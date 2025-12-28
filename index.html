@@ -28,7 +28,7 @@
     <script type="module" src="assets/js/precificacao-insumos.js"></script> 
     <script type="module" src="assets/js/main.js"></script>
     <script type="module" src="assets/js/orcamentos.js"></script>
-    <script type="module" src="assets/js/relatorios.js"></script> <!-- NOVO: Prioridade 3 (Refatoração) -->
+    <script type="module" src="assets/js/relatorios.js"></script>
     <script type="module" src="assets/js/precificacao.js"></script>
 </head>
 <body>
@@ -393,7 +393,7 @@
         </div>
     </section>
 
-    <!-- 5. MÓDULO: PRECIFICAÇÃO -->
+    <!-- 5. MÓDULO: PRECIFICAÇÃO (ATUALIZADO V1.1.0) -->
     <section id="module-precificacao" style="display: none;">
         <button class="btn-back-hub">⬅ Voltar ao Menu</button>
 
@@ -402,11 +402,12 @@
                  <img src="assets/images/logo_perola_rara.png" class="module-logo-small" alt="Logo">
                  <h1 class="module-title-main">Pérola Rara</h1>
                  
+                 <!-- NAVEGAÇÃO ATUALIZADA (TERMINOLOGIA HUMANIZADA) -->
                  <nav class="nav-lined">
                      <ul>
                         <li><a href="#" data-submenu="materiais-insumos" class="nav-link">Materiais</a></li>
-                        <li><a href="#" data-submenu="mao-de-obra" class="nav-link">Mão de Obra</a></li>
-                        <li><a href="#" data-submenu="custos-indiretos" class="nav-link">Custos Indiretos</a></li>
+                        <li><a href="#" data-submenu="mao-de-obra" class="nav-link">Meu Salário</a></li> <!-- Alterado -->
+                        <li><a href="#" data-submenu="custos-indiretos" class="nav-link">Gastos Fixos</a></li> <!-- Alterado -->
                         <li><a href="#" data-submenu="cadastrar-produtos" class="nav-link">Produtos</a></li>
                         <li><a href="#" data-submenu="calculo-precificacao" class="nav-link">Precificação</a></li>
                         <li><a href="#" data-submenu="precificacoes-geradas" class="nav-link">Histórico</a></li>
@@ -478,9 +479,9 @@
                 </div>
             </div>
 
-            <!-- ABA: MÃO DE OBRA -->
+            <!-- ABA: MÃO DE OBRA (AGORA: MEU SALÁRIO) -->
             <div id="mao-de-obra" class="subpagina" style="display:none;">
-                <h2 class="section-title-lined">Custo de Mão de Obra</h2>
+                <h2 class="section-title-lined">Definição do Meu Salário</h2> <!-- Título Humanizado -->
                 <form id="form-mao-de-obra">
                     <div class="form-group">
                         <label>Salário a receber (R$):</label>
@@ -513,9 +514,9 @@
                 </form>
             </div>
 
-            <!-- ABA: CUSTOS INDIRETOS -->
+            <!-- ABA: CUSTOS INDIRETOS (AGORA: GASTOS FIXOS) -->
             <div id="custos-indiretos" class="subpagina" style="display:none;">
-                <h2 class="section-title-lined">Custos Indiretos</h2>
+                <h2 class="section-title-lined">Gastos Fixos (Indiretos)</h2> <!-- Título Humanizado -->
                 <ul id="lista-custos-indiretos">
                     <!-- Preenchido via JS -->
                 </ul>
@@ -644,7 +645,7 @@
                         </div>
                     </div>
 
-                    <!-- COLUNA 2: CARTÃO DE RESULTADO -->
+                    <!-- COLUNA 2: CARTÃO DE RESULTADO (ATUALIZADO V1.1.0) -->
                     <div class="pricing-results-area">
                         <div class="result-card">
                             <div class="result-header">
@@ -667,7 +668,8 @@
                                         <span id="res-custo-mat">R$ 0,00</span>
                                     </div>
                                     <div class="result-row">
-                                        <span>Custos Indiretos (Fixos):</span>
+                                        <!-- Rótulo Humanizado + Tooltip Educativo -->
+                                        <span title="Energia, aluguel, depreciação, etc.">Gastos Fixos:</span>
                                         <span id="custo-indireto">R$ 0,00</span>
                                     </div>
                                     <div class="result-row subtotal-row">
@@ -683,10 +685,11 @@
                                             <circle cx="12" cy="12" r="10"></circle>
                                             <polyline points="12 6 12 12 16 14"></polyline>
                                         </svg>
-                                        Mão de Obra (Seu Salário)
+                                        <!-- Rótulo Humanizado -->
+                                        Meu Salário (Mão de Obra)
                                     </h5>
                                     <div class="result-row highlight-blue">
-                                        <span>Valor pelo tempo trabalhado:</span>
+                                        <span title="Valor pelo tempo trabalhado na peça">Valor pelo tempo trabalhado:</span>
                                         <span id="total-mao-de-obra">R$ 0,00</span>
                                     </div>
                                     <span id="custo-mao-de-obra-detalhe" style="display:none;"></span>
@@ -699,10 +702,11 @@
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4CAF50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 5px;">
                                             <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
                                         </svg>
-                                        Lucro (Para a Empresa)
+                                        <!-- Rótulo Humanizado -->
+                                        Caixa da Empresa (Crescimento)
                                     </h5>
                                     <div class="result-row highlight-green">
-                                        <span>Margem Líquida:</span>
+                                        <span title="Valor destinado para reinvestimento e segurança do negócio">Margem Líquida:</span>
                                         <span id="margem-lucro-valor">R$ 0,00</span>
                                     </div>
                                 </div>
@@ -728,7 +732,7 @@
                             </details>
 
                             <details class="details-ci">
-                                <summary>Ver detalhe Custos Indiretos</summary>
+                                <summary>Ver detalhe Gastos Fixos</summary> <!-- Humanizado -->
                                 <ul id="lista-custos-indiretos-detalhes"></ul>
                             </details>
                         </div>
