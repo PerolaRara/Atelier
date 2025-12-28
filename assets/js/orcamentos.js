@@ -813,12 +813,13 @@ function gerarRelatorioFinanceiro() {
             <td><span title="${p.cliente}">${nomeCliente}</span></td>
             <td style="color:#2196F3; font-weight:bold;">${formatarMoeda(p.custoMaoDeObra)}</td>
             <td style="color:#4CAF50; font-weight:bold;">${formatarMoeda(p.margemLucro)}</td>
-            <td>${formatarMoeda(p.total)}</td>
+            <td style="color:#e53935; font-weight:bold;">${formatarMoeda(p.custosTotais)}</td> <!-- NOVO: Gastos (Vermelho) -->
+            <td style="color:#ff9800; font-weight:bold;">${formatarMoeda(p.total)}</td> <!-- ATUALIZADO: Total (Laranja) -->
         `;
     });
 
     if(pedidosFiltrados.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 20px; color: #777;">Nenhum pedido entregue neste período.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 20px; color: #777;">Nenhum pedido entregue neste período.</td></tr>';
     }
 
     // 2. Atualização dos KPIs Numéricos (Prio 1)
