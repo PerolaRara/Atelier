@@ -829,6 +829,7 @@ function visualizarPrecificacao(id) {
     const p = precificacoesGeradas.find(x => x.id === id);
     if(!p) return;
 
+    // TEMPLATE ATUALIZADO (PRIORIDADE 1: TERMINOLOGIA)
     const html = `
         <html>
         <head>
@@ -851,14 +852,17 @@ function visualizarPrecificacao(id) {
                 <div class="line"><span>Custo Materiais:</span> <span>${formatarMoeda(p.custoMateriais)}</span></div>
                 <ul>${p.detalhesMateriais.map(x => `<li>${x}</li>`).join('')}</ul>
                 
-                <div class="line"><span>Mão de Obra (${p.horas}h):</span> <span>${formatarMoeda(p.totalMaoDeObra)}</span></div>
+                <!-- TERMINOLOGIA ATUALIZADA: Mão de Obra -> Meu Salário -->
+                <div class="line"><span>Meu Salário (${p.horas}h):</span> <span>${formatarMoeda(p.totalMaoDeObra)}</span></div>
                 
-                <div class="line"><span>Custos Indiretos:</span> <span>${formatarMoeda(p.custoIndiretoTotal)}</span></div>
+                <!-- TERMINOLOGIA ATUALIZADA: Custos Indiretos -> Gastos Fixos -->
+                <div class="line"><span>Gastos Fixos:</span> <span>${formatarMoeda(p.custoIndiretoTotal)}</span></div>
                 <ul>${p.detalhesCustosIndiretos.map(x => `<li>${x}</li>`).join('')}</ul>
             </div>
 
             <div class="box" style="background: #f9f9f9;">
-                <div class="line"><span>Margem de Lucro (${p.margem}%):</span> <span>Incluso</span></div>
+                <!-- TERMINOLOGIA ATUALIZADA: Margem de Lucro -> Margem p/ Caixa -->
+                <div class="line"><span>Margem p/ Caixa (${p.margem}%):</span> <span>Incluso</span></div>
                 <div class="line total"><span>Total Final:</span> <span>${formatarMoeda(p.total)}</span></div>
             </div>
             
