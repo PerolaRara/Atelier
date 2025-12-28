@@ -6,6 +6,17 @@
  */
 const changeLogData = [
     {
+        version: "1.1.0",
+        date: "28/12/2025",
+        changes: [
+            "🗣️ **Humanização da Interface:** Adeus ao 'idioma de contador'! Unificação total da terminologia para a realidade da artesã.",
+            "💰 **Meu Salário:** O termo 'Mão de Obra' foi substituído por 'Meu Salário' em todo o sistema, reforçando que o tempo trabalhado é sagrado.",
+            "🏢 **Cultura de Reinvestimento:** 'Lucro' agora é 'Caixa da Empresa' e 'Custos Indiretos' viraram 'Gastos Fixos', facilitando o entendimento financeiro.",
+            "🎓 **Educação Integrada:** Adição de tooltips (dicas flutuantes) explicativos nos novos termos para guiar a precificação.",
+            "🖨️ **Coerência na Impressão:** As notas de precificação geradas agora utilizam exatamente os mesmos termos amigáveis apresentados na tela."
+        ]
+    },
+    {
         version: "1.0.9",
         date: "11/12/2025",
         changes: [
