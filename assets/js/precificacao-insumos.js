@@ -34,6 +34,63 @@ export let custosIndiretosAdicionais = [];
 // Variáveis Locais de Controle
 let materialEmEdicao = null;
 let onMaterialUpdateCallback = null;
+let inputDestinoAtualId = null; // Para saber qual input atualizar após o cálculo
+let indexDestinoAtual = null;   // Para saber qual item salvar
+
+// ==========================================
+// CONFIGURAÇÃO DAS CALCULADORAS (ASSISTENTE)
+// ==========================================
+const calculadorasConfig = {
+    'Energia elétrica': {
+        titulo: 'Calc. Energia de Maquinário',
+        campos: [
+            { id: 'potencia', label: 'Potência da Máquina (Watts)', tipo: 'number', help: 'Veja na etiqueta atrás da máquina (ex: 400)' },
+            { id: 'horasDia', label: 'Horas ligada por dia', tipo: 'number', help: 'Média de uso diário' },
+            { id: 'diasMes', label: 'Dias trabalhados no mês', tipo: 'number', value: 20 },
+            { id: 'tarifa', label: 'Tarifa de Energia (R$/kWh)', tipo: 'number', value: 1.20, help: 'Olhe na sua conta de luz (Preço do kWh)' }
+        ],
+        calcular: (v) => {
+            // Fórmula: (Watts * Horas * Dias / 1000) * Tarifa
+            const kwhMensal = (v.potencia * v.horasDia * v.diasMes) / 1000;
+            return kwhMensal * v.tarifa;
+        }
+    },
+    'Depreciação de máquinas e equipamentos': {
+        titulo: 'Calc. Depreciação (Reserva)',
+        campos: [
+            { id: 'valorCompra', label: 'Valor de Compra (R$)', tipo: 'number' },
+            { id: 'valorRevenda', label: 'Valor Estimado de Revenda (R$)', tipo: 'number', help: 'Por quanto venderia usada no final?' },
+            { id: 'vidaUtil', label: 'Vida Útil (Anos)', tipo: 'number', value: 5, help: 'Quanto tempo pretende ficar com ela?' }
+        ],
+        calcular: (v) => {
+            // Fórmula: (Compra - Revenda) / Meses
+            const meses = v.vidaUtil * 12;
+            if (meses === 0) return 0;
+            return (v.valorCompra - v.valorRevenda) / meses;
+        }
+    },
+    'Manutenção predial e de equipamentos': {
+        titulo: 'Provisão de Manutenção',
+        campos: [
+            { id: 'gastoAnual', label: 'Gasto Anual Estimado (R$)', tipo: 'number', help: 'Soma de revisões e reparos previstos no ano' }
+        ],
+        calcular: (v) => { return v.gastoAnual / 12; }
+    },
+    'Aluguel do espaço': {
+        titulo: 'Rateio de Aluguel (Home Office)',
+        campos: [
+            { id: 'valorTotal', label: 'Valor Total Aluguel/Condomínio (R$)', tipo: 'number' },
+            { id: 'areaTotal', label: 'Área Total da Casa (m²)', tipo: 'number' },
+            { id: 'areaAtelie', label: 'Área do Ateliê (m²)', tipo: 'number' }
+        ],
+        calcular: (v) => {
+            // Regra de 3 simples
+            if (v.areaTotal === 0) return 0;
+            const percentual = v.areaAtelie / v.areaTotal;
+            return v.valorTotal * percentual;
+        }
+    }
+};
 
 // ==========================================
 // FUNÇÕES AUXILIARES E CONFIGURAÇÃO
@@ -276,18 +333,12 @@ export async function salvarMaoDeObra() {
 
     const valorHora = salario / horas;
     
-    // =========================================================================
     // FÓRMULA CORRIGIDA: Encargos = (13º + 1/3 Férias)
-    // =========================================================================
     let custoEncargos = 0;
     if (incluirFerias) {
-        // Cálculo do montante anual de direitos
-        const decimoTerceiro = salario;       // Valor cheio do 13º
-        const umTercoFerias = salario / 3;    // Valor do terço constitucional
-        
+        const decimoTerceiro = salario;       
+        const umTercoFerias = salario / 3;    
         const totalDireitosAnual = decimoTerceiro + umTercoFerias;
-        
-        // Diluição mensal e depois horária
         custoEncargos = (totalDireitosAnual / 12) / horas;
     }
 
@@ -361,7 +412,7 @@ function toggleEdicaoMaoDeObra(editando) {
 }
 
 // ==========================================
-// MÓDULO: CUSTOS INDIRETOS
+// MÓDULO: CUSTOS INDIRETOS (COM CALCULADORA)
 // ==========================================
 
 export async function carregarCustosIndiretos() {
@@ -372,7 +423,10 @@ export async function carregarCustosIndiretos() {
         ciPreSnap.forEach(d => {
             const data = d.data();
             const idx = custosIndiretosPredefinidos.findIndex(c => c.descricao === data.descricao);
-            if (idx !== -1) custosIndiretosPredefinidos[idx] = data;
+            if (idx !== -1) {
+                // Carrega o valor e os parâmetros salvos (para persistência - Prioridade 2)
+                custosIndiretosPredefinidos[idx] = data;
+            }
         });
 
         const ciAddSnap = await getDocs(collection(db, "custos-indiretos-adicionais"));
@@ -386,6 +440,7 @@ export async function carregarCustosIndiretos() {
     }
 }
 
+// ATUALIZADO: Inclusão do botão de calculadora
 export function carregarCustosIndiretosPredefinidosUI() {
     const lista = document.getElementById('lista-custos-indiretos');
     if(!lista) return;
@@ -394,9 +449,32 @@ export function carregarCustosIndiretosPredefinidosUI() {
     // Renderiza Predefinidos
     custosIndiretosPredefinidosBase.forEach((base, idx) => {
         const atual = custosIndiretosPredefinidos.find(c => c.descricao === base.descricao) || base;
+        
+        // Verifica se existe calculadora para este item no calculadorasConfig
+        const temCalculadora = calculadorasConfig.hasOwnProperty(base.descricao);
+        
+        // Ícone SVG de Calculadora
+        const btnCalcHTML = temCalculadora 
+            ? `<button class="btn-calc-trigger" onclick="abrirCalculadoraCustos('${base.descricao}', ${idx})" title="Assistente de Cálculo" type="button" style="background:none; border:none; cursor:pointer; vertical-align:middle; color:#7aa2a9;">
+                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                   <rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect>
+                   <line x1="8" y1="6" x2="16" y2="6"></line>
+                   <line x1="16" y1="14" x2="16" y2="14"></line>
+                   <line x1="8" y1="14" x2="8" y2="14"></line>
+                   <line x1="12" y1="14" x2="12" y2="14"></line>
+                   <line x1="16" y1="18" x2="16" y2="18"></line>
+                   <line x1="8" y1="18" x2="8" y2="18"></line>
+                   <line x1="12" y1="18" x2="12" y2="18"></line>
+                 </svg>
+               </button>` 
+            : '';
+
         const li = document.createElement('li');
         li.innerHTML = `
-            <div class="custo-item-nome">${base.descricao}</div>
+            <div class="custo-item-nome">
+                ${base.descricao}
+                ${btnCalcHTML}
+            </div>
             <input type="number" id="ci-pref-${idx}" value="${(atual.valorMensal || 0).toFixed(2)}" step="0.01">
             <button onclick="salvarCustoIndiretoPredefinido('${base.descricao}', ${idx})">Salvar</button>
         `;
@@ -415,31 +493,40 @@ export function carregarCustosIndiretosPredefinidosUI() {
     });
 }
 
-export async function salvarCustoIndiretoPredefinido(descricao, idx) {
+// ATUALIZADO: Suporte a salvar parâmetros opcionais
+export async function salvarCustoIndiretoPredefinido(descricao, idx, parametrosOpcionais = null) {
     const input = document.getElementById(`ci-pref-${idx}`);
-    // Se o input não existe (chamada interna via zerar), não tenta ler o value
-    // A lógica de zerar já lida com o valor 0
     let val = 0;
     
     if (input) {
         val = parseFloat(input.value) || 0;
     } else if (idx === -1) { 
-        // Código especial para "Zerar" chamando diretamente
         val = 0;
     } else {
         return; 
     }
 
-    const item = { descricao, valorMensal: val, valorPorHora: val / maoDeObra.horas };
-    
+    // Se vierem parâmetros da calculadora, usa-os. Se não, tenta manter os existentes ou nulo.
     const arrIdx = custosIndiretosPredefinidos.findIndex(c => c.descricao === descricao);
+    const paramsAtuais = (arrIdx !== -1) ? custosIndiretosPredefinidos[arrIdx].parametros : null;
+    
+    const finalParams = parametrosOpcionais || paramsAtuais || null;
+
+    const item = { 
+        descricao, 
+        valorMensal: val, 
+        valorPorHora: val / maoDeObra.horas,
+        parametros: finalParams // Salva os dados técnicos (Watts, Horas, etc.)
+    };
+    
     if(arrIdx !== -1) custosIndiretosPredefinidos[arrIdx] = item;
     else custosIndiretosPredefinidos.push(item);
     
     try {
         await setDoc(doc(db, "custos-indiretos-predefinidos", descricao), item);
         atualizarTabelaCustosIndiretos();
-        if(idx !== -1) alert("Custo salvo!"); // Não alerta se for zeramento automático
+        // Não alerta se for zeramento automático ou chamada interna da calculadora
+        if(idx !== -1 && !parametrosOpcionais) alert("Custo salvo!"); 
     } catch(e) {
         console.error(e);
         if(idx !== -1) alert("Erro ao salvar custo.");
@@ -495,26 +582,20 @@ export async function removerCustoIndiretoAdicional(id) {
     }
 }
 
-// ==========================================
-// NOVA FUNÇÃO: ZERAR CUSTO INDIRETO
-// ==========================================
 export async function zerarCustoIndireto(descricao, idOpcional) {
     if(!confirm(`Deseja zerar o custo de "${descricao}"? Ele sairá desta lista.`)) return;
 
-    // Se tiver ID válido, é um custo adicional (deve ser excluído)
-    // Usamos string 'undefined' para garantir compatibilidade com o HTML gerado
     if (idOpcional && idOpcional !== 'undefined' && idOpcional !== undefined) {
         await removerCustoIndiretoAdicional(idOpcional);
     } else {
-        // É um custo predefinido, apenas atualizamos o valor para 0
-        const item = { descricao, valorMensal: 0, valorPorHora: 0 };
+        const item = { descricao, valorMensal: 0, valorPorHora: 0, parametros: null }; // Reseta parâmetros também
         const arrIdx = custosIndiretosPredefinidos.findIndex(c => c.descricao === descricao);
         if(arrIdx !== -1) custosIndiretosPredefinidos[arrIdx] = item;
         
         try {
             await setDoc(doc(db, "custos-indiretos-predefinidos", descricao), item);
-            carregarCustosIndiretosPredefinidosUI(); // Atualiza os inputs na lista superior
-            atualizarTabelaCustosIndiretos(); // Atualiza a tabela (remove a linha)
+            carregarCustosIndiretosPredefinidosUI(); 
+            atualizarTabelaCustosIndiretos(); 
         } catch(e) { 
             console.error("Erro ao zerar custo predefinido:", e); 
         }
@@ -528,13 +609,11 @@ export function atualizarTabelaCustosIndiretos() {
     
     const todos = [...custosIndiretosPredefinidos, ...custosIndiretosAdicionais];
     
-    // Exibe apenas quem tem valor > 0
     todos.filter(c => c.valorMensal > 0).forEach(c => {
         const row = tbody.insertRow();
         const horasDivisor = maoDeObra.horas || 220;
         const vHora = c.valorMensal / horasDivisor;
         
-        // Verifica se é adicional (tem ID) ou predefinido para passar ao botão Zerar
         const idParam = c.id ? `'${c.id}'` : 'undefined';
         
         row.innerHTML = `
@@ -560,6 +639,106 @@ export function buscarCustosIndiretosCadastrados() {
 }
 
 // ==========================================
+// FUNÇÕES DA CALCULADORA (JANELA MODAL)
+// ==========================================
+
+window.abrirCalculadoraCustos = function(descricao, index) {
+    const config = calculadorasConfig[descricao];
+    if (!config) return; 
+
+    inputDestinoAtualId = `ci-pref-${index}`;
+    indexDestinoAtual = index;
+    
+    // Prioridade 2: Buscar parâmetros salvos para preencher
+    const itemSalvo = custosIndiretosPredefinidos.find(c => c.descricao === descricao);
+    const paramsSalvos = itemSalvo ? itemSalvo.parametros : {};
+
+    // Configurar título e corpo
+    document.getElementById('titulo-calculadora').innerText = config.titulo;
+    const form = document.getElementById('form-calculadora-dinamica');
+    form.innerHTML = ''; 
+
+    config.campos.forEach(campo => {
+        // Prioridade de valor: Parâmetro Salvo > Valor Padrão da Config > Vazio
+        const valorInicial = paramsSalvos && paramsSalvos[campo.id] !== undefined 
+            ? paramsSalvos[campo.id] 
+            : (campo.value !== undefined ? campo.value : '');
+
+        const div = document.createElement('div');
+        div.className = 'calc-group';
+        div.innerHTML = `
+            <label>${campo.label}</label>
+            <input type="number" step="0.01" id="calc-${campo.id}" value="${valorInicial}" oninput="recalcularPrevia('${descricao}')">
+            ${campo.help ? `<div class="calc-help">${campo.help}</div>` : ''}
+        `;
+        form.appendChild(div);
+    });
+
+    // Resetar prévia ou calcular se já tiver dados
+    if (paramsSalvos && Object.keys(paramsSalvos).length > 0) {
+        window.recalcularPrevia(descricao);
+    } else {
+        document.querySelector('#resultado-previo-calc strong').innerText = 'R$ 0,00';
+    }
+    
+    // Exibir Modal
+    const modal = document.getElementById('modal-calculadora-custos');
+    if(modal) modal.style.display = 'flex';
+    
+    // Configurar botão de confirmação
+    const btnConfirm = document.getElementById('btn-confirmar-calculo');
+    if(btnConfirm) {
+        // Remove listeners antigos clonando o nó (solução rápida para evitar múltiplos binds)
+        const newBtn = btnConfirm.cloneNode(true);
+        btnConfirm.parentNode.replaceChild(newBtn, btnConfirm);
+        newBtn.onclick = () => aplicarCalculo(descricao);
+    }
+};
+
+window.recalcularPrevia = function(descricao) {
+    const config = calculadorasConfig[descricao];
+    const valores = {};
+    
+    config.campos.forEach(c => {
+        const val = parseFloat(document.getElementById(`calc-${c.id}`).value);
+        valores[c.id] = isNaN(val) ? 0 : val;
+    });
+
+    const resultado = config.calcular(valores);
+    document.querySelector('#resultado-previo-calc strong').innerText = formatarMoeda(resultado);
+};
+
+function aplicarCalculo(descricao) {
+    const config = calculadorasConfig[descricao];
+    const valoresParametros = {};
+    
+    // Captura os valores dos inputs da calculadora
+    config.campos.forEach(c => {
+        const val = parseFloat(document.getElementById(`calc-${c.id}`).value);
+        valoresParametros[c.id] = isNaN(val) ? 0 : val;
+    });
+
+    // Calcula o valor final
+    const resultadoFinal = config.calcular(valoresParametros);
+
+    // Injeta no input original da lista visual
+    const inputAlvo = document.getElementById(inputDestinoAtualId);
+    if(inputAlvo) {
+        inputAlvo.value = resultadoFinal.toFixed(2);
+    }
+
+    // Salva no Firestore: Valor + Parâmetros (Prioridade 2)
+    salvarCustoIndiretoPredefinido(descricao, indexDestinoAtual, valoresParametros);
+
+    window.fecharCalculadoraCustos();
+}
+
+window.fecharCalculadoraCustos = function() {
+    const modal = document.getElementById('modal-calculadora-custos');
+    if(modal) modal.style.display = 'none';
+};
+
+// ==========================================
 // EXPOR FUNÇÕES AO ESCOPO GLOBAL (WINDOW)
 // ==========================================
 
@@ -572,5 +751,4 @@ window.editarMaoDeObraUI = editarMaoDeObraUI;
 window.salvarCustoIndiretoPredefinido = salvarCustoIndiretoPredefinido;
 window.removerCustoIndiretoAdicional = removerCustoIndiretoAdicional;
 window.buscarCustosIndiretosCadastrados = buscarCustosIndiretosCadastrados;
-// Nova exposição
 window.zerarCustoIndireto = zerarCustoIndireto;
