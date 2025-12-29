@@ -454,6 +454,8 @@ td {
 #lista-custos-indiretos li .custo-item-nome {
     flex-grow: 1;
     margin-right: 10px;
+    display: flex;
+    align-items: center;
 }
 
 #lista-custos-indiretos li input[type="number"] {
@@ -1031,4 +1033,168 @@ input[type="checkbox"] {
         flex: auto; 
         order: 2; /* Garante que o resultado fique abaixo dos inputs no mobile */
     }
+}
+
+/* ========================================================= */
+/*  NOVO: ESTILOS DO ASSISTENTE DE CÁLCULO (Modal)          */
+/* ========================================================= */
+
+/* Overlay de Fundo */
+.modal-overlay {
+    position: fixed; 
+    top: 0; 
+    left: 0; 
+    width: 100%; 
+    height: 100%;
+    background: rgba(0,0,0,0.5); 
+    z-index: 2000;
+    display: flex; 
+    justify-content: center; 
+    align-items: center;
+    backdrop-filter: blur(2px); /* Efeito moderno de desfoque */
+}
+
+/* Janela do Modal */
+.calculator-modal {
+    background: #fff; 
+    width: 90%; 
+    max-width: 450px;
+    border-radius: 15px; 
+    padding: 25px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    animation: fadeInUp 0.3s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Animação de Entrada */
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Cabeçalho do Modal */
+.modal-header { 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    margin-bottom: 20px; 
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+}
+
+.modal-header h3 { 
+    margin: 0; 
+    color: var(--cor-principal); 
+    font-size: 1.25rem;
+}
+
+.close-modal { 
+    font-size: 1.8rem; 
+    cursor: pointer; 
+    color: #999; 
+    line-height: 1;
+    transition: color 0.2s;
+}
+.close-modal:hover { color: #555; }
+
+/* Corpo do Modal */
+.calc-description { 
+    font-size: 0.95rem; 
+    color: #666; 
+    margin-bottom: 20px; 
+    line-height: 1.4;
+}
+
+/* Grupos de Input dentro da Calculadora */
+.calc-group { margin-bottom: 15px; }
+
+.calc-group label { 
+    display: block; 
+    font-size: 0.9rem; 
+    color: #555; 
+    margin-bottom: 6px; 
+    font-weight: 500;
+}
+
+.calc-group input { 
+    width: 100% !important; /* Força largura total no modal */
+    box-sizing: border-box !important;
+    padding: 10px; 
+    border: 1px solid #ccc; 
+    border-radius: 8px; 
+    font-size: 1rem; 
+    background-color: #fff; /* Contraste limpo */
+    color: #333;
+}
+
+.calc-help { 
+    font-size: 0.8rem; 
+    color: #888; 
+    margin-top: 4px; 
+    font-style: italic; 
+}
+
+/* Cartão de Resultado Prévio */
+.calc-result-preview {
+    background-color: #e0f2f1; 
+    color: #00695c;
+    padding: 20px; 
+    border-radius: 10px; 
+    text-align: center;
+    margin: 25px 0; 
+    font-size: 1.1rem;
+    border: 1px solid #b2dfdb;
+}
+
+.calc-result-preview strong {
+    display: block;
+    font-size: 1.5rem;
+    margin-top: 5px;
+}
+
+/* Rodapé do Modal (Botões) */
+.modal-footer { 
+    display: flex; 
+    gap: 10px; 
+    justify-content: flex-end; 
+}
+
+.modal-footer button {
+    margin: 0; /* Remove margens globais de botões */
+    padding: 10px 20px;
+}
+
+.btn-secondary { 
+    background: #e0e0e0; 
+    color: #333; 
+}
+.btn-secondary:hover { background: #d6d6d6; }
+
+.btn-primary { 
+    background: var(--cor-principal); 
+    color: #fff; 
+}
+.btn-primary:hover { background: #5a8289; }
+
+/* Botão Gatilho (Ícone de Calculadora na Lista) */
+.btn-calc-trigger {
+    background: none; 
+    border: none; 
+    cursor: pointer;
+    color: var(--cor-principal); 
+    margin-left: 8px; 
+    padding: 6px;
+    display: inline-flex; 
+    align-items: center; 
+    justify-content: center;
+    border-radius: 50%;
+    transition: background 0.2s;
+    min-width: auto; /* Override de estilos globais */
+    width: 32px;
+    height: 32px;
+}
+
+.btn-calc-trigger:hover { 
+    background-color: #e0f2f1; 
 }
