@@ -758,6 +758,29 @@
         </div>
     </section>
 
+    <!-- 6. MODAL: ASSISTENTE DE CÁLCULO DE CUSTOS (NOVO) -->
+    <div id="modal-calculadora-custos" class="modal-overlay" style="display: none;">
+        <div class="modal-content calculator-modal">
+            <div class="modal-header">
+                <h3 id="titulo-calculadora">Assistente de Cálculo</h3>
+                <span class="close-modal" onclick="fecharCalculadoraCustos()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p id="descricao-calculadora" class="calc-description">Preencha os dados abaixo para estimar o custo:</p>
+                <form id="form-calculadora-dinamica">
+                    <!-- Campos inseridos via JS -->
+                </form>
+                <div id="resultado-previo-calc" class="calc-result-preview">
+                    Estimativa Mensal: <strong>R$ 0,00</strong>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="fecharCalculadoraCustos()">Cancelar</button>
+                <button type="button" class="btn-primary" id="btn-confirmar-calculo">Usar Este Valor</button>
+            </div>
+        </div>
+    </div>
+
     <!-- SERVICE WORKER -->
     <script>
       if ('serviceWorker' in navigator) {
