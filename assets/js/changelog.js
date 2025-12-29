@@ -6,6 +6,17 @@
  */
 const changeLogData = [
     {
+        version: "1.1.1",
+        date: "29/12/2025",
+        changes: [
+            "🤖 **Assistente Inteligente de Custos:** Fim do 'chutômetro'! Agora os itens complexos (Energia, Depreciação, Aluguel) possuem uma calculadora integrada baseada em consultoria especializada.",
+            "⚡ **Cálculo de Energia:** Basta informar a potência da máquina e horas de uso para saber o custo exato na conta de luz, separando o gasto do ateliê do gasto doméstico.",
+            "📉 **Depreciação Automática:** Fórmula embutida para calcular quanto reservar mensalmente para a reposição futura de máquinas e equipamentos.",
+            "💾 **Memória de Cálculo:** O sistema agora salva os dados técnicos (Watts, m², Valor de Compra) que você preencheu. Na próxima vez, basta ajustar o tempo de uso sem precisar procurar os manuais novamente.",
+            "🎨 **Interface Intuitiva:** Novo ícone de calculadora nos itens compatíveis e janela pop-up simplificada para inserção de dados."
+        ]
+    },
+    {
         version: "1.1.0",
         date: "28/12/2025",
         changes: [
