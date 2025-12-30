@@ -110,6 +110,17 @@ export function getUnidadeSigla(tipo) {
     return map[tipo] || '';
 }
 
+/**
+ * PRIORIDADE 2: Normalização de Texto (Title Case)
+ * Transforma "tecido algodão" em "Tecido Algodão" para padronização.
+ */
+function normalizarNome(nome) {
+    if (!nome) return "";
+    return nome.trim().toLowerCase().split(' ').map(palavra => {
+        return palavra.charAt(0).toUpperCase() + palavra.slice(1);
+    }).join(' ');
+}
+
 function calcularCustoUnitario(tipo, valorTotal, comprimentoCm, volumeMl, pesoG, larguraCm, alturaCm) {
     let custo = 0;
     if (valorTotal <= 0) return 0;
@@ -158,6 +169,10 @@ export function atualizarTabelaMateriaisInsumos() {
     tbody.innerHTML = '';
 
     materiais.forEach(m => {
+        // PRIORIDADE 3: Arquivamento
+        // Não exibe materiais arquivados (ativo === false) na lista principal
+        if (m.ativo === false) return;
+
         const row = tbody.insertRow();
         
         let detalhes = "-";
@@ -192,7 +207,7 @@ export function toggleCamposMaterial(tipo) {
 }
 
 export async function cadastrarMaterialInsumo() {
-    const nome = document.getElementById('nome-material').value;
+    const nomeInput = document.getElementById('nome-material').value;
     const radioChecked = document.querySelector('input[name="tipo-material"]:checked');
     const tipo = radioChecked ? radioChecked.value : 'comprimento';
     
@@ -204,8 +219,25 @@ export async function cadastrarMaterialInsumo() {
     const larguraCm = parseFloat(document.getElementById('largura-cm').value) || 0;
     const alturaCm = parseFloat(document.getElementById('altura-cm').value) || 0;
 
-    if(!nome || valorTotal <= 0) {
+    if(!nomeInput || valorTotal <= 0) {
         alert("Preencha o nome e o valor total corretamente.");
+        return;
+    }
+
+    // PRIORIDADE 2: Normalização do Nome (Salva sempre bonitinho)
+    const nome = normalizarNome(nomeInput);
+
+    // PRIORIDADE 1: Verificação de Duplicidade (Blindagem)
+    const existeDuplicata = materiais.some(m => {
+        // Ignora itens arquivados e o próprio item se estiver editando
+        if (m.ativo === false) return false; 
+        if (materialEmEdicao && m.id === materialEmEdicao.id) return false;
+        
+        return m.nome.toLowerCase() === nome.toLowerCase();
+    });
+
+    if (existeDuplicata) {
+        alert(`O material "${nome}" já está cadastrado.\nPor favor, utilize outro nome ou edite o existente.`);
         return;
     }
 
@@ -214,7 +246,8 @@ export async function cadastrarMaterialInsumo() {
     const materialData = {
         nome, tipo, valorTotal, 
         comprimentoCm, volumeMl, pesoG, larguraCm, alturaCm,
-        custoUnitario
+        custoUnitario,
+        ativo: true // Garante que novos itens nasçam ativos
     };
 
     try {
@@ -279,15 +312,23 @@ export function editarMaterialInsumo(id) {
     if(section) section.scrollIntoView({behavior: "smooth"});
 }
 
+// PRIORIDADE 3: Arquivamento (Substitui Exclusão Permanente)
 export async function removerMaterialInsumo(id) {
-    if(confirm("Deseja realmente excluir este material?")) {
+    if(confirm("Deseja arquivar este material?\n\nEle sairá da lista de cadastro para organização, mas o histórico de preços dos produtos que o utilizam será preservado.")) {
         try {
-            await deleteDoc(doc(db, "materiais-insumos", id));
-            materiais = materiais.filter(m => m.id !== id);
+            // Ao invés de deleteDoc, usamos updateDoc para marcar como inativo
+            await updateDoc(doc(db, "materiais-insumos", id), { ativo: false });
+            
+            // Atualiza o estado local
+            const idx = materiais.findIndex(m => m.id === id);
+            if(idx !== -1) {
+                materiais[idx].ativo = false;
+            }
+            
             atualizarTabelaMateriaisInsumos();
         } catch(e) {
             console.error(e);
-            alert("Erro ao remover material.");
+            alert("Erro ao arquivar material.");
         }
     }
 }
@@ -424,7 +465,6 @@ export async function carregarCustosIndiretos() {
             const data = d.data();
             const idx = custosIndiretosPredefinidos.findIndex(c => c.descricao === data.descricao);
             if (idx !== -1) {
-                // Carrega o valor e os parâmetros salvos (para persistência - Prioridade 2)
                 custosIndiretosPredefinidos[idx] = data;
             }
         });
@@ -440,7 +480,6 @@ export async function carregarCustosIndiretos() {
     }
 }
 
-// ATUALIZADO: Inclusão do botão de calculadora
 export function carregarCustosIndiretosPredefinidosUI() {
     const lista = document.getElementById('lista-custos-indiretos');
     if(!lista) return;
@@ -450,10 +489,8 @@ export function carregarCustosIndiretosPredefinidosUI() {
     custosIndiretosPredefinidosBase.forEach((base, idx) => {
         const atual = custosIndiretosPredefinidos.find(c => c.descricao === base.descricao) || base;
         
-        // Verifica se existe calculadora para este item no calculadorasConfig
         const temCalculadora = calculadorasConfig.hasOwnProperty(base.descricao);
         
-        // Ícone SVG de Calculadora
         const btnCalcHTML = temCalculadora 
             ? `<button class="btn-calc-trigger" onclick="abrirCalculadoraCustos('${base.descricao}', ${idx})" title="Assistente de Cálculo" type="button" style="background:none; border:none; cursor:pointer; vertical-align:middle; color:#7aa2a9;">
                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -493,7 +530,6 @@ export function carregarCustosIndiretosPredefinidosUI() {
     });
 }
 
-// ATUALIZADO: Suporte a salvar parâmetros opcionais
 export async function salvarCustoIndiretoPredefinido(descricao, idx, parametrosOpcionais = null) {
     const input = document.getElementById(`ci-pref-${idx}`);
     let val = 0;
@@ -506,7 +542,6 @@ export async function salvarCustoIndiretoPredefinido(descricao, idx, parametrosO
         return; 
     }
 
-    // Se vierem parâmetros da calculadora, usa-os. Se não, tenta manter os existentes ou nulo.
     const arrIdx = custosIndiretosPredefinidos.findIndex(c => c.descricao === descricao);
     const paramsAtuais = (arrIdx !== -1) ? custosIndiretosPredefinidos[arrIdx].parametros : null;
     
@@ -516,7 +551,7 @@ export async function salvarCustoIndiretoPredefinido(descricao, idx, parametrosO
         descricao, 
         valorMensal: val, 
         valorPorHora: val / maoDeObra.horas,
-        parametros: finalParams // Salva os dados técnicos (Watts, Horas, etc.)
+        parametros: finalParams 
     };
     
     if(arrIdx !== -1) custosIndiretosPredefinidos[arrIdx] = item;
@@ -525,7 +560,6 @@ export async function salvarCustoIndiretoPredefinido(descricao, idx, parametrosO
     try {
         await setDoc(doc(db, "custos-indiretos-predefinidos", descricao), item);
         atualizarTabelaCustosIndiretos();
-        // Não alerta se for zeramento automático ou chamada interna da calculadora
         if(idx !== -1 && !parametrosOpcionais) alert("Custo salvo!"); 
     } catch(e) {
         console.error(e);
@@ -588,7 +622,7 @@ export async function zerarCustoIndireto(descricao, idOpcional) {
     if (idOpcional && idOpcional !== 'undefined' && idOpcional !== undefined) {
         await removerCustoIndiretoAdicional(idOpcional);
     } else {
-        const item = { descricao, valorMensal: 0, valorPorHora: 0, parametros: null }; // Reseta parâmetros também
+        const item = { descricao, valorMensal: 0, valorPorHora: 0, parametros: null };
         const arrIdx = custosIndiretosPredefinidos.findIndex(c => c.descricao === descricao);
         if(arrIdx !== -1) custosIndiretosPredefinidos[arrIdx] = item;
         
@@ -649,17 +683,14 @@ window.abrirCalculadoraCustos = function(descricao, index) {
     inputDestinoAtualId = `ci-pref-${index}`;
     indexDestinoAtual = index;
     
-    // Prioridade 2: Buscar parâmetros salvos para preencher
     const itemSalvo = custosIndiretosPredefinidos.find(c => c.descricao === descricao);
     const paramsSalvos = itemSalvo ? itemSalvo.parametros : {};
 
-    // Configurar título e corpo
     document.getElementById('titulo-calculadora').innerText = config.titulo;
     const form = document.getElementById('form-calculadora-dinamica');
     form.innerHTML = ''; 
 
     config.campos.forEach(campo => {
-        // Prioridade de valor: Parâmetro Salvo > Valor Padrão da Config > Vazio
         const valorInicial = paramsSalvos && paramsSalvos[campo.id] !== undefined 
             ? paramsSalvos[campo.id] 
             : (campo.value !== undefined ? campo.value : '');
@@ -674,21 +705,17 @@ window.abrirCalculadoraCustos = function(descricao, index) {
         form.appendChild(div);
     });
 
-    // Resetar prévia ou calcular se já tiver dados
     if (paramsSalvos && Object.keys(paramsSalvos).length > 0) {
         window.recalcularPrevia(descricao);
     } else {
         document.querySelector('#resultado-previo-calc strong').innerText = 'R$ 0,00';
     }
     
-    // Exibir Modal
     const modal = document.getElementById('modal-calculadora-custos');
     if(modal) modal.style.display = 'flex';
     
-    // Configurar botão de confirmação
     const btnConfirm = document.getElementById('btn-confirmar-calculo');
     if(btnConfirm) {
-        // Remove listeners antigos clonando o nó (solução rápida para evitar múltiplos binds)
         const newBtn = btnConfirm.cloneNode(true);
         btnConfirm.parentNode.replaceChild(newBtn, btnConfirm);
         newBtn.onclick = () => aplicarCalculo(descricao);
@@ -712,22 +739,18 @@ function aplicarCalculo(descricao) {
     const config = calculadorasConfig[descricao];
     const valoresParametros = {};
     
-    // Captura os valores dos inputs da calculadora
     config.campos.forEach(c => {
         const val = parseFloat(document.getElementById(`calc-${c.id}`).value);
         valoresParametros[c.id] = isNaN(val) ? 0 : val;
     });
 
-    // Calcula o valor final
     const resultadoFinal = config.calcular(valoresParametros);
 
-    // Injeta no input original da lista visual
     const inputAlvo = document.getElementById(inputDestinoAtualId);
     if(inputAlvo) {
         inputAlvo.value = resultadoFinal.toFixed(2);
     }
 
-    // Salva no Firestore: Valor + Parâmetros (Prioridade 2)
     salvarCustoIndiretoPredefinido(descricao, indexDestinoAtual, valoresParametros);
 
     window.fecharCalculadoraCustos();
