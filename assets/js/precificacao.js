@@ -156,6 +156,12 @@ function setupEventListeners() {
     // --- Listeners Locais (Produtos e Cálculo) ---
     bindClick('#cadastrar-produto-btn', cadastrarProduto);
     
+    // [NOVO] Listener para Validação em Tempo Real (Duplicidade)
+    const inputNomeProd = document.getElementById('nome-produto');
+    if(inputNomeProd) {
+        inputNomeProd.addEventListener('input', verificarDuplicidadeTempoReal);
+    }
+
     const inputMat = document.getElementById('pesquisa-material');
     if(inputMat) inputMat.addEventListener('input', buscarMateriaisAutocomplete);
 
@@ -263,9 +269,57 @@ function converterMoeda(str) {
     return parseFloat(str.replace('R$','').replace(/\s/g,'').replace(/\./g,'').replace(',','.')) || 0;
 }
 
+// [NOVO] Função Helper para Normalização de Texto (Title Case)
+function normalizarTexto(texto) {
+    if (!texto) return "";
+    return texto
+        .toLowerCase()
+        .split(' ')
+        .map(palavra => palavra.charAt(0).toUpperCase() + palavra.slice(1))
+        .join(' ');
+}
+
 // ==========================================================================
 // 6. LÓGICA DE PRODUTOS (CRUD e Montagem)
 // ==========================================================================
+
+// [NOVO] Feedback Visual em Tempo Real
+function verificarDuplicidadeTempoReal(e) {
+    const input = e.target;
+    const nomeDigitado = input.value.trim().toLowerCase();
+    
+    // Cria ou seleciona o elemento de aviso
+    let avisoEl = document.getElementById('aviso-duplicidade-cadastro-prod');
+    if (!avisoEl) {
+        avisoEl = document.createElement('small');
+        avisoEl.id = 'aviso-duplicidade-cadastro-prod';
+        avisoEl.style.color = '#d32f2f'; // Vermelho erro
+        avisoEl.style.fontWeight = 'bold';
+        avisoEl.style.display = 'none';
+        avisoEl.style.marginTop = '5px';
+        input.parentNode.insertBefore(avisoEl, input.nextSibling);
+    }
+
+    if (!nomeDigitado) {
+        avisoEl.style.display = 'none';
+        input.style.borderColor = '#ccc';
+        return;
+    }
+
+    const existe = produtos.some(p => {
+        if (produtoEmEdicao && p.id === produtoEmEdicao.id) return false;
+        return p.nome.trim().toLowerCase() === nomeDigitado;
+    });
+
+    if (existe) {
+        avisoEl.textContent = '⚠️ Este produto já está cadastrado.';
+        avisoEl.style.display = 'block';
+        input.style.borderColor = '#d32f2f';
+    } else {
+        avisoEl.style.display = 'none';
+        input.style.borderColor = '#4CAF50'; // Verde ok
+    }
+}
 
 async function atualizarCustosProdutosPorMaterial(material) {
     console.log(`Atualizando produtos que usam: ${material.nome}`);
@@ -393,8 +447,29 @@ function recalcularLinhaProduto(row, mat) {
 }
 
 async function cadastrarProduto() {
-    const nome = document.getElementById('nome-produto').value;
-    if(!nome) return alert("Nome obrigatório");
+    const inputNome = document.getElementById('nome-produto');
+    const nomeBruto = inputNome.value;
+    
+    if(!nomeBruto) return alert("Nome obrigatório");
+
+    // [NOVO] Normalização de Dados (Title Case)
+    const nomeNormalizado = normalizarTexto(nomeBruto);
+
+    // [NOVO] Bloqueio de Duplicidade (Blindagem)
+    const nomeParaComparacao = nomeNormalizado.toLowerCase();
+    const existeDuplicata = produtos.some(p => {
+        // Se estiver editando, ignora a si mesmo
+        if (produtoEmEdicao && p.id === produtoEmEdicao.id) return false;
+        
+        return p.nome.trim().toLowerCase() === nomeParaComparacao;
+    });
+
+    if (existeDuplicata) {
+        alert(`Impossível salvar: O produto "${nomeNormalizado}" já existe.\nPor favor, utilize um nome diferente ou edite o existente.`);
+        // Re-aciona visualmente o erro caso o alert seja fechado
+        inputNome.style.borderColor = '#d32f2f';
+        return;
+    }
 
     const materiaisList = [];
     let custoTotal = 0;
@@ -431,7 +506,8 @@ async function cadastrarProduto() {
         custoTotal += custoItem;
     });
 
-    const prodData = { nome, materiais: materiaisList, custoTotal };
+    // Usa o nome normalizado no objeto final
+    const prodData = { nome: nomeNormalizado, materiais: materiaisList, custoTotal };
 
     try {
         if(produtoEmEdicao) {
@@ -446,9 +522,15 @@ async function cadastrarProduto() {
             produtos.push(prodData);
         }
         
-        alert("Produto Salvo!");
+        alert("Produto Salvo com Sucesso!");
         document.getElementById('form-produtos-cadastrados').reset();
         document.querySelector('#tabela-materiais-produto tbody').innerHTML = '';
+        
+        // Limpa estado de erro visual
+        const avisoEl = document.getElementById('aviso-duplicidade-cadastro-prod');
+        if(avisoEl) avisoEl.style.display = 'none';
+        inputNome.style.borderColor = '#ccc';
+
         atualizarTabelaProdutosCadastrados();
 
     } catch (e) { console.error(e); alert("Erro ao salvar produto"); }
@@ -459,7 +541,10 @@ function atualizarTabelaProdutosCadastrados() {
     if(!tbody) return;
     tbody.innerHTML = '';
     
-    produtos.forEach(p => {
+    // Ordena alfabeticamente para facilitar leitura
+    const produtosOrdenados = [...produtos].sort((a,b) => a.nome.localeCompare(b.nome));
+
+    produtosOrdenados.forEach(p => {
         const row = tbody.insertRow();
         row.innerHTML = `
             <td>${p.nome}</td>
