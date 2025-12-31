@@ -6,6 +6,16 @@
  */
 const changeLogData = [
     {
+        version: "1.2.2",
+        date: "31/12/2025",
+        changes: [
+            "🔍 **Busca Inteligente:** Implementada barra de pesquisa instantânea nos módulos de 'Orçamentos' e 'Pedidos'. Agora é possível filtrar por Nome do Cliente, Número ou Data em tempo real.",
+            "📄 **Paginação Automática:** Adeus rolagem infinita! As listas agora são organizadas em páginas (10 itens por vez) com navegação 'Anterior/Próximo', melhorando a performance e organização visual.",
+            "🧹 **Limpeza de Interface:** Remoção dos botões manuais de 'Atualizar Lista', tornando o layout mais limpo e a experiência mais fluida.",
+            "⚡ **Otimização de Renderização:** O sistema agora processa grandes volumes de dados de forma fatiada, evitando travamentos em dispositivos móveis."
+        ]
+    },
+    {
         version: "1.1.1",
         date: "29/12/2025",
         changes: [
