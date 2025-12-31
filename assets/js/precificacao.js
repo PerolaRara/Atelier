@@ -27,7 +27,10 @@ import {
     
     // Configuração e Helpers
     setOnMaterialUpdateCallback,
-    getUnidadeSigla
+    getUnidadeSigla,
+    
+    // [NOVO] Importação do inicializador de listeners de materiais (Prioridade 1/2)
+    initListenersMateriais
 } from './precificacao-insumos.js';
 
 // 3. VARIÁVEIS DE ESTADO LOCAIS (Produtos e Histórico)
@@ -39,6 +42,11 @@ let moduleInitialized = false;
 let searchIndex = -1; // Controle da navegação por teclado na busca
 let margemLucroPadrao = 50;
 
+// [NOVO] Variáveis de Paginação e Busca de Produtos
+let pagAtualProd = 1;
+const ITENS_POR_PAGINA = 10;
+let termoBuscaProd = "";
+
 // ==========================================================================
 // 4. INICIALIZAÇÃO E CARREGAMENTO
 // ==========================================================================
@@ -46,7 +54,7 @@ export async function initPrecificacao() {
     console.log("Inicializando Módulo Precificação (Modularizado)...");
     
     // EXPOR FUNÇÕES AO ESCOPO GLOBAL (WINDOW)
-    window.buscarProdutosCadastrados = buscarProdutosCadastrados;
+    // Nota: 'buscarProdutosCadastrados' foi removido pois agora usamos o listener com debounce
     window.editarProduto = editarProduto;
     window.removerProduto = removerProduto;
     
@@ -86,7 +94,7 @@ async function carregarDadosCompletos() {
         precificacoesGeradas = [];
         precSnap.forEach(d => precificacoesGeradas.push({id: d.id, ...d.data()}));
 
-        // D. Atualizar UI
+        // D. Atualizar UI (Agora com paginação)
         atualizarTabelaProdutosCadastrados();
         atualizarTabelaPrecificacoesGeradas();
         
@@ -114,12 +122,13 @@ async function carregarDadosCompletos() {
 // 5. EVENT LISTENERS E NAVEGAÇÃO
 // ==========================================================================
 
-function debounce(func, wait) {
-    let timeout;
+// [NOVO] Função Helper Debounce
+function debounce(func, timeout = 300) {
+    let timer;
     return function(...args) {
         const context = this;
-        clearTimeout(timeout);
-        timeout = setTimeout(() => func.apply(context, args), wait);
+        clearTimeout(timer);
+        timer = setTimeout(() => func.apply(context, args), timeout);
     };
 }
 
@@ -132,8 +141,13 @@ function setupEventListeners() {
         });
     });
 
-    // --- Listeners para o Módulo de Insumos (Delegados) ---
+    // --- Listeners para o Módulo de Insumos (Delegados e Inicialização) ---
     bindClick('#cadastrar-material-insumo-btn', cadastrarMaterialInsumo);
+    
+    // [NOVO] Inicializa os listeners de busca/paginação de Materiais (definidos no outro arquivo)
+    if (typeof initListenersMateriais === 'function') {
+        initListenersMateriais();
+    }
     
     document.querySelectorAll('input[name="tipo-material"]').forEach(radio => {
         radio.addEventListener('change', function() { toggleCamposMaterial(this.value); });
@@ -156,6 +170,16 @@ function setupEventListeners() {
     // --- Listeners Locais (Produtos e Cálculo) ---
     bindClick('#cadastrar-produto-btn', cadastrarProduto);
     
+    // [NOVO] Listener para Busca de Produtos (Lista) com Debounce e Paginação
+    const inputBuscaProd = document.getElementById('busca-produto-lista');
+    if(inputBuscaProd) {
+        inputBuscaProd.addEventListener('input', debounce((e) => {
+            termoBuscaProd = e.target.value;
+            pagAtualProd = 1; // Reseta para primeira página ao buscar
+            atualizarTabelaProdutosCadastrados();
+        }));
+    }
+
     // [NOVO] Listener para Validação em Tempo Real (Duplicidade)
     const inputNomeProd = document.getElementById('nome-produto');
     if(inputNomeProd) {
@@ -536,36 +560,64 @@ async function cadastrarProduto() {
     } catch (e) { console.error(e); alert("Erro ao salvar produto"); }
 }
 
+// [ATUALIZADO] Função de Renderização da Tabela de Produtos (Com Paginação e Filtro)
 function atualizarTabelaProdutosCadastrados() {
     const tbody = document.querySelector('#tabela-produtos tbody');
+    const btnAnt = document.getElementById("btn-ant-prod");
+    const btnProx = document.getElementById("btn-prox-prod");
+    const infoPag = document.getElementById("info-pag-prod");
+
     if(!tbody) return;
     tbody.innerHTML = '';
     
-    // Ordena alfabeticamente para facilitar leitura
-    const produtosOrdenados = [...produtos].sort((a,b) => a.nome.localeCompare(b.nome));
+    // 1. Filtragem (Busca) e Ordenação
+    const termo = termoBuscaProd.trim().toLowerCase();
+    const filtrados = produtos.filter(p => p.nome.toLowerCase().includes(termo));
+    filtrados.sort((a,b) => a.nome.localeCompare(b.nome));
 
-    produtosOrdenados.forEach(p => {
-        const row = tbody.insertRow();
-        row.innerHTML = `
-            <td>${p.nome}</td>
-            <td><ul>${p.materiais.map(m => `<li>${m.material.nome} (${m.quantidade})</li>`).join('')}</ul></td>
-            <td>-</td>
-            <td>${formatarMoeda(p.custoTotal)}</td>
-            <td>
-                <button class="btn-editar-prod" onclick="editarProduto('${p.id}')">Editar</button>
-                <button class="btn-remover-prod" onclick="removerProduto('${p.id}')">Remover</button>
-            </td>
-        `;
-    });
+    // 2. Paginação
+    const totalPaginas = Math.ceil(filtrados.length / ITENS_POR_PAGINA) || 1;
+    if (pagAtualProd > totalPaginas) pagAtualProd = totalPaginas;
+    if (pagAtualProd < 1) pagAtualProd = 1;
+
+    const inicio = (pagAtualProd - 1) * ITENS_POR_PAGINA;
+    const fim = inicio + ITENS_POR_PAGINA;
+    const itensPagina = filtrados.slice(inicio, fim);
+
+    // 3. Renderização
+    if (itensPagina.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Nenhum produto encontrado.</td></tr>';
+    } else {
+        itensPagina.forEach(p => {
+            const row = tbody.insertRow();
+            row.innerHTML = `
+                <td>${p.nome}</td>
+                <td><ul>${p.materiais.map(m => `<li>${m.material.nome} (${m.quantidade})</li>`).join('')}</ul></td>
+                <td>-</td>
+                <td>${formatarMoeda(p.custoTotal)}</td>
+                <td>
+                    <button class="btn-editar-prod" onclick="editarProduto('${p.id}')">Editar</button>
+                    <button class="btn-remover-prod" onclick="removerProduto('${p.id}')">Remover</button>
+                </td>
+            `;
+        });
+    }
+
+    // 4. Atualizar Controles de Paginação
+    if (infoPag) infoPag.textContent = `Página ${pagAtualProd} de ${totalPaginas}`;
+    if (btnAnt) {
+        btnAnt.disabled = (pagAtualProd === 1);
+        // Atualiza o listener para usar a função local
+        btnAnt.onclick = () => { if(pagAtualProd > 1) { pagAtualProd--; atualizarTabelaProdutosCadastrados(); } };
+    }
+    if (btnProx) {
+        btnProx.disabled = (pagAtualProd === totalPaginas);
+        // Atualiza o listener para usar a função local
+        btnProx.onclick = () => { if(pagAtualProd < totalPaginas) { pagAtualProd++; atualizarTabelaProdutosCadastrados(); } };
+    }
 }
 
-function buscarProdutosCadastrados() {
-    const termo = document.getElementById('busca-produto').value.toLowerCase();
-    const rows = document.querySelectorAll('#tabela-produtos tbody tr');
-    rows.forEach(r => {
-        r.style.display = r.innerText.toLowerCase().includes(termo) ? '' : 'none';
-    });
-}
+// Nota: A função 'buscarProdutosCadastrados' antiga foi removida pois agora usamos 'atualizarTabelaProdutosCadastrados' com filtro
 
 function editarProduto(id) {
     const prod = produtos.find(p => p.id === id);
