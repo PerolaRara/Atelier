@@ -37,6 +37,20 @@ let onMaterialUpdateCallback = null;
 let inputDestinoAtualId = null; // Para saber qual input atualizar após o cálculo
 let indexDestinoAtual = null;   // Para saber qual item salvar
 
+// Variáveis de Paginação e Busca (Materiais)
+let pagAtualMat = 1;
+const ITENS_POR_PAGINA = 10;
+let termoBuscaMat = "";
+
+// Função Debounce (Utilitário local)
+function debounce(func, timeout = 300) {
+    let timer;
+    return (...args) => {
+        clearTimeout(timer);
+        timer = setTimeout(() => { func.apply(this, args); }, timeout);
+    };
+}
+
 // ==========================================
 // CONFIGURAÇÃO DAS CALCULADORAS (ASSISTENTE)
 // ==========================================
@@ -163,36 +177,84 @@ export async function carregarMateriais() {
     }
 }
 
+// ATUALIZADO: Função com suporte a Paginação e Busca
 export function atualizarTabelaMateriaisInsumos() {
     const tbody = document.querySelector('#tabela-materiais-insumos tbody');
+    const btnAnt = document.getElementById("btn-ant-mat");
+    const btnProx = document.getElementById("btn-prox-mat");
+    const infoPag = document.getElementById("info-pag-mat");
+
     if(!tbody) return;
     tbody.innerHTML = '';
 
-    materiais.forEach(m => {
-        // PRIORIDADE 3: Arquivamento
-        // Não exibe materiais arquivados (ativo === false) na lista principal
-        if (m.ativo === false) return;
-
-        const row = tbody.insertRow();
-        
-        let detalhes = "-";
-        if (m.tipo === 'comprimento') detalhes = `${m.comprimentoCm} cm`;
-        else if (m.tipo === 'litro') detalhes = `${m.volumeMl} ml`;
-        else if (m.tipo === 'quilo') detalhes = `${m.pesoG} g`;
-        else if (m.tipo === 'area') detalhes = `${m.larguraCm}x${m.alturaCm} cm`;
-
-        row.innerHTML = `
-            <td>${m.nome}</td>
-            <td>${m.tipo}</td>
-            <td>${detalhes}</td>
-            <td>${formatarMoeda(m.valorTotal)}</td>
-            <td>${formatarMoeda(m.custoUnitario)} / ${getUnidadeSigla(m.tipo)}</td>
-            <td>
-                <button class="btn-editar-mat" onclick="editarMaterialInsumo('${m.id}')">Editar</button>
-                <button class="btn-remover-mat" onclick="removerMaterialInsumo('${m.id}')">Remover</button>
-            </td>
-        `;
+    // 1. Filtragem
+    const termo = termoBuscaMat.trim().toLowerCase();
+    const filtrados = materiais.filter(m => {
+        if (m.ativo === false) return false; // Ignora arquivados
+        if (!termo) return true;
+        return m.nome.toLowerCase().includes(termo);
     });
+
+    // 2. Ordenação (Alfabética)
+    filtrados.sort((a,b) => a.nome.localeCompare(b.nome));
+
+    // 3. Paginação
+    const totalPaginas = Math.ceil(filtrados.length / ITENS_POR_PAGINA) || 1;
+    if (pagAtualMat > totalPaginas) pagAtualMat = totalPaginas;
+    if (pagAtualMat < 1) pagAtualMat = 1;
+
+    const inicio = (pagAtualMat - 1) * ITENS_POR_PAGINA;
+    const fim = inicio + ITENS_POR_PAGINA;
+    const itensPagina = filtrados.slice(inicio, fim);
+
+    // 4. Renderização
+    if (itensPagina.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Nenhum material encontrado.</td></tr>';
+    } else {
+        itensPagina.forEach(m => {
+            const row = tbody.insertRow();
+            let detalhes = "-";
+            if (m.tipo === 'comprimento') detalhes = `${m.comprimentoCm} cm`;
+            else if (m.tipo === 'litro') detalhes = `${m.volumeMl} ml`;
+            else if (m.tipo === 'quilo') detalhes = `${m.pesoG} g`;
+            else if (m.tipo === 'area') detalhes = `${m.larguraCm}x${m.alturaCm} cm`;
+
+            row.innerHTML = `
+                <td>${m.nome}</td>
+                <td>${m.tipo}</td>
+                <td>${detalhes}</td>
+                <td>${formatarMoeda(m.valorTotal)}</td>
+                <td>${formatarMoeda(m.custoUnitario)} / ${getUnidadeSigla(m.tipo)}</td>
+                <td>
+                    <button class="btn-editar-mat" onclick="editarMaterialInsumo('${m.id}')">Editar</button>
+                    <button class="btn-remover-mat" onclick="removerMaterialInsumo('${m.id}')">Remover</button>
+                </td>
+            `;
+        });
+    }
+
+    // 5. Atualizar Controles
+    if (infoPag) infoPag.textContent = `Página ${pagAtualMat} de ${totalPaginas}`;
+    if (btnAnt) {
+        btnAnt.disabled = (pagAtualMat === 1);
+        btnAnt.onclick = () => { if(pagAtualMat > 1) { pagAtualMat--; atualizarTabelaMateriaisInsumos(); } };
+    }
+    if (btnProx) {
+        btnProx.disabled = (pagAtualMat === totalPaginas);
+        btnProx.onclick = () => { if(pagAtualMat < totalPaginas) { pagAtualMat++; atualizarTabelaMateriaisInsumos(); } };
+    }
+}
+
+// NOVO: Inicialização dos Listeners de Busca (Chamado pelo precificacao.js)
+export function initListenersMateriais() {
+    const inputBusca = document.getElementById('busca-material');
+    if(inputBusca) {
+        inputBusca.addEventListener('input', debounce((e) => {
+            termoBuscaMat = e.target.value;
+            pagAtualMat = 1; // Reseta para pág 1 na busca
+            atualizarTabelaMateriaisInsumos();
+        }));
+    }
 }
 
 export function toggleCamposMaterial(tipo) {
@@ -334,15 +396,8 @@ export async function removerMaterialInsumo(id) {
 }
 
 export function buscarMateriaisCadastrados() {
-    const buscaEl = document.getElementById('busca-material');
-    if(!buscaEl) return;
-    
-    const termo = buscaEl.value.toLowerCase();
-    const rows = document.querySelectorAll('#tabela-materiais-insumos tbody tr');
-    rows.forEach(row => {
-        const text = row.innerText.toLowerCase();
-        row.style.display = text.includes(termo) ? '' : 'none';
-    });
+    // Depreciado: substituído pelo listener de debounce
+    // Mantido vazio para compatibilidade se algo ainda chamar
 }
 
 // ==========================================
