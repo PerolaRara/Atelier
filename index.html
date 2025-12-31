@@ -495,8 +495,12 @@
                     <button type="button" id="cadastrar-material-insumo-btn">Cadastrar Material</button>
                 </form>
                 
-                <div class="form-group">
-                    <input type="text" id="busca-material" placeholder="Filtrar cadastrados..." onkeyup="buscarMateriaisCadastrados()">
+                <!-- ADICIONADO: Linha Separadora Harmônica -->
+                <hr class="menu">
+
+                <!-- ATUALIZADO: Barra de Busca Estilizada -->
+                <div class="search-container">
+                    <input type="text" id="busca-material" placeholder="🔍 Buscar Material..." class="search-input">
                 </div>
                 
                 <div class="table-responsive">
@@ -504,6 +508,13 @@
                         <thead><tr><th>Nome</th><th>Tipo</th><th>Medida</th><th>Custo Loja</th><th>Custo Unit.</th><th>Ações</th></tr></thead>
                         <tbody></tbody>
                     </table>
+                </div>
+
+                <!-- ADICIONADO: Controles de Paginação -->
+                <div class="pagination-controls">
+                    <button id="btn-ant-mat" class="btn-paginacao">❮ Anterior</button>
+                    <span id="info-pag-mat">Página 1</span>
+                    <button id="btn-prox-mat" class="btn-paginacao">Próximo ❯</button>
                 </div>
             </div>
 
@@ -585,13 +596,28 @@
                     <button type="button" id="cadastrar-produto-btn">Cadastrar Produto</button>
                 </form>
 
+                <!-- ADICIONADO: Linha Separadora Harmônica -->
+                <hr class="menu">
+
                 <h2>Produtos Cadastrados</h2>
-                <input type="text" id="busca-produto" placeholder="Buscar produto..." onkeyup="buscarProdutosCadastrados()">
+
+                <!-- ATUALIZADO: Barra de Busca Estilizada -->
+                <div class="search-container">
+                    <input type="text" id="busca-produto-lista" placeholder="🔍 Buscar Produto..." class="search-input">
+                </div>
+
                 <div class="table-responsive">
                     <table id="tabela-produtos" class="tabela-gerada">
                         <thead><tr><th>Nome</th><th>Itens</th><th>-</th><th>Custo Total</th><th>Ação</th></tr></thead>
                         <tbody></tbody>
                     </table>
+                </div>
+
+                <!-- ADICIONADO: Controles de Paginação -->
+                <div class="pagination-controls">
+                    <button id="btn-ant-prod" class="btn-paginacao">❮ Anterior</button>
+                    <span id="info-pag-prod">Página 1</span>
+                    <button id="btn-prox-prod" class="btn-paginacao">Próximo ❯</button>
                 </div>
             </div>
 
