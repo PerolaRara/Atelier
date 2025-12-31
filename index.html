@@ -133,9 +133,7 @@
         
         <div class="container mobile-container">
             <header class="module-header-styled">
-                 <!-- INÍCIO DA ALTERAÇÃO (PRIORIDADE 1 - VISUAL) -->
                  <img src="assets/images/logo_perola_rara.png" class="module-logo-small" alt="Logo">
-                 <!-- FIM DA ALTERAÇÃO -->
                  <h1 class="module-title-main">Gestão de Pedidos</h1>
                  
                  <nav class="nav-lined">
@@ -207,24 +205,48 @@
                 <!-- LISTA DE ORÇAMENTOS GERADOS -->
                 <section id="orcamentos-gerados" class="pagina" style="display: none;">
                     <h2 class="section-title-lined">Orçamentos Gerados</h2>
-                    <button onclick="filtrarOrcamentos()">Atualizar Lista</button>
+                    
+                    <!-- Barra de Busca (NOVO) -->
+                    <div class="search-container">
+                        <input type="text" id="busca-orcamentos" placeholder="🔍 Buscar por Cliente, Número ou Data..." class="search-input">
+                    </div>
+
                     <div class="table-responsive">
                         <table id="tabela-orcamentos">
                             <thead><tr><th>Nº</th><th>Data</th><th>Cliente</th><th>Total</th><th>Pedido?</th><th>Ações</th></tr></thead>
                             <tbody></tbody>
                         </table>
                     </div>
+
+                    <!-- Controles de Paginação (NOVO) -->
+                    <div class="pagination-controls">
+                        <button id="btn-ant-orc" class="btn-paginacao">❮ Anterior</button>
+                        <span id="info-pag-orc">Página 1</span>
+                        <button id="btn-prox-orc" class="btn-paginacao">Próximo ❯</button>
+                    </div>
                 </section>
 
                 <!-- LISTA DE PEDIDOS REALIZADOS -->
                 <section id="lista-pedidos" class="pagina" style="display: none;">
                     <h2 class="section-title-lined">Pedidos Realizados</h2>
-                    <button onclick="filtrarPedidos()">Atualizar Lista</button>
+                    
+                    <!-- Barra de Busca (NOVO) -->
+                    <div class="search-container">
+                        <input type="text" id="busca-pedidos" placeholder="🔍 Buscar por Cliente, Número ou Data..." class="search-input">
+                    </div>
+
                     <div class="table-responsive">
                         <table id="tabela-pedidos">
                             <thead><tr><th>Nº</th><th>Data</th><th>Cliente</th><th>Total</th><th>Ações</th></tr></thead>
                             <tbody></tbody>
                         </table>
+                    </div>
+
+                    <!-- Controles de Paginação (NOVO) -->
+                    <div class="pagination-controls">
+                        <button id="btn-ant-ped" class="btn-paginacao">❮ Anterior</button>
+                        <span id="info-pag-ped">Página 1</span>
+                        <button id="btn-prox-ped" class="btn-paginacao">Próximo ❯</button>
                     </div>
                 </section>
                 
