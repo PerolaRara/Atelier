@@ -6,7 +6,7 @@ import { collection, addDoc, getDocs, doc, setDoc, query, orderBy } from "https:
 // Referências
 const orcamentosPedidosRef = collection(db, "Orcamento-Pedido");
 
-// Variáveis de Estado
+// Variáveis de Estado (Dados)
 let numeroOrcamento = 1;
 let numeroPedido = 1;
 const anoAtual = new Date().getFullYear();
@@ -16,13 +16,20 @@ let orcamentos = [];
 let pedidos = [];
 let moduleInitialized = false;
 
+// Variáveis de Estado (Paginação e Busca) - NOVAS
+const ITENS_POR_PAGINA = 10;
+let pagAtualOrc = 1;
+let pagAtualPed = 1;
+let termoBuscaOrc = "";
+let termoBuscaPed = "";
+
 // ==========================================================================
 // 1. INICIALIZAÇÃO
 // ==========================================================================
 export async function initOrcamentos() {
     console.log("Inicializando Módulo Orçamentos...");
     
-    // EXPOR FUNÇÕES PARA O HTML (Correção do erro "Not Defined")
+    // EXPOR FUNÇÕES PARA O HTML
     window.excluirProduto = excluirProduto;
     window.excluirProdutoEdicao = excluirProdutoEdicao;
     window.formatarEntradaMoeda = formatarEntradaMoeda;
@@ -33,7 +40,7 @@ export async function initOrcamentos() {
     window.gerarPedido = gerarPedido;
     window.editarPedido = editarPedido;
     window.imprimirChecklist = imprimirChecklist;
-    window.gerarRelatorioFinanceiro = gerarRelatorioFinanceiro; // Nova lógica vinculada aqui
+    window.gerarRelatorioFinanceiro = gerarRelatorioFinanceiro;
 
     // Carregar dados do banco
     await carregarDados();
@@ -71,6 +78,7 @@ async function carregarDados() {
     try {
         orcamentos = [];
         pedidos = [];
+        // Trazemos ordenado por número para facilitar, mas a ordenação final será na memória
         const q = query(orcamentosPedidosRef, orderBy("numero"));
         const snapshot = await getDocs(q);
 
@@ -90,6 +98,7 @@ async function carregarDados() {
         });
         
         console.log(`Orçamentos: ${orcamentos.length}, Pedidos: ${pedidos.length}`);
+        // Renderiza as tabelas com paginação inicial
         mostrarOrcamentosGerados();
         mostrarPedidosRealizados();
 
@@ -118,8 +127,17 @@ async function salvarDados(dados, tipo) {
 }
 
 // ==========================================================================
-// 3. EVENT LISTENERS E NAVEGAÇÃO
+// 3. EVENT LISTENERS, UTILS E NAVEGAÇÃO
 // ==========================================================================
+
+// Função Debounce (Melhoria UX - Prioridade 3)
+function debounce(func, timeout = 300) {
+    let timer;
+    return (...args) => {
+        clearTimeout(timer);
+        timer = setTimeout(() => { func.apply(this, args); }, timeout);
+    };
+}
 
 function setupEventListeners() {
     // Abas
@@ -130,17 +148,58 @@ function setupEventListeners() {
         });
     });
 
-    // Botões Principais
+    // Botões Principais de Ação
     bindClick('#btnAddProdutoOrcamento', adicionarProduto);
     bindClick('#btnGerarOrcamento', gerarOrcamento);
     bindClick('#btnAtualizarOrcamento', atualizarOrcamento);
     bindClick('#btnAddProdutoEdicao', adicionarProdutoEdicao);
     bindClick('#btnSalvarPedidoEdicao', atualizarPedido);
 
-    // Filtros e Relatórios
-    bindClick('#orcamentos-gerados button', filtrarOrcamentos);
-    bindClick('#lista-pedidos button', filtrarPedidos);
+    // --- NOVOS LISTENERS: Busca e Paginação (Prioridade 1) ---
     
+    // 1. Orçamentos
+    const inputBuscaOrc = document.getElementById('busca-orcamentos');
+    if(inputBuscaOrc) {
+        // Aplica Debounce na busca
+        inputBuscaOrc.addEventListener('input', debounce((e) => {
+            termoBuscaOrc = e.target.value.toLowerCase();
+            pagAtualOrc = 1; // Reseta para a primeira página ao buscar
+            mostrarOrcamentosGerados();
+        }));
+    }
+    bindClick('#btn-ant-orc', () => { 
+        if(pagAtualOrc > 1) { 
+            pagAtualOrc--; 
+            mostrarOrcamentosGerados(); 
+        } 
+    });
+    bindClick('#btn-prox-orc', () => { 
+        pagAtualOrc++; 
+        mostrarOrcamentosGerados(); 
+    });
+
+    // 2. Pedidos
+    const inputBuscaPed = document.getElementById('busca-pedidos');
+    if(inputBuscaPed) {
+        // Aplica Debounce na busca
+        inputBuscaPed.addEventListener('input', debounce((e) => {
+            termoBuscaPed = e.target.value.toLowerCase();
+            pagAtualPed = 1; // Reseta para a primeira página ao buscar
+            mostrarPedidosRealizados();
+        }));
+    }
+    bindClick('#btn-ant-ped', () => { 
+        if(pagAtualPed > 1) { 
+            pagAtualPed--; 
+            mostrarPedidosRealizados(); 
+        } 
+    });
+    bindClick('#btn-prox-ped', () => { 
+        pagAtualPed++; 
+        mostrarPedidosRealizados(); 
+    });
+
+    // Filtros e Relatórios (Botão de Atualizar Lista antigo foi removido - Prioridade 2)
     const btnXLSX = document.querySelector('#relatorio button[onclick="gerarRelatorioXLSX()"]');
     if(btnXLSX) btnXLSX.onclick = gerarRelatorioXLSX;
 
@@ -169,13 +228,14 @@ function mostrarPagina(idPagina) {
     const target = document.getElementById(idPagina);
     if(target) {
         target.style.display = 'block';
+        // Recarrega as tabelas ao entrar na aba para garantir dados frescos
         if(idPagina === 'orcamentos-gerados') mostrarOrcamentosGerados();
         if(idPagina === 'lista-pedidos') mostrarPedidosRealizados();
     }
 }
 
 // ==========================================================================
-// 4. FUNÇÕES AUXILIARES
+// 4. FUNÇÕES AUXILIARES DE FORMATAÇÃO
 // ==========================================================================
 
 function formatarMoeda(valor) {
@@ -343,50 +403,99 @@ async function atualizarOrcamento() {
     mostrarPagina('orcamentos-gerados');
 }
 
-// LISTAGENS
+// ==========================================================================
+// 6. LISTAGEM COM FILTRO E PAGINAÇÃO (REESCRITA COMPLETA)
+// ==========================================================================
+
 function mostrarOrcamentosGerados() {
     const tbody = document.querySelector("#tabela-orcamentos tbody");
+    const btnAnt = document.getElementById("btn-ant-orc");
+    const btnProx = document.getElementById("btn-prox-orc");
+    const infoPag = document.getElementById("info-pag-orc");
+    
     if(!tbody) return;
     tbody.innerHTML = '';
 
-    orcamentos.forEach(orc => {
-        const row = tbody.insertRow();
-        row.innerHTML = `
-            <td>${orc.numero}</td>
-            <td>${orc.dataOrcamento ? orc.dataOrcamento.split('-').reverse().join('/') : '-'}</td>
-            <td>${orc.cliente}</td>
-            <td>${formatarMoeda(orc.total)}</td>
-            <td>${orc.pedidoGerado ? orc.numeroPedido : 'Não'}</td>
-            <td></td>
-        `;
+    // 1. Filtragem (Busca)
+    const termo = termoBuscaOrc.trim();
+    const filtrados = orcamentos.filter(orc => {
+        if (!termo) return true;
         
-        const cellAcoes = row.cells[5];
+        const dataFormatada = orc.dataOrcamento ? orc.dataOrcamento.split('-').reverse().join('/') : '';
+        const matchCliente = orc.cliente.toLowerCase().includes(termo);
+        const matchNumero = orc.numero.toLowerCase().includes(termo);
+        const matchData = dataFormatada.includes(termo);
         
-        // Botão Imprimir
-        const btnImprimir = document.createElement('button');
-        btnImprimir.textContent = "Imprimir";
-        btnImprimir.style.marginRight = "5px";
-        btnImprimir.onclick = () => visualizarImpressao(orc);
-        cellAcoes.appendChild(btnImprimir);
-
-        if (!orc.pedidoGerado) {
-            const btnEditar = document.createElement('button');
-            btnEditar.textContent = "Editar";
-            btnEditar.style.marginRight = "5px";
-            btnEditar.onclick = () => editarOrcamento(orc.id);
-            cellAcoes.appendChild(btnEditar);
-            
-            const btnGerar = document.createElement('button');
-            btnGerar.textContent = "Gerar Pedido";
-            btnGerar.onclick = () => gerarPedido(orc.id);
-            cellAcoes.appendChild(btnGerar);
-        } else {
-            const span = document.createElement('span');
-            span.textContent = " Pedido Gerado";
-            span.style.color = "#7aa2a9";
-            cellAcoes.appendChild(span);
-        }
+        return matchCliente || matchNumero || matchData;
     });
+
+    // 2. Ordenação (Decrescente por número -> mais recente no topo)
+    filtrados.sort((a,b) => {
+        // Extrai números para comparação correta (ex: 2/2025 > 10/2024)
+        // Simplificação: comparação string localeCompare geralmente funciona bem para "0000/0000"
+        return b.numero.localeCompare(a.numero);
+    });
+
+    // 3. Paginação
+    const totalItens = filtrados.length;
+    const totalPaginas = Math.ceil(totalItens / ITENS_POR_PAGINA) || 1;
+
+    // Correção se a página atual ultrapassar o total (ex: filtrou e reduziu itens)
+    if (pagAtualOrc > totalPaginas) pagAtualOrc = totalPaginas;
+    if (pagAtualOrc < 1) pagAtualOrc = 1;
+
+    const indiceInicio = (pagAtualOrc - 1) * ITENS_POR_PAGINA;
+    const indiceFim = indiceInicio + ITENS_POR_PAGINA;
+    const itensPagina = filtrados.slice(indiceInicio, indiceFim);
+
+    // 4. Renderização
+    if (itensPagina.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Nenhum orçamento encontrado.</td></tr>';
+    } else {
+        itensPagina.forEach(orc => {
+            const row = tbody.insertRow();
+            row.innerHTML = `
+                <td>${orc.numero}</td>
+                <td>${orc.dataOrcamento ? orc.dataOrcamento.split('-').reverse().join('/') : '-'}</td>
+                <td>${orc.cliente}</td>
+                <td>${formatarMoeda(orc.total)}</td>
+                <td>${orc.pedidoGerado ? orc.numeroPedido : 'Não'}</td>
+                <td></td>
+            `;
+            
+            const cellAcoes = row.cells[5];
+            
+            // Botão Imprimir
+            const btnImprimir = document.createElement('button');
+            btnImprimir.textContent = "Imprimir";
+            btnImprimir.style.marginRight = "5px";
+            btnImprimir.onclick = () => visualizarImpressao(orc);
+            cellAcoes.appendChild(btnImprimir);
+
+            if (!orc.pedidoGerado) {
+                const btnEditar = document.createElement('button');
+                btnEditar.textContent = "Editar";
+                btnEditar.style.marginRight = "5px";
+                btnEditar.onclick = () => editarOrcamento(orc.id);
+                cellAcoes.appendChild(btnEditar);
+                
+                const btnGerar = document.createElement('button');
+                btnGerar.textContent = "Gerar Pedido";
+                btnGerar.onclick = () => gerarPedido(orc.id);
+                cellAcoes.appendChild(btnGerar);
+            } else {
+                const span = document.createElement('span');
+                span.textContent = " Pedido Gerado";
+                span.style.color = "#7aa2a9";
+                cellAcoes.appendChild(span);
+            }
+        });
+    }
+
+    // 5. Atualizar Controles de Paginação
+    if (infoPag) infoPag.textContent = `Página ${pagAtualOrc} de ${totalPaginas}`;
+    if (btnAnt) btnAnt.disabled = (pagAtualOrc === 1);
+    if (btnProx) btnProx.disabled = (pagAtualOrc === totalPaginas);
 }
 
 function visualizarImpressao(orcamento) {
@@ -505,7 +614,7 @@ function editarOrcamento(id) {
 }
 
 // ==========================================================================
-// 6. LÓGICA DE NEGÓCIO (PEDIDOS)
+// 7. LÓGICA DE NEGÓCIO (PEDIDOS)
 // ==========================================================================
 
 async function gerarPedido(orcamentoId) {
@@ -548,28 +657,71 @@ async function gerarPedido(orcamentoId) {
 
     alert(`Pedido ${pedido.numero} gerado!`);
     mostrarPagina('lista-pedidos');
+    // Atualiza ambas as listas para refletir o novo pedido e o status "Gerado" no orçamento
     mostrarPedidosRealizados();
     mostrarOrcamentosGerados();
 }
 
+// LISTAGEM DE PEDIDOS (REESCRITA COMPLETA COM FILTRO E PAGINAÇÃO)
 function mostrarPedidosRealizados() {
     const tbody = document.querySelector("#tabela-pedidos tbody");
+    const btnAnt = document.getElementById("btn-ant-ped");
+    const btnProx = document.getElementById("btn-prox-ped");
+    const infoPag = document.getElementById("info-pag-ped");
+
     if(!tbody) return;
     tbody.innerHTML = '';
 
-    pedidos.forEach(p => {
-        const row = tbody.insertRow();
-        row.innerHTML = `
-            <td>${p.numero}</td>
-            <td>${p.dataPedido ? p.dataPedido.split('-').reverse().join('/') : '-'}</td>
-            <td>${p.cliente}</td>
-            <td>${formatarMoeda(p.total)}</td>
-            <td>
-                <button class="btn-editar-pedido" onclick="editarPedido('${p.id}')">Editar</button>
-                <button class="btn-checklist" style="background:#687f82; margin-left:5px;" onclick="imprimirChecklist('${p.id}')">Checklist</button>
-            </td>
-        `;
+    // 1. Filtragem (Busca)
+    const termo = termoBuscaPed.trim();
+    const filtrados = pedidos.filter(ped => {
+        if (!termo) return true;
+        
+        const dataFormatada = ped.dataPedido ? ped.dataPedido.split('-').reverse().join('/') : '';
+        const matchCliente = ped.cliente.toLowerCase().includes(termo);
+        const matchNumero = ped.numero.toLowerCase().includes(termo);
+        const matchData = dataFormatada.includes(termo);
+        
+        return matchCliente || matchNumero || matchData;
     });
+
+    // 2. Ordenação (Decrescente por número)
+    filtrados.sort((a,b) => b.numero.localeCompare(a.numero));
+
+    // 3. Paginação
+    const totalItens = filtrados.length;
+    const totalPaginas = Math.ceil(totalItens / ITENS_POR_PAGINA) || 1;
+
+    if (pagAtualPed > totalPaginas) pagAtualPed = totalPaginas;
+    if (pagAtualPed < 1) pagAtualPed = 1;
+
+    const indiceInicio = (pagAtualPed - 1) * ITENS_POR_PAGINA;
+    const indiceFim = indiceInicio + ITENS_POR_PAGINA;
+    const itensPagina = filtrados.slice(indiceInicio, indiceFim);
+
+    // 4. Renderização
+    if (itensPagina.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Nenhum pedido encontrado.</td></tr>';
+    } else {
+        itensPagina.forEach(p => {
+            const row = tbody.insertRow();
+            row.innerHTML = `
+                <td>${p.numero}</td>
+                <td>${p.dataPedido ? p.dataPedido.split('-').reverse().join('/') : '-'}</td>
+                <td>${p.cliente}</td>
+                <td>${formatarMoeda(p.total)}</td>
+                <td>
+                    <button class="btn-editar-pedido" onclick="editarPedido('${p.id}')">Editar</button>
+                    <button class="btn-checklist" style="background:#687f82; margin-left:5px;" onclick="imprimirChecklist('${p.id}')">Checklist</button>
+                </td>
+            `;
+        });
+    }
+
+    // 5. Atualizar Controles de Paginação
+    if (infoPag) infoPag.textContent = `Página ${pagAtualPed} de ${totalPaginas}`;
+    if (btnAnt) btnAnt.disabled = (pagAtualPed === 1);
+    if (btnProx) btnProx.disabled = (pagAtualPed === totalPaginas);
 }
 
 function editarPedido(id) {
@@ -668,6 +820,8 @@ async function atualizarPedido() {
     alert("Pedido Atualizado e Dados Financeiros Salvos!");
     pedidoEditando = null;
     mostrarPagina('lista-pedidos');
+    // Força atualização da tabela para refletir edições
+    mostrarPedidosRealizados();
 }
 
 // Funções de Edição (Dinâmicas)
@@ -712,7 +866,7 @@ function atualizarRestanteEdicao() {
 }
 
 // ==========================================================================
-// 7. CHECKLIST E RELATÓRIOS
+// 8. CHECKLIST E RELATÓRIOS
 // ==========================================================================
 
 function imprimirChecklist(id) {
@@ -772,10 +926,6 @@ function imprimirChecklist(id) {
     janela.document.close();
 }
 
-/**
- * REESCRITA COMPLETA DA FUNÇÃO DE RELATÓRIO
- * Implementa Prioridade 1 (Humanização/Visual) e Prioridade 2 (CSS Mobile)
- */
 function gerarRelatorioFinanceiro() {
     const mes = parseInt(document.getElementById("relatorio-mes").value);
     const anoSelect = document.getElementById("relatorio-ano");
@@ -808,13 +958,13 @@ function gerarRelatorioFinanceiro() {
         const nomeCliente = p.cliente.length > 15 ? p.cliente.substring(0, 15) + '...' : p.cliente;
 
         row.innerHTML = `
-            <td>${p.dataPedido.split('-').reverse().join('/').substring(0, 5)}</td> <!-- Apenas Dia/Mês -->
-            <td class="col-oculta-mobile">${p.numero}</td> <!-- Classe Prio 2 -->
+            <td>${p.dataPedido.split('-').reverse().join('/').substring(0, 5)}</td>
+            <td class="col-oculta-mobile">${p.numero}</td>
             <td><span title="${p.cliente}">${nomeCliente}</span></td>
             <td style="color:#2196F3; font-weight:bold;">${formatarMoeda(p.custoMaoDeObra)}</td>
             <td style="color:#4CAF50; font-weight:bold;">${formatarMoeda(p.margemLucro)}</td>
-            <td style="color:#e53935; font-weight:bold;">${formatarMoeda(p.custosTotais)}</td> <!-- NOVO: Gastos (Vermelho) -->
-            <td style="color:#ff9800; font-weight:bold;">${formatarMoeda(p.total)}</td> <!-- ATUALIZADO: Total (Laranja) -->
+            <td style="color:#e53935; font-weight:bold;">${formatarMoeda(p.custosTotais)}</td>
+            <td style="color:#ff9800; font-weight:bold;">${formatarMoeda(p.total)}</td>
         `;
     });
 
@@ -822,16 +972,16 @@ function gerarRelatorioFinanceiro() {
         tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 20px; color: #777;">Nenhum pedido entregue neste período.</td></tr>';
     }
 
-    // 2. Atualização dos KPIs Numéricos (Prio 1)
+    // 2. Atualização dos KPIs Numéricos
     const kpiQtd = document.getElementById("kpi-qtd-pedidos");
-    if(kpiQtd) kpiQtd.textContent = pedidosFiltrados.length; // Novo KPI
+    if(kpiQtd) kpiQtd.textContent = pedidosFiltrados.length;
 
     updateElementText("kpi-mao-obra", totalMO);
     updateElementText("kpi-lucro", totalLucro);
     updateElementText("kpi-custos", totalCustos);
     updateElementText("kpi-total", totalFat);
 
-    // 3. Atualização da Barra Visual (Prio 1)
+    // 3. Atualização da Barra Visual
     if (totalFat > 0) {
         const pctCustos = (totalCustos / totalFat) * 100;
         const pctMO = (totalMO / totalFat) * 100;
@@ -846,7 +996,7 @@ function gerarRelatorioFinanceiro() {
         setBarWidth("barra-lucro", 0);
     }
 
-    // 4. Mensagem Motivacional (Prio 1)
+    // 4. Mensagem Motivacional
     const boxMsg = document.getElementById("mensagem-motivacional");
     if (boxMsg) {
         if (pedidosFiltrados.length > 0) {
@@ -878,7 +1028,4 @@ function setBarWidth(id, pct) {
     if(el) el.style.width = `${pct}%`;
 }
 
-// Filtros Simples
-function filtrarOrcamentos() { mostrarOrcamentosGerados(); }
-function filtrarPedidos() { mostrarPedidosRealizados(); }
 function gerarRelatorioXLSX() { alert("Exportação XLSX em breve."); }
