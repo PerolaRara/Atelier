@@ -1199,23 +1199,28 @@ input[type="checkbox"] {
     background-color: #e0f2f1; 
 }
 
-/* CORREÇÃO DE CONFLITO: Barra de Busca (Prioridade 1) */
+/* ========================================================= */
+/* CORREÇÃO VISUAL: BARRA DE BUSCA (Padronização)           */
+/* ========================================================= */
+
+/* 1. Força o estilo do main.css a prevalecer sobre os inputs genéricos */
 #module-precificacao .search-input {
     background-color: #ffffff !important;
-    border: 2px solid #dfb6b0 !important;
+    border: 2px solid #dfb6b0 !important; /* Borda Rosa */
     color: #444 !important;
     border-radius: 25px !important;
     width: 100% !important;
     padding: 12px 20px !important;
-    margin-bottom: 0 !important;
+    margin-bottom: 0 !important; /* O container já tem margem */
 }
 
+/* 2. Efeito de Foco */
 #module-precificacao .search-input:focus {
-    border-color: #7aa2a9 !important;
-    box-shadow: 0 0 8px rgba(122, 162, 169, 0.2) !important;
+    border-color: #dfb6b0 !important; /* Mantém Rosé ou muda para Teal se preferir destaque */
+    box-shadow: 0 0 8px rgba(223, 182, 176, 0.4) !important;
 }
 
-/* Espaçamento para a busca em Gastos Fixos */
+/* 3. Garante que o container da busca tenha o espaçamento correto */
 #custos-indiretos .search-container {
     margin-top: 20px;
     margin-bottom: 20px;
