@@ -42,10 +42,14 @@ let moduleInitialized = false;
 let searchIndex = -1; // Controle da navegação por teclado na busca
 let margemLucroPadrao = 50;
 
-// [NOVO] Variáveis de Paginação e Busca de Produtos
+// Variáveis de Paginação e Busca (Produtos)
 let pagAtualProd = 1;
 const ITENS_POR_PAGINA = 10;
 let termoBuscaProd = "";
+
+// Variáveis de Paginação (Histórico) - ATUALIZADO
+let pagAtualHist = 1;
+let termoBuscaHist = "";
 
 // ==========================================================================
 // 4. INICIALIZAÇÃO E CARREGAMENTO
@@ -54,11 +58,11 @@ export async function initPrecificacao() {
     console.log("Inicializando Módulo Precificação (Modularizado)...");
     
     // EXPOR FUNÇÕES AO ESCOPO GLOBAL (WINDOW)
-    // Nota: 'buscarProdutosCadastrados' foi removido pois agora usamos o listener com debounce
     window.editarProduto = editarProduto;
     window.removerProduto = removerProduto;
     
-    window.buscarPrecificacoesGeradas = buscarPrecificacoesGeradas;
+    // Expondo a nova função de atualização de tabela
+    window.buscarPrecificacoesGeradas = atualizarTabelaPrecificacoesGeradas;
     window.visualizarPrecificacao = visualizarPrecificacao;
     window.removerPrecificacao = removerPrecificacao;
 
@@ -122,7 +126,7 @@ async function carregarDadosCompletos() {
 // 5. EVENT LISTENERS E NAVEGAÇÃO
 // ==========================================================================
 
-// [NOVO] Função Helper Debounce
+// Função Helper Debounce
 function debounce(func, timeout = 300) {
     let timer;
     return function(...args) {
@@ -142,7 +146,6 @@ function setupEventListeners() {
     });
 
     // 2. Listeners do Módulo de Insumos (Delegados e Inicialização)
-    // AQUI ENTRA A MUDANÇA PRINCIPAL: Inicializa busca/paginação de Materiais e Custos Fixos
     initListenersInsumos(); 
 
     bindClick('#cadastrar-material-insumo-btn', cadastrarMaterialInsumo);
@@ -177,18 +180,27 @@ function setupEventListeners() {
     const inputMat = document.getElementById('pesquisa-material');
     if(inputMat) inputMat.addEventListener('input', buscarMateriaisAutocomplete);
 
-    // NOVO: Busca na Lista de Produtos (Aba "Produtos")
+    // Busca na Lista de Produtos (Aba "Produtos")
     const inputBuscaProd = document.getElementById('busca-produto-lista');
     if(inputBuscaProd) {
         inputBuscaProd.addEventListener('input', debounce((e) => {
             termoBuscaProd = e.target.value;
-            pagAtualProd = 1; // Reseta para a primeira página ao buscar
+            pagAtualProd = 1; 
             atualizarTabelaProdutosCadastrados();
         }, 300));
     }
 
+    // [NOVO] Busca no Histórico com Debounce (Aba "Histórico")
+    const inputBuscaHist = document.getElementById('busca-precificacao');
+    if(inputBuscaHist) {
+        inputBuscaHist.addEventListener('input', debounce((e) => {
+            termoBuscaHist = e.target.value;
+            pagAtualHist = 1; 
+            atualizarTabelaPrecificacoesGeradas();
+        }, 300));
+    }
+
     // 4. Listeners de Cálculo (Aba "Precificação")
-    // Input de busca do produto para calcular o preço final
     const inputProd = document.getElementById('produto-pesquisa');
     if(inputProd) {
         inputProd.addEventListener('input', debounce(buscarProdutosAutocomplete, 300));
@@ -293,7 +305,6 @@ function converterMoeda(str) {
     return parseFloat(str.replace('R$','').replace(/\s/g,'').replace(/\./g,'').replace(',','.')) || 0;
 }
 
-// [NOVO] Função Helper para Normalização de Texto (Title Case)
 function normalizarTexto(texto) {
     if (!texto) return "";
     return texto
@@ -307,17 +318,15 @@ function normalizarTexto(texto) {
 // 6. LÓGICA DE PRODUTOS (CRUD e Montagem)
 // ==========================================================================
 
-// [NOVO] Feedback Visual em Tempo Real
 function verificarDuplicidadeTempoReal(e) {
     const input = e.target;
     const nomeDigitado = input.value.trim().toLowerCase();
     
-    // Cria ou seleciona o elemento de aviso
     let avisoEl = document.getElementById('aviso-duplicidade-cadastro-prod');
     if (!avisoEl) {
         avisoEl = document.createElement('small');
         avisoEl.id = 'aviso-duplicidade-cadastro-prod';
-        avisoEl.style.color = '#d32f2f'; // Vermelho erro
+        avisoEl.style.color = '#d32f2f'; 
         avisoEl.style.fontWeight = 'bold';
         avisoEl.style.display = 'none';
         avisoEl.style.marginTop = '5px';
@@ -341,7 +350,7 @@ function verificarDuplicidadeTempoReal(e) {
         input.style.borderColor = '#d32f2f';
     } else {
         avisoEl.style.display = 'none';
-        input.style.borderColor = '#4CAF50'; // Verde ok
+        input.style.borderColor = '#4CAF50'; 
     }
 }
 
@@ -476,21 +485,16 @@ async function cadastrarProduto() {
     
     if(!nomeBruto) return alert("Nome obrigatório");
 
-    // [NOVO] Normalização de Dados (Title Case)
     const nomeNormalizado = normalizarTexto(nomeBruto);
 
-    // [NOVO] Bloqueio de Duplicidade (Blindagem)
     const nomeParaComparacao = nomeNormalizado.toLowerCase();
     const existeDuplicata = produtos.some(p => {
-        // Se estiver editando, ignora a si mesmo
         if (produtoEmEdicao && p.id === produtoEmEdicao.id) return false;
-        
         return p.nome.trim().toLowerCase() === nomeParaComparacao;
     });
 
     if (existeDuplicata) {
         alert(`Impossível salvar: O produto "${nomeNormalizado}" já existe.\nPor favor, utilize um nome diferente ou edite o existente.`);
-        // Re-aciona visualmente o erro caso o alert seja fechado
         inputNome.style.borderColor = '#d32f2f';
         return;
     }
@@ -530,7 +534,6 @@ async function cadastrarProduto() {
         custoTotal += custoItem;
     });
 
-    // Usa o nome normalizado no objeto final
     const prodData = { nome: nomeNormalizado, materiais: materiaisList, custoTotal };
 
     try {
@@ -550,7 +553,6 @@ async function cadastrarProduto() {
         document.getElementById('form-produtos-cadastrados').reset();
         document.querySelector('#tabela-materiais-produto tbody').innerHTML = '';
         
-        // Limpa estado de erro visual
         const avisoEl = document.getElementById('aviso-duplicidade-cadastro-prod');
         if(avisoEl) avisoEl.style.display = 'none';
         inputNome.style.borderColor = '#ccc';
@@ -560,7 +562,6 @@ async function cadastrarProduto() {
     } catch (e) { console.error(e); alert("Erro ao salvar produto"); }
 }
 
-// [ATUALIZADO] Função de Renderização da Tabela de Produtos (Com Paginação e Filtro)
 function atualizarTabelaProdutosCadastrados() {
     const tbody = document.querySelector('#tabela-produtos tbody');
     const btnAnt = document.getElementById("btn-ant-prod");
@@ -607,17 +608,13 @@ function atualizarTabelaProdutosCadastrados() {
     if (infoPag) infoPag.textContent = `Página ${pagAtualProd} de ${totalPaginas}`;
     if (btnAnt) {
         btnAnt.disabled = (pagAtualProd === 1);
-        // Atualiza o listener para usar a função local
         btnAnt.onclick = () => { if(pagAtualProd > 1) { pagAtualProd--; atualizarTabelaProdutosCadastrados(); } };
     }
     if (btnProx) {
         btnProx.disabled = (pagAtualProd === totalPaginas);
-        // Atualiza o listener para usar a função local
         btnProx.onclick = () => { if(pagAtualProd < totalPaginas) { pagAtualProd++; atualizarTabelaProdutosCadastrados(); } };
     }
 }
-
-// Nota: A função 'buscarProdutosCadastrados' antiga foi removida pois agora usamos 'atualizarTabelaProdutosCadastrados' com filtro
 
 function editarProduto(id) {
     const prod = produtos.find(p => p.id === id);
@@ -727,7 +724,7 @@ function selecionarProdutoParaCalculo(prod) {
     const elHidden = document.getElementById('custo-produto');
     if(elHidden) elHidden.textContent = formatarMoeda(prod.custoTotal);
     
-    // ATUALIZAÇÃO: Exibe os materiais na nova área de detalhes
+    // Exibe os materiais na nova área de detalhes
     const ul = document.getElementById('lista-materiais-produto');
     if(ul) {
         ul.innerHTML = '';
@@ -744,11 +741,9 @@ function selecionarProdutoParaCalculo(prod) {
 
 function calcularCustos() {
     // 1. Custos Diretos (Materiais)
-    // Lê do span oculto
     const custoMatDisplay = document.getElementById('custo-produto').textContent;
     const custoMat = converterMoeda(custoMatDisplay);
     
-    // Atualiza display no Card de Resultado (Dashboard)
     const resCustoMat = document.getElementById('res-custo-mat');
     if(resCustoMat) resCustoMat.textContent = formatarMoeda(custoMat);
 
@@ -759,11 +754,9 @@ function calcularCustos() {
     const custoEncargos = horas * maoDeObra.custoFerias13o;
     const totalMO = custoMO + custoEncargos;
     
-    // Atualiza DASHBOARD: Card de Mão de Obra (Valor Unificado)
     const elTotalMO = document.getElementById('total-mao-de-obra');
     if(elTotalMO) elTotalMO.textContent = formatarMoeda(totalMO);
 
-    // Compatibilidade: Campos ocultos para salvar no banco
     const elOldMO = document.getElementById('custo-mao-de-obra-detalhe');
     if(elOldMO) elOldMO.textContent = formatarMoeda(custoMO);
     const elOldEncargos = document.getElementById('custo-ferias-13o-detalhe');
@@ -774,7 +767,6 @@ function calcularCustos() {
     const valorHoraCI = todosCI.reduce((acc, c) => acc + (c.valorMensal / maoDeObra.horas), 0);
     const totalCI = valorHoraCI * horas;
     
-    // Atualiza DASHBOARD: Card de Custos Indiretos
     const elTotalCI = document.getElementById('custo-indireto');
     if(elTotalCI) elTotalCI.textContent = formatarMoeda(totalCI);
     
@@ -789,8 +781,7 @@ function calcularCustos() {
         });
     }
 
-    // 4. Subtotal (DASHBOARD: Custos Operacionais = Material + Indiretos)
-    // Nota: Mão de Obra é mostrada separadamente no card, mas entra no cálculo do Markup
+    // 4. Subtotal (Custos Operacionais = Material + Indiretos)
     const subtotalCustos = custoMat + totalCI;
     const elSubtotal = document.getElementById('subtotal');
     if(elSubtotal) elSubtotal.textContent = formatarMoeda(subtotalCustos);
@@ -804,11 +795,9 @@ function calcularCustos() {
     const lucro = baseCalculo * (margemPerc / 100);
     const totalSemTaxa = baseCalculo + lucro;
 
-    // Atualiza DASHBOARD: Lucro
     const elLucro = document.getElementById('margem-lucro-valor');
     if(elLucro) elLucro.textContent = formatarMoeda(lucro);
     
-    // Atualiza DASHBOARD: Total sem Taxas
     const elTotalSemTaxa = document.getElementById('total-final');
     if(elTotalSemTaxa) elTotalSemTaxa.textContent = formatarMoeda(totalSemTaxa);
     
@@ -830,8 +819,6 @@ function calcularTotalComTaxas() {
     const incluir = document.getElementById('incluir-taxa-credito-sim').checked;
     
     if(incluir) {
-        // Cálculo de taxa "por dentro" ou "por fora"? 
-        // O código original usava "por fora" (soma simples). Mantendo lógica original.
         const taxaVal = totalSemTaxa * (taxaCredito.percentual / 100);
         
         const elTaxa = document.getElementById('taxa-credito-valor');
@@ -895,7 +882,6 @@ async function gerarNotaPrecificacao() {
         margem: document.getElementById('margem-lucro-final').value,
         total: totalFinal,
         custoMateriais: converterMoeda(document.getElementById('custo-produto').textContent),
-        // Lê os valores calculados (agora disponíveis nos novos elementos ou ocultos)
         totalMaoDeObra: converterMoeda(document.getElementById('total-mao-de-obra').textContent),
         custoIndiretoTotal: converterMoeda(document.getElementById('custo-indireto').textContent),
         detalhesMateriais: getListaTexto('lista-materiais-produto'),
@@ -934,39 +920,74 @@ function getListaTexto(ulId) {
     return arr;
 }
 
+// [NOVO] Função de Renderização da Tabela de Histórico (Paginação + Busca)
 function atualizarTabelaPrecificacoesGeradas() {
     const tbody = document.querySelector('#tabela-precificacoes-geradas tbody');
+    const btnAnt = document.getElementById("btn-ant-hist");
+    const btnProx = document.getElementById("btn-prox-hist");
+    const infoPag = document.getElementById("info-pag-hist");
+
     if(!tbody) return;
     tbody.innerHTML = '';
     
-    const ordenadas = [...precificacoesGeradas].sort((a,b) => b.numero - a.numero);
-
-    ordenadas.forEach(p => {
-        const row = tbody.insertRow();
-        row.innerHTML = `
-            <td>${p.numero}</td>
-            <td>${p.produto}</td>
-            <td>
-                <button onclick="visualizarPrecificacao('${p.id}')">Visualizar</button>
-                <button onclick="removerPrecificacao('${p.id}')">Excluir</button>
-            </td>
-        `;
+    // 1. Filtragem (Busca por Produto ou Número)
+    const termo = termoBuscaHist.trim().toLowerCase();
+    const filtrados = precificacoesGeradas.filter(p => {
+        const matchProd = p.produto.toLowerCase().includes(termo);
+        const matchNum = p.numero.toString().includes(termo);
+        return matchProd || matchNum;
     });
-}
 
-function buscarPrecificacoesGeradas() {
-    const termo = document.getElementById('busca-precificacao').value.toLowerCase();
-    const rows = document.querySelectorAll('#tabela-precificacoes-geradas tbody tr');
-    rows.forEach(r => {
-        r.style.display = r.innerText.toLowerCase().includes(termo) ? '' : 'none';
-    });
+    // 2. Ordenação (Mais recente primeiro)
+    filtrados.sort((a,b) => b.numero - a.numero);
+
+    // 3. Paginação
+    const totalPaginas = Math.ceil(filtrados.length / ITENS_POR_PAGINA) || 1;
+    if (pagAtualHist > totalPaginas) pagAtualHist = totalPaginas;
+    if (pagAtualHist < 1) pagAtualHist = 1;
+
+    const inicio = (pagAtualHist - 1) * ITENS_POR_PAGINA;
+    const fim = inicio + ITENS_POR_PAGINA;
+    const itensPagina = filtrados.slice(inicio, fim);
+
+    // 4. Renderização
+    if (itensPagina.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Nenhum registro encontrado.</td></tr>';
+    } else {
+        itensPagina.forEach(p => {
+            const row = tbody.insertRow();
+            // Formata data se existir, senão usa hoje
+            const dataFormatada = p.dataGeracao ? new Date(p.dataGeracao).toLocaleDateString() : '-';
+            
+            row.innerHTML = `
+                <td>${p.numero}</td>
+                <td>${p.produto}</td>
+                <td>${dataFormatada}</td>
+                <td>${formatarMoeda(p.total)}</td>
+                <td>
+                    <button onclick="visualizarPrecificacao('${p.id}')">Visualizar</button>
+                    <button onclick="removerPrecificacao('${p.id}')" style="background-color: #e57373; margin-left: 5px;">Excluir</button>
+                </td>
+            `;
+        });
+    }
+
+    // 5. Atualizar Controles
+    if (infoPag) infoPag.textContent = `Página ${pagAtualHist} de ${totalPaginas}`;
+    if (btnAnt) {
+        btnAnt.disabled = (pagAtualHist === 1);
+        btnAnt.onclick = () => { if(pagAtualHist > 1) { pagAtualHist--; atualizarTabelaPrecificacoesGeradas(); } };
+    }
+    if (btnProx) {
+        btnProx.disabled = (pagAtualHist === totalPaginas);
+        btnProx.onclick = () => { if(pagAtualHist < totalPaginas) { pagAtualHist++; atualizarTabelaPrecificacoesGeradas(); } };
+    }
 }
 
 function visualizarPrecificacao(id) {
     const p = precificacoesGeradas.find(x => x.id === id);
     if(!p) return;
 
-    // TEMPLATE ATUALIZADO (PRIORIDADE 1: TERMINOLOGIA)
     const html = `
         <html>
         <head>
@@ -989,16 +1010,13 @@ function visualizarPrecificacao(id) {
                 <div class="line"><span>Custo Materiais:</span> <span>${formatarMoeda(p.custoMateriais)}</span></div>
                 <ul>${p.detalhesMateriais.map(x => `<li>${x}</li>`).join('')}</ul>
                 
-                <!-- TERMINOLOGIA ATUALIZADA: Mão de Obra -> Meu Salário -->
                 <div class="line"><span>Meu Salário (${p.horas}h):</span> <span>${formatarMoeda(p.totalMaoDeObra)}</span></div>
                 
-                <!-- TERMINOLOGIA ATUALIZADA: Custos Indiretos -> Gastos Fixos -->
                 <div class="line"><span>Gastos Fixos:</span> <span>${formatarMoeda(p.custoIndiretoTotal)}</span></div>
                 <ul>${p.detalhesCustosIndiretos.map(x => `<li>${x}</li>`).join('')}</ul>
             </div>
 
             <div class="box" style="background: #f9f9f9;">
-                <!-- TERMINOLOGIA ATUALIZADA: Margem de Lucro -> Margem p/ Caixa -->
                 <div class="line"><span>Margem p/ Caixa (${p.margem}%):</span> <span>Incluso</span></div>
                 <div class="line total"><span>Total Final:</span> <span>${formatarMoeda(p.total)}</span></div>
             </div>
@@ -1047,25 +1065,20 @@ function calcularCustoTotalItem(item) {
     return custoTotal;
 }
 
-// [ATUALIZADO] Função para calcular Mão de Obra em Tempo Real
 function calcularMaoDeObraTempoReal() {
     const salario = parseFloat(document.getElementById('salario-receber').value) || 0;
     const horas = parseFloat(document.getElementById('horas-trabalhadas').value) || 220;
     
-    // Verifica se o checkbox de incluir encargos está marcado
     const incluirEncargos = document.getElementById('incluir-ferias-13o-sim')?.checked;
 
     if (horas > 0) {
-        // 1. Atualiza Valor Hora Normal
         const valorHora = salario / horas;
         const elValorHora = document.getElementById('valor-hora');
         if(elValorHora) elValorHora.value = valorHora.toFixed(2);
 
-        // 2. Atualiza Valor Encargos em Tempo Real
         const elCustoExtra = document.getElementById('custo-ferias-13o');
         if(elCustoExtra) {
             if (incluirEncargos) {
-                // FÓRMULA ATUALIZADA: ((Salário (13º) + Salário/3 (1/3 Férias)) / 12) / Horas
                 const totalAnualExtras = salario + (salario / 3);
                 const custoMensalDiluido = totalAnualExtras / 12;
                 const custoPorHora = custoMensalDiluido / horas;
