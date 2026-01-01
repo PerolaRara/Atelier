@@ -6,7 +6,7 @@
  */
 const changeLogData = [
     {
-        version: "1.2.2",
+        version: "1.1.2",
         date: "31/12/2025",
         changes: [
             "🔍 **Busca Inteligente:** Implementada barra de pesquisa instantânea nos módulos de 'Orçamentos' e 'Pedidos'. Agora é possível filtrar por Nome do Cliente, Número ou Data em tempo real.",
