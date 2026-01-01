@@ -717,14 +717,41 @@ export function atualizarTabelaCustosIndiretos() {
 }
 
 export function buscarCustosIndiretosCadastrados() {
-    const el = document.getElementById('busca-custo-indireto');
-    if(!el) return;
-
-    const termo = el.value.toLowerCase();
+    const termo = document.getElementById('busca-custo-indireto').value.toLowerCase().trim();
+    
+    // Filtra a Tabela de Resumo (Itens Predefinidos + Adicionais)
     const rows = document.querySelectorAll('#tabela-custos-indiretos tbody tr');
+    let encontrouNaTabela = false;
+
     rows.forEach(r => {
-        r.style.display = r.innerText.toLowerCase().includes(termo) ? '' : 'none';
+        // Pega o texto da primeira célula (Descrição)
+        const descricao = r.cells[0]?.textContent.toLowerCase() || "";
+        const match = descricao.includes(termo);
+        
+        r.style.display = match ? '' : 'none';
+        if (match) encontrouNaTabela = true;
     });
+
+    // Opcional: Feedback visual se nada for encontrado
+    const tabela = document.getElementById('tabela-custos-indiretos');
+    // Se quiser esconder o cabeçalho quando não achar nada, descomente abaixo:
+    // tabela.style.display = encontrouNaTabela ? '' : 'none';
+}
+
+// 2. Adicione o listener com Debounce na função 'initListenersMateriais' (ou crie uma nova 'initListenersCustos')
+// Vamos aproveitar a função de inicialização que já editamos anteriormente:
+
+export function initListenersInsumos() { // Sugiro renomear 'initListenersMateriais' para 'initListenersInsumos' para englobar tudo
+    
+    // ... Listener de Materiais (código anterior) ...
+
+    // NOVO: Listener para Gastos Fixos
+    const inputBuscaCustos = document.getElementById('busca-custo-indireto');
+    if(inputBuscaCustos) {
+        inputBuscaCustos.addEventListener('input', debounce((e) => {
+            buscarCustosIndiretosCadastrados();
+        }, 300));
+    }
 }
 
 // ==========================================
