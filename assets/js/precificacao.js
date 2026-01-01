@@ -3,70 +3,70 @@
 // 1. IMPORTAÇÕES DE INFRAESTRUTURA
 import { db, auth } from './firebase-config.js';
 import { 
-    collection, doc, addDoc, getDocs, updateDoc, deleteDoc, setDoc, getDoc 
+    collection, doc, addDoc, getDocs, setDoc, deleteDoc, getDoc 
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 
-// 2. IMPORTAÇÕES DO MÓDULO DE INSUMOS
+// 2. IMPORTAÇÕES DOS MÓDULOS DE DADOS (INSUMOS E PRODUTOS)
 import { 
-    // Dados (Estado Compartilhado)
-    materiais, 
+    // Dados e Funções de Insumos
     maoDeObra, 
     custosIndiretosPredefinidos, 
     custosIndiretosAdicionais,
-    
-    // Funções de Carregamento e CRUD
     carregarDadosInsumos,
+    formatarMoeda, // Utilitário compartilhado
+    setOnMaterialUpdateCallback, // Para registrar a reação à mudança de preços
+    initListenersInsumos,
+    // CRUDs de Insumos (UI)
     cadastrarMaterialInsumo,
     salvarMaoDeObra,
     editarMaoDeObraUI,
     adicionarNovoCustoIndireto,
-    
-    // Funções de Busca e UI (Globais)
-    buscarMateriaisCadastrados,
-    buscarCustosIndiretosCadastrados,
-    
-    // Configuração e Helpers
-    setOnMaterialUpdateCallback,
-    getUnidadeSigla,
-
-    // NOVO: Inicializador de Listeners (Busca e Paginação de Insumos)
-    initListenersInsumos
+    toggleCamposMaterial // Usado no HTML onclick
 } from './precificacao-insumos.js';
 
-// 3. VARIÁVEIS DE ESTADO LOCAIS (Produtos e Histórico)
-let produtos = [];
+import {
+    // Dados e Funções de Produtos (NOVO)
+    produtos,
+    carregarProdutos,
+    initListenersProdutos,
+    editarProduto,  // Exposto para o window
+    removerProduto, // Exposto para o window
+    atualizarCustosProdutosPorMaterial // Callback
+} from './precificacao-produtos.js';
+
+// 3. VARIÁVEIS DE ESTADO LOCAIS (Dashboard e Histórico)
 let precificacoesGeradas = [];
 let taxaCredito = { percentual: 6, incluir: false };
-let produtoEmEdicao = null;
 let moduleInitialized = false;
 let searchIndex = -1; // Controle da navegação por teclado na busca
 let margemLucroPadrao = 50;
 
-// Variáveis de Paginação e Busca (Produtos)
-let pagAtualProd = 1;
-const ITENS_POR_PAGINA = 10;
-let termoBuscaProd = "";
-
-// Variáveis de Paginação (Histórico) - ATUALIZADO
+// Variáveis de Paginação (Histórico)
 let pagAtualHist = 1;
+const ITENS_POR_PAGINA = 10;
 let termoBuscaHist = "";
 
 // ==========================================================================
 // 4. INICIALIZAÇÃO E CARREGAMENTO
 // ==========================================================================
 export async function initPrecificacao() {
-    console.log("Inicializando Módulo Precificação (Modularizado)...");
+    console.log("Inicializando Módulo Precificação (Refatorado - V2)...");
     
     // EXPOR FUNÇÕES AO ESCOPO GLOBAL (WINDOW)
+    // Funções de Insumos
+    window.editarMaterialInsumo = window.editarMaterialInsumo; // Já exposto no insumos.js, mas reforçando se necessário
+    window.removerMaterialInsumo = window.removerMaterialInsumo;
+    
+    // Funções de Produtos (Vindas do novo módulo)
     window.editarProduto = editarProduto;
     window.removerProduto = removerProduto;
     
-    // Expondo a nova função de atualização de tabela
+    // Funções de Histórico (Locais)
     window.buscarPrecificacoesGeradas = atualizarTabelaPrecificacoesGeradas;
     window.visualizarPrecificacao = visualizarPrecificacao;
     window.removerPrecificacao = removerPrecificacao;
 
-    // Configura o Callback de atualização de insumos
+    // Configura o Callback: Quando um material mudar, avisa o módulo de produtos
     setOnMaterialUpdateCallback(atualizarCustosProdutosPorMaterial);
 
     await carregarDadosCompletos();
@@ -82,24 +82,21 @@ async function carregarDadosCompletos() {
     if (!user) return;
 
     try {
-        // A. Carrega Insumos (Materiais, MO, Custos) do Módulo Externo
-        await carregarDadosInsumos();
+        // Carregamento Paralelo para Performance
+        await Promise.all([
+            carregarDadosInsumos(), // Insumos.js
+            carregarProdutos()      // Produtos.js
+        ]);
 
-        // B. Carrega Configurações Locais
+        // Carrega Configurações Locais e Histórico
         const taxaDoc = await getDoc(doc(db, "configuracoes", "taxaCredito"));
         if (taxaDoc.exists()) taxaCredito = { ...taxaCredito, ...taxaDoc.data() };
-
-        // C. Carrega Coleções Locais (Produtos e Histórico)
-        const prodSnap = await getDocs(collection(db, "produtos"));
-        produtos = [];
-        prodSnap.forEach(d => produtos.push({id: d.id, ...d.data()}));
 
         const precSnap = await getDocs(collection(db, "precificacoes-geradas"));
         precificacoesGeradas = [];
         precSnap.forEach(d => precificacoesGeradas.push({id: d.id, ...d.data()}));
 
-        // D. Atualizar UI (Agora com paginação)
-        atualizarTabelaProdutosCadastrados();
+        // Atualizar UI
         atualizarTabelaPrecificacoesGeradas();
         
         // Restaurar inputs de cálculo na tela
@@ -126,7 +123,6 @@ async function carregarDadosCompletos() {
 // 5. EVENT LISTENERS E NAVEGAÇÃO
 // ==========================================================================
 
-// Função Helper Debounce
 function debounce(func, timeout = 300) {
     let timer;
     return function(...args) {
@@ -145,20 +141,20 @@ function setupEventListeners() {
         });
     });
 
-    // 2. Listeners do Módulo de Insumos (Delegados e Inicialização)
-    initListenersInsumos(); 
+    // 2. Inicializa Listeners dos Sub-módulos
+    initListenersInsumos(); // Insumos.js
+    initListenersProdutos(); // Produtos.js (NOVO)
 
+    // 3. Listeners Manuais de Insumos (Legado/UI)
     bindClick('#cadastrar-material-insumo-btn', cadastrarMaterialInsumo);
-    
     document.querySelectorAll('input[name="tipo-material"]').forEach(radio => {
         radio.addEventListener('change', function() { toggleCamposMaterial(this.value); });
     });
-
     bindClick('#btn-salvar-mao-de-obra', salvarMaoDeObra);
     bindClick('#btn-editar-mao-de-obra', editarMaoDeObraUI);
     bindClick('#adicionarCustoIndiretoBtn', adicionarNovoCustoIndireto);
 
-    // [ATUALIZADO] Listeners para cálculo em tempo real da Mão de Obra
+    // Listeners para cálculo em tempo real da Mão de Obra
     const inputSalario = document.getElementById('salario-receber');
     const inputHoras = document.getElementById('horas-trabalhadas');
     const radiosEncargos = document.querySelectorAll('input[name="incluir-ferias-13o"]');
@@ -167,30 +163,7 @@ function setupEventListeners() {
     if(inputHoras) inputHoras.addEventListener('input', calcularMaoDeObraTempoReal);
     radiosEncargos.forEach(r => r.addEventListener('change', calcularMaoDeObraTempoReal));
 
-    // 3. Listeners Locais (Produtos)
-    bindClick('#cadastrar-produto-btn', cadastrarProduto);
-    
-    // Validação em Tempo Real (Duplicidade no Cadastro)
-    const inputNomeProd = document.getElementById('nome-produto');
-    if(inputNomeProd) {
-        inputNomeProd.addEventListener('input', verificarDuplicidadeTempoReal);
-    }
-
-    // Autocomplete de Materiais (dentro do cadastro de produto)
-    const inputMat = document.getElementById('pesquisa-material');
-    if(inputMat) inputMat.addEventListener('input', buscarMateriaisAutocomplete);
-
-    // Busca na Lista de Produtos (Aba "Produtos")
-    const inputBuscaProd = document.getElementById('busca-produto-lista');
-    if(inputBuscaProd) {
-        inputBuscaProd.addEventListener('input', debounce((e) => {
-            termoBuscaProd = e.target.value;
-            pagAtualProd = 1; 
-            atualizarTabelaProdutosCadastrados();
-        }, 300));
-    }
-
-    // [NOVO] Busca no Histórico com Debounce (Aba "Histórico")
+    // 4. Listeners Locais (Histórico e Dashboard)
     const inputBuscaHist = document.getElementById('busca-precificacao');
     if(inputBuscaHist) {
         inputBuscaHist.addEventListener('input', debounce((e) => {
@@ -200,7 +173,7 @@ function setupEventListeners() {
         }, 300));
     }
 
-    // 4. Listeners de Cálculo (Aba "Precificação")
+    // Listeners do Dashboard de Cálculo
     const inputProd = document.getElementById('produto-pesquisa');
     if(inputProd) {
         inputProd.addEventListener('input', debounce(buscarProdutosAutocomplete, 300));
@@ -212,7 +185,6 @@ function setupEventListeners() {
             }
         });
         
-        // Navegação por teclado no autocomplete
         inputProd.addEventListener('keydown', (e) => {
             const div = document.getElementById('produto-resultados');
             if (div.classList.contains('hidden')) return;
@@ -242,7 +214,6 @@ function setupEventListeners() {
         });
     }
     
-    // Fechar autocomplete ao clicar fora
     document.addEventListener('click', (e) => {
         const resultsDiv = document.getElementById('produto-resultados');
         const searchInput = document.getElementById('produto-pesquisa');
@@ -256,7 +227,6 @@ function setupEventListeners() {
     });
     
     bindClick('#btn-gerar-nota', gerarNotaPrecificacao);
-    
     addChangeListeners(['horas-produto', 'margem-lucro-final'], calcularCustos);
     addChangeListeners(['incluir-taxa-credito-sim', 'incluir-taxa-credito-nao'], calcularTotalComTaxas);
     bindClick('#btn-salvar-taxa-credito', salvarTaxaCredito);
@@ -283,368 +253,14 @@ function mostrarSubMenu(id) {
     if(target) target.style.display = 'block';
 }
 
-function toggleCamposMaterial(tipo) {
-    const campos = ['comprimento', 'litro', 'quilo', 'area'];
-    campos.forEach(c => {
-        const el = document.getElementById(`campos-${c}`);
-        if(el) el.style.display = 'none';
-    });
-    
-    const target = document.getElementById(`campos-${tipo}`);
-    if(target) target.style.display = 'block';
-}
-
-function formatarMoeda(valor) {
-    if (typeof valor !== 'number' || isNaN(valor)) return 'R$ 0,00';
-    return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-}
-
 function converterMoeda(str) {
     if (typeof str === 'number') return str;
     if (!str) return 0;
     return parseFloat(str.replace('R$','').replace(/\s/g,'').replace(/\./g,'').replace(',','.')) || 0;
 }
 
-function normalizarTexto(texto) {
-    if (!texto) return "";
-    return texto
-        .toLowerCase()
-        .split(' ')
-        .map(palavra => palavra.charAt(0).toUpperCase() + palavra.slice(1))
-        .join(' ');
-}
-
 // ==========================================================================
-// 6. LÓGICA DE PRODUTOS (CRUD e Montagem)
-// ==========================================================================
-
-function verificarDuplicidadeTempoReal(e) {
-    const input = e.target;
-    const nomeDigitado = input.value.trim().toLowerCase();
-    
-    let avisoEl = document.getElementById('aviso-duplicidade-cadastro-prod');
-    if (!avisoEl) {
-        avisoEl = document.createElement('small');
-        avisoEl.id = 'aviso-duplicidade-cadastro-prod';
-        avisoEl.style.color = '#d32f2f'; 
-        avisoEl.style.fontWeight = 'bold';
-        avisoEl.style.display = 'none';
-        avisoEl.style.marginTop = '5px';
-        input.parentNode.insertBefore(avisoEl, input.nextSibling);
-    }
-
-    if (!nomeDigitado) {
-        avisoEl.style.display = 'none';
-        input.style.borderColor = '#ccc';
-        return;
-    }
-
-    const existe = produtos.some(p => {
-        if (produtoEmEdicao && p.id === produtoEmEdicao.id) return false;
-        return p.nome.trim().toLowerCase() === nomeDigitado;
-    });
-
-    if (existe) {
-        avisoEl.textContent = '⚠️ Este produto já está cadastrado.';
-        avisoEl.style.display = 'block';
-        input.style.borderColor = '#d32f2f';
-    } else {
-        avisoEl.style.display = 'none';
-        input.style.borderColor = '#4CAF50'; 
-    }
-}
-
-async function atualizarCustosProdutosPorMaterial(material) {
-    console.log(`Atualizando produtos que usam: ${material.nome}`);
-    
-    const produtosAfetados = produtos.filter(p => p.materiais.some(m => m.materialId === material.id));
-
-    for (const prod of produtosAfetados) {
-        prod.materiais.forEach(item => {
-            if (item.materialId === material.id) {
-                item.material.custoUnitario = material.custoUnitario;
-                item.custoTotal = calcularCustoTotalItem(item); 
-            }
-        });
-        
-        prod.custoTotal = prod.materiais.reduce((acc, item) => acc + item.custoTotal, 0);
-
-        await updateDoc(doc(db, "produtos", prod.id), {
-            materiais: prod.materiais,
-            custoTotal: prod.custoTotal
-        });
-    }
-    
-    if (produtosAfetados.length > 0) {
-        atualizarTabelaProdutosCadastrados();
-        const produtoSelecionadoNome = document.getElementById('produto-pesquisa').value;
-        if (produtoSelecionadoNome) {
-            const produtoSelecionado = produtos.find(p => p.nome === produtoSelecionadoNome);
-            if (produtoSelecionado) {
-                selecionarProdutoParaCalculo(produtoSelecionado);
-            }
-        }
-    }
-}
-
-function buscarMateriaisAutocomplete() {
-    const termo = this.value.toLowerCase();
-    const div = document.getElementById('resultados-pesquisa');
-    div.innerHTML = '';
-    
-    if(!termo) { div.style.display = 'none'; return; }
-    
-    const results = materiais.filter(m => m.nome.toLowerCase().includes(termo));
-    results.forEach(m => {
-        const item = document.createElement('div');
-        item.textContent = m.nome;
-        item.onclick = () => {
-            adicionarMaterialNaTabelaProduto(m);
-            div.style.display = 'none';
-            document.getElementById('pesquisa-material').value = '';
-        };
-        div.appendChild(item);
-    });
-    div.style.display = results.length ? 'block' : 'none';
-}
-
-function adicionarMaterialNaTabelaProduto(mat, dadosSalvos = null) {
-    const tbody = document.querySelector('#tabela-materiais-produto tbody');
-    const row = tbody.insertRow();
-    
-    let inputDimensao = '';
-    let valDimensao = 0;
-
-    if (mat.tipo === 'comprimento') {
-        valDimensao = dadosSalvos ? dadosSalvos.comprimento : mat.comprimentoCm;
-        inputDimensao = `<input type="number" class="dim-input" value="${valDimensao}" style="width:60px"> cm`;
-    } else if (mat.tipo === 'area') {
-        const l = dadosSalvos ? dadosSalvos.largura : mat.larguraCm;
-        const a = dadosSalvos ? dadosSalvos.altura : mat.alturaCm;
-        inputDimensao = `<input type="number" class="dim-l" value="${l}" style="width:50px"> x <input type="number" class="dim-a" value="${a}" style="width:50px"> cm`;
-    } else if (mat.tipo === 'litro') {
-        valDimensao = dadosSalvos ? dadosSalvos.volume : mat.volumeMl;
-        inputDimensao = `<input type="number" class="dim-input" value="${valDimensao}" style="width:60px"> ml`;
-    } else if (mat.tipo === 'quilo') {
-        valDimensao = dadosSalvos ? dadosSalvos.peso : mat.pesoG;
-        inputDimensao = `<input type="number" class="dim-input" value="${valDimensao}" style="width:60px"> g`;
-    } else {
-        const qtdUn = dadosSalvos ? dadosSalvos.quantidadeMaterial : 1;
-        inputDimensao = `<input type="number" class="dim-input" value="${qtdUn}" style="width:60px"> un`;
-    }
-
-    const qtd = dadosSalvos ? dadosSalvos.quantidade : 1;
-
-    row.innerHTML = `
-        <td data-id="${mat.id}">${mat.nome}</td>
-        <td>${mat.tipo}</td>
-        <td>${formatarMoeda(mat.custoUnitario)}</td>
-        <td class="cell-dimensao">${inputDimensao}</td>
-        <td><input type="number" class="qtd-input" value="${qtd}" style="width:50px"></td>
-        <td class="custo-total-item">R$ 0,00</td>
-        <td><button onclick="this.closest('tr').remove()">X</button></td>
-    `;
-
-    row.querySelectorAll('input').forEach(input => {
-        input.addEventListener('input', () => recalcularLinhaProduto(row, mat));
-    });
-
-    recalcularLinhaProduto(row, mat);
-}
-
-function recalcularLinhaProduto(row, mat) {
-    const qtd = parseFloat(row.querySelector('.qtd-input').value) || 0;
-    
-    const itemTemp = {
-        tipo: mat.tipo,
-        material: { custoUnitario: mat.custoUnitario },
-        quantidade: qtd
-    };
-
-    if(mat.tipo === 'comprimento') {
-        itemTemp.comprimento = parseFloat(row.querySelector('.dim-input').value) || 0;
-    } else if (mat.tipo === 'litro') {
-        itemTemp.volume = parseFloat(row.querySelector('.dim-input').value) || 0;
-    } else if (mat.tipo === 'quilo') {
-        itemTemp.peso = parseFloat(row.querySelector('.dim-input').value) || 0;
-    } else if (mat.tipo === 'area') {
-        itemTemp.largura = parseFloat(row.querySelector('.dim-l').value) || 0;
-        itemTemp.altura = parseFloat(row.querySelector('.dim-a').value) || 0;
-    } else {
-        itemTemp.quantidadeMaterial = parseFloat(row.querySelector('.dim-input').value) || 0;
-    }
-
-    const total = calcularCustoTotalItem(itemTemp);
-    row.querySelector('.custo-total-item').textContent = formatarMoeda(total);
-    row.dataset.total = total; 
-}
-
-async function cadastrarProduto() {
-    const inputNome = document.getElementById('nome-produto');
-    const nomeBruto = inputNome.value;
-    
-    if(!nomeBruto) return alert("Nome obrigatório");
-
-    const nomeNormalizado = normalizarTexto(nomeBruto);
-
-    const nomeParaComparacao = nomeNormalizado.toLowerCase();
-    const existeDuplicata = produtos.some(p => {
-        if (produtoEmEdicao && p.id === produtoEmEdicao.id) return false;
-        return p.nome.trim().toLowerCase() === nomeParaComparacao;
-    });
-
-    if (existeDuplicata) {
-        alert(`Impossível salvar: O produto "${nomeNormalizado}" já existe.\nPor favor, utilize um nome diferente ou edite o existente.`);
-        inputNome.style.borderColor = '#d32f2f';
-        return;
-    }
-
-    const materiaisList = [];
-    let custoTotal = 0;
-
-    const rows = document.querySelectorAll('#tabela-materiais-produto tbody tr');
-    rows.forEach(row => {
-        const matId = row.cells[0].dataset.id;
-        const matOriginal = materiais.find(m => m.id === matId);
-        const tipo = row.cells[1].innerText;
-        const qtd = parseFloat(row.querySelector('.qtd-input').value);
-        const custoItem = parseFloat(row.dataset.total);
-
-        let comp=0, larg=0, alt=0, vol=0, peso=0, qtdMat=0;
-        
-        if(tipo === 'comprimento') comp = parseFloat(row.querySelector('.dim-input').value);
-        else if(tipo === 'litro') vol = parseFloat(row.querySelector('.dim-input').value);
-        else if(tipo === 'quilo') peso = parseFloat(row.querySelector('.dim-input').value);
-        else if(tipo === 'area') {
-            larg = parseFloat(row.querySelector('.dim-l').value);
-            alt = parseFloat(row.querySelector('.dim-a').value);
-        } else {
-            qtdMat = parseFloat(row.querySelector('.dim-input').value);
-        }
-
-        materiaisList.push({
-            materialId: matId,
-            material: { nome: matOriginal.nome, custoUnitario: matOriginal.custoUnitario }, 
-            tipo,
-            quantidade: qtd,
-            custoTotal: custoItem,
-            comprimento: comp, largura: larg, altura: alt, volume: vol, peso: peso, quantidadeMaterial: qtdMat
-        });
-        
-        custoTotal += custoItem;
-    });
-
-    const prodData = { nome: nomeNormalizado, materiais: materiaisList, custoTotal };
-
-    try {
-        if(produtoEmEdicao) {
-            await updateDoc(doc(db, "produtos", produtoEmEdicao.id), prodData);
-            const idx = produtos.findIndex(p => p.id === produtoEmEdicao.id);
-            if(idx !== -1) produtos[idx] = { id: produtoEmEdicao.id, ...prodData };
-            produtoEmEdicao = null;
-            document.querySelector('#cadastrar-produto-btn').textContent = "Cadastrar Produto";
-        } else {
-            const ref = await addDoc(collection(db, "produtos"), prodData);
-            prodData.id = ref.id;
-            produtos.push(prodData);
-        }
-        
-        alert("Produto Salvo com Sucesso!");
-        document.getElementById('form-produtos-cadastrados').reset();
-        document.querySelector('#tabela-materiais-produto tbody').innerHTML = '';
-        
-        const avisoEl = document.getElementById('aviso-duplicidade-cadastro-prod');
-        if(avisoEl) avisoEl.style.display = 'none';
-        inputNome.style.borderColor = '#ccc';
-
-        atualizarTabelaProdutosCadastrados();
-
-    } catch (e) { console.error(e); alert("Erro ao salvar produto"); }
-}
-
-function atualizarTabelaProdutosCadastrados() {
-    const tbody = document.querySelector('#tabela-produtos tbody');
-    const btnAnt = document.getElementById("btn-ant-prod");
-    const btnProx = document.getElementById("btn-prox-prod");
-    const infoPag = document.getElementById("info-pag-prod");
-
-    if(!tbody) return;
-    tbody.innerHTML = '';
-    
-    // 1. Filtragem (Busca) e Ordenação
-    const termo = termoBuscaProd.trim().toLowerCase();
-    const filtrados = produtos.filter(p => p.nome.toLowerCase().includes(termo));
-    filtrados.sort((a,b) => a.nome.localeCompare(b.nome));
-
-    // 2. Paginação
-    const totalPaginas = Math.ceil(filtrados.length / ITENS_POR_PAGINA) || 1;
-    if (pagAtualProd > totalPaginas) pagAtualProd = totalPaginas;
-    if (pagAtualProd < 1) pagAtualProd = 1;
-
-    const inicio = (pagAtualProd - 1) * ITENS_POR_PAGINA;
-    const fim = inicio + ITENS_POR_PAGINA;
-    const itensPagina = filtrados.slice(inicio, fim);
-
-    // 3. Renderização
-    if (itensPagina.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Nenhum produto encontrado.</td></tr>';
-    } else {
-        itensPagina.forEach(p => {
-            const row = tbody.insertRow();
-            row.innerHTML = `
-                <td>${p.nome}</td>
-                <td><ul>${p.materiais.map(m => `<li>${m.material.nome} (${m.quantidade})</li>`).join('')}</ul></td>
-                <td>-</td>
-                <td>${formatarMoeda(p.custoTotal)}</td>
-                <td>
-                    <button class="btn-editar-prod" onclick="editarProduto('${p.id}')">Editar</button>
-                    <button class="btn-remover-prod" onclick="removerProduto('${p.id}')">Remover</button>
-                </td>
-            `;
-        });
-    }
-
-    // 4. Atualizar Controles de Paginação
-    if (infoPag) infoPag.textContent = `Página ${pagAtualProd} de ${totalPaginas}`;
-    if (btnAnt) {
-        btnAnt.disabled = (pagAtualProd === 1);
-        btnAnt.onclick = () => { if(pagAtualProd > 1) { pagAtualProd--; atualizarTabelaProdutosCadastrados(); } };
-    }
-    if (btnProx) {
-        btnProx.disabled = (pagAtualProd === totalPaginas);
-        btnProx.onclick = () => { if(pagAtualProd < totalPaginas) { pagAtualProd++; atualizarTabelaProdutosCadastrados(); } };
-    }
-}
-
-function editarProduto(id) {
-    const prod = produtos.find(p => p.id === id);
-    if(!prod) return;
-    
-    produtoEmEdicao = prod;
-    document.getElementById('nome-produto').value = prod.nome;
-    const tbody = document.querySelector('#tabela-materiais-produto tbody');
-    tbody.innerHTML = '';
-    
-    prod.materiais.forEach(item => {
-        const matReal = materiais.find(m => m.id === item.materialId);
-        if(matReal) {
-            adicionarMaterialNaTabelaProduto(matReal, item);
-        }
-    });
-    document.querySelector('#cadastrar-produto-btn').textContent = "Salvar Alterações";
-    document.getElementById('cadastrar-produtos').scrollIntoView();
-}
-
-async function removerProduto(id) {
-    if(confirm("Excluir produto?")) {
-        await deleteDoc(doc(db, "produtos", id));
-        produtos = produtos.filter(p => p.id !== id);
-        atualizarTabelaProdutosCadastrados();
-    }
-}
-
-// ==========================================================================
-// 7. MÓDULO: CÁLCULO DE PREÇO E HISTÓRICO (DASHBOARD REDESIGN)
+// 6. MÓDULO: DASHBOARD DE CÁLCULO (Lógica Financeira)
 // ==========================================================================
 
 function buscarProdutosAutocomplete() {
@@ -663,6 +279,7 @@ function buscarProdutosAutocomplete() {
         return; 
     }
 
+    // Usa a lista 'produtos' importada do precificacao-produtos.js
     const results = produtos.filter(p => p.nome.toLowerCase().includes(termo));
 
     if (results.length === 0) {
@@ -740,7 +357,7 @@ function selecionarProdutoParaCalculo(prod) {
 }
 
 function calcularCustos() {
-    // 1. Custos Diretos (Materiais)
+    // 1. Custos Diretos (Materiais) - Vem do Produto
     const custoMatDisplay = document.getElementById('custo-produto').textContent;
     const custoMat = converterMoeda(custoMatDisplay);
     
@@ -835,6 +452,10 @@ function calcularTotalComTaxas() {
     }
 }
 
+// ==========================================================================
+// 7. HISTÓRICO DE PRECIFICAÇÕES
+// ==========================================================================
+
 function obterProximoNumeroDisponivel() {
     const numerosExistentes = precificacoesGeradas
         .map(p => p.numero)
@@ -920,7 +541,6 @@ function getListaTexto(ulId) {
     return arr;
 }
 
-// [NOVO] Função de Renderização da Tabela de Histórico (Paginação + Busca)
 function atualizarTabelaPrecificacoesGeradas() {
     const tbody = document.querySelector('#tabela-precificacoes-geradas tbody');
     const btnAnt = document.getElementById("btn-ant-hist");
@@ -930,7 +550,7 @@ function atualizarTabelaPrecificacoesGeradas() {
     if(!tbody) return;
     tbody.innerHTML = '';
     
-    // 1. Filtragem (Busca por Produto ou Número)
+    // 1. Filtragem e Ordenação
     const termo = termoBuscaHist.trim().toLowerCase();
     const filtrados = precificacoesGeradas.filter(p => {
         const matchProd = p.produto.toLowerCase().includes(termo);
@@ -938,10 +558,9 @@ function atualizarTabelaPrecificacoesGeradas() {
         return matchProd || matchNum;
     });
 
-    // 2. Ordenação (Mais recente primeiro)
     filtrados.sort((a,b) => b.numero - a.numero);
 
-    // 3. Paginação
+    // 2. Paginação
     const totalPaginas = Math.ceil(filtrados.length / ITENS_POR_PAGINA) || 1;
     if (pagAtualHist > totalPaginas) pagAtualHist = totalPaginas;
     if (pagAtualHist < 1) pagAtualHist = 1;
@@ -950,13 +569,12 @@ function atualizarTabelaPrecificacoesGeradas() {
     const fim = inicio + ITENS_POR_PAGINA;
     const itensPagina = filtrados.slice(inicio, fim);
 
-    // 4. Renderização
+    // 3. Renderização
     if (itensPagina.length === 0) {
         tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Nenhum registro encontrado.</td></tr>';
     } else {
         itensPagina.forEach(p => {
             const row = tbody.insertRow();
-            // Formata data se existir, senão usa hoje
             const dataFormatada = p.dataGeracao ? new Date(p.dataGeracao).toLocaleDateString() : '-';
             
             row.innerHTML = `
@@ -972,7 +590,7 @@ function atualizarTabelaPrecificacoesGeradas() {
         });
     }
 
-    // 5. Atualizar Controles
+    // 4. Atualizar Controles
     if (infoPag) infoPag.textContent = `Página ${pagAtualHist} de ${totalPaginas}`;
     if (btnAnt) {
         btnAnt.disabled = (pagAtualHist === 1);
@@ -1039,36 +657,10 @@ async function removerPrecificacao(id) {
     }
 }
 
-// ==========================================================================
-// 8. FUNÇÕES AUXILIARES DE CÁLCULO
-// ==========================================================================
-
-function calcularCustoTotalItem(item) {
-    let custoTotal = 0;
-    let quantidade = item.quantidade || 1;
-
-    const custoUnit = item.material ? item.material.custoUnitario : 0;
-
-    if (item.tipo === "comprimento") {
-        custoTotal = custoUnit * (item.comprimento / 100) * quantidade;
-    } else if (item.tipo === "area") {
-        custoTotal = custoUnit * (item.largura * item.altura / 10000) * quantidade;
-    } else if (item.tipo === "litro") {
-        custoTotal = custoUnit * (item.volume / 1000) * quantidade;
-    } else if (item.tipo === "quilo") {
-        custoTotal = custoUnit * (item.peso / 1000) * quantidade;
-    } else if (item.tipo === "unidade") {
-        let qtdMat = item.quantidadeMaterial || 1;
-        custoTotal = custoUnit * qtdMat * quantidade;
-    }
-    
-    return custoTotal;
-}
-
 function calcularMaoDeObraTempoReal() {
+    // Apenas UI logic, os dados reais são salvos via Insumos.js
     const salario = parseFloat(document.getElementById('salario-receber').value) || 0;
     const horas = parseFloat(document.getElementById('horas-trabalhadas').value) || 220;
-    
     const incluirEncargos = document.getElementById('incluir-ferias-13o-sim')?.checked;
 
     if (horas > 0) {
@@ -1082,7 +674,6 @@ function calcularMaoDeObraTempoReal() {
                 const totalAnualExtras = salario + (salario / 3);
                 const custoMensalDiluido = totalAnualExtras / 12;
                 const custoPorHora = custoMensalDiluido / horas;
-
                 elCustoExtra.value = custoPorHora.toFixed(2);
             } else {
                 elCustoExtra.value = "0.00";
