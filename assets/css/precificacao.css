@@ -1198,3 +1198,25 @@ input[type="checkbox"] {
 .btn-calc-trigger:hover { 
     background-color: #e0f2f1; 
 }
+
+/* CORREÇÃO DE CONFLITO: Barra de Busca (Prioridade 1) */
+#module-precificacao .search-input {
+    background-color: #ffffff !important;
+    border: 2px solid #dfb6b0 !important;
+    color: #444 !important;
+    border-radius: 25px !important;
+    width: 100% !important;
+    padding: 12px 20px !important;
+    margin-bottom: 0 !important;
+}
+
+#module-precificacao .search-input:focus {
+    border-color: #7aa2a9 !important;
+    box-shadow: 0 0 8px rgba(122, 162, 169, 0.2) !important;
+}
+
+/* Espaçamento para a busca em Gastos Fixos */
+#custos-indiretos .search-container {
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
