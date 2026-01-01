@@ -28,9 +28,9 @@ import {
     // Configuração e Helpers
     setOnMaterialUpdateCallback,
     getUnidadeSigla,
-    
-    // [NOVO] Importação do inicializador de listeners de materiais (Prioridade 1/2)
-    initListenersMateriais
+
+    // NOVO: Inicializador de Listeners (Busca e Paginação de Insumos)
+    initListenersInsumos
 } from './precificacao-insumos.js';
 
 // 3. VARIÁVEIS DE ESTADO LOCAIS (Produtos e Histórico)
@@ -133,7 +133,7 @@ function debounce(func, timeout = 300) {
 }
 
 function setupEventListeners() {
-    // Navegação entre Abas
+    // 1. Navegação entre Abas
     document.querySelectorAll('#module-precificacao nav ul li a.nav-link').forEach(link => {
         link.addEventListener('click', (e) => {
             e.preventDefault();
@@ -141,13 +141,11 @@ function setupEventListeners() {
         });
     });
 
-    // --- Listeners para o Módulo de Insumos (Delegados e Inicialização) ---
+    // 2. Listeners do Módulo de Insumos (Delegados e Inicialização)
+    // AQUI ENTRA A MUDANÇA PRINCIPAL: Inicializa busca/paginação de Materiais e Custos Fixos
+    initListenersInsumos(); 
+
     bindClick('#cadastrar-material-insumo-btn', cadastrarMaterialInsumo);
-    
-    // [NOVO] Inicializa os listeners de busca/paginação de Materiais (definidos no outro arquivo)
-    if (typeof initListenersMateriais === 'function') {
-        initListenersMateriais();
-    }
     
     document.querySelectorAll('input[name="tipo-material"]').forEach(radio => {
         radio.addEventListener('change', function() { toggleCamposMaterial(this.value); });
@@ -160,36 +158,37 @@ function setupEventListeners() {
     // [ATUALIZADO] Listeners para cálculo em tempo real da Mão de Obra
     const inputSalario = document.getElementById('salario-receber');
     const inputHoras = document.getElementById('horas-trabalhadas');
-    // Adiciona listener também nos radios de encargos para recalcular ao trocar Sim/Não
     const radiosEncargos = document.querySelectorAll('input[name="incluir-ferias-13o"]');
     
     if(inputSalario) inputSalario.addEventListener('input', calcularMaoDeObraTempoReal);
     if(inputHoras) inputHoras.addEventListener('input', calcularMaoDeObraTempoReal);
     radiosEncargos.forEach(r => r.addEventListener('change', calcularMaoDeObraTempoReal));
 
-    // --- Listeners Locais (Produtos e Cálculo) ---
+    // 3. Listeners Locais (Produtos)
     bindClick('#cadastrar-produto-btn', cadastrarProduto);
     
-    // [NOVO] Listener para Busca de Produtos (Lista) com Debounce e Paginação
-    const inputBuscaProd = document.getElementById('busca-produto-lista');
-    if(inputBuscaProd) {
-        inputBuscaProd.addEventListener('input', debounce((e) => {
-            termoBuscaProd = e.target.value;
-            pagAtualProd = 1; // Reseta para primeira página ao buscar
-            atualizarTabelaProdutosCadastrados();
-        }));
-    }
-
-    // [NOVO] Listener para Validação em Tempo Real (Duplicidade)
+    // Validação em Tempo Real (Duplicidade no Cadastro)
     const inputNomeProd = document.getElementById('nome-produto');
     if(inputNomeProd) {
         inputNomeProd.addEventListener('input', verificarDuplicidadeTempoReal);
     }
 
+    // Autocomplete de Materiais (dentro do cadastro de produto)
     const inputMat = document.getElementById('pesquisa-material');
     if(inputMat) inputMat.addEventListener('input', buscarMateriaisAutocomplete);
 
-    // Cálculo - Debounce e Teclado
+    // NOVO: Busca na Lista de Produtos (Aba "Produtos")
+    const inputBuscaProd = document.getElementById('busca-produto-lista');
+    if(inputBuscaProd) {
+        inputBuscaProd.addEventListener('input', debounce((e) => {
+            termoBuscaProd = e.target.value;
+            pagAtualProd = 1; // Reseta para a primeira página ao buscar
+            atualizarTabelaProdutosCadastrados();
+        }, 300));
+    }
+
+    // 4. Listeners de Cálculo (Aba "Precificação")
+    // Input de busca do produto para calcular o preço final
     const inputProd = document.getElementById('produto-pesquisa');
     if(inputProd) {
         inputProd.addEventListener('input', debounce(buscarProdutosAutocomplete, 300));
@@ -201,6 +200,7 @@ function setupEventListeners() {
             }
         });
         
+        // Navegação por teclado no autocomplete
         inputProd.addEventListener('keydown', (e) => {
             const div = document.getElementById('produto-resultados');
             if (div.classList.contains('hidden')) return;
