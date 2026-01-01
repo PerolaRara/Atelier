@@ -492,7 +492,9 @@ button:hover { background-color: #5a8289; }
     width: 100%;
     max-width: 400px;
     padding: 12px 20px;
-    border: 2px solid #dfb6b0; /* Cor secundária (Rosa) */
+    
+    /* ALTERAÇÃO: Forçando borda Rosé em todo o sistema */
+    border: 2px solid #dfb6b0 !important; 
     border-radius: 25px;
     font-size: 1rem;
     outline: none;
@@ -502,7 +504,7 @@ button:hover { background-color: #5a8289; }
 }
 
 .search-input:focus {
-    border-color: #7aa2a9; /* Cor principal (Teal) */
+    border-color: #7aa2a9; /* Cor principal (Teal) no foco */
     box-shadow: 0 0 8px rgba(122, 162, 169, 0.2);
 }
 
