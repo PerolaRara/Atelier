@@ -37,10 +37,14 @@ let onMaterialUpdateCallback = null;
 let inputDestinoAtualId = null; // Para saber qual input atualizar após o cálculo
 let indexDestinoAtual = null;   // Para saber qual item salvar
 
-// Variáveis de Paginação e Busca (Materiais)
+// Variáveis de Paginação e Busca (MATERIAIS)
 let pagAtualMat = 1;
 const ITENS_POR_PAGINA = 10;
 let termoBuscaMat = "";
+
+// Variáveis de Paginação e Busca (CUSTOS INDIRETOS - GASTOS FIXOS)
+let pagAtualCustos = 1;
+let termoBuscaCustos = "";
 
 // Função Debounce (Utilitário local)
 function debounce(func, timeout = 300) {
@@ -124,10 +128,6 @@ export function getUnidadeSigla(tipo) {
     return map[tipo] || '';
 }
 
-/**
- * PRIORIDADE 2: Normalização de Texto (Title Case)
- * Transforma "tecido algodão" em "Tecido Algodão" para padronização.
- */
 function normalizarNome(nome) {
     if (!nome) return "";
     return nome.trim().toLowerCase().split(' ').map(palavra => {
@@ -150,7 +150,7 @@ function calcularCustoUnitario(tipo, valorTotal, comprimentoCm, volumeMl, pesoG,
 }
 
 // ==========================================
-// FUNÇÃO AGRUPADORA
+// FUNÇÃO AGRUPADORA (LOADER)
 // ==========================================
 export async function carregarDadosInsumos() {
     console.log("Carregando dados de insumos...");
@@ -177,7 +177,6 @@ export async function carregarMateriais() {
     }
 }
 
-// ATUALIZADO: Função com suporte a Paginação e Busca
 export function atualizarTabelaMateriaisInsumos() {
     const tbody = document.querySelector('#tabela-materiais-insumos tbody');
     const btnAnt = document.getElementById("btn-ant-mat");
@@ -245,18 +244,6 @@ export function atualizarTabelaMateriaisInsumos() {
     }
 }
 
-// NOVO: Inicialização dos Listeners de Busca (Chamado pelo precificacao.js)
-export function initListenersMateriais() {
-    const inputBusca = document.getElementById('busca-material');
-    if(inputBusca) {
-        inputBusca.addEventListener('input', debounce((e) => {
-            termoBuscaMat = e.target.value;
-            pagAtualMat = 1; // Reseta para pág 1 na busca
-            atualizarTabelaMateriaisInsumos();
-        }));
-    }
-}
-
 export function toggleCamposMaterial(tipo) {
     const campos = ['comprimento', 'litro', 'quilo', 'area'];
     campos.forEach(c => {
@@ -286,15 +273,11 @@ export async function cadastrarMaterialInsumo() {
         return;
     }
 
-    // PRIORIDADE 2: Normalização do Nome (Salva sempre bonitinho)
     const nome = normalizarNome(nomeInput);
 
-    // PRIORIDADE 1: Verificação de Duplicidade (Blindagem)
     const existeDuplicata = materiais.some(m => {
-        // Ignora itens arquivados e o próprio item se estiver editando
         if (m.ativo === false) return false; 
         if (materialEmEdicao && m.id === materialEmEdicao.id) return false;
-        
         return m.nome.toLowerCase() === nome.toLowerCase();
     });
 
@@ -309,7 +292,7 @@ export async function cadastrarMaterialInsumo() {
         nome, tipo, valorTotal, 
         comprimentoCm, volumeMl, pesoG, larguraCm, alturaCm,
         custoUnitario,
-        ativo: true // Garante que novos itens nasçam ativos
+        ativo: true
     };
 
     try {
@@ -374,14 +357,11 @@ export function editarMaterialInsumo(id) {
     if(section) section.scrollIntoView({behavior: "smooth"});
 }
 
-// PRIORIDADE 3: Arquivamento (Substitui Exclusão Permanente)
 export async function removerMaterialInsumo(id) {
     if(confirm("Deseja arquivar este material?\n\nEle sairá da lista de cadastro para organização, mas o histórico de preços dos produtos que o utilizam será preservado.")) {
         try {
-            // Ao invés de deleteDoc, usamos updateDoc para marcar como inativo
             await updateDoc(doc(db, "materiais-insumos", id), { ativo: false });
             
-            // Atualiza o estado local
             const idx = materiais.findIndex(m => m.id === id);
             if(idx !== -1) {
                 materiais[idx].ativo = false;
@@ -397,7 +377,6 @@ export async function removerMaterialInsumo(id) {
 
 export function buscarMateriaisCadastrados() {
     // Depreciado: substituído pelo listener de debounce
-    // Mantido vazio para compatibilidade se algo ainda chamar
 }
 
 // ==========================================
@@ -429,7 +408,6 @@ export async function salvarMaoDeObra() {
 
     const valorHora = salario / horas;
     
-    // FÓRMULA CORRIGIDA: Encargos = (13º + 1/3 Férias)
     let custoEncargos = 0;
     if (incluirFerias) {
         const decimoTerceiro = salario;       
@@ -508,7 +486,7 @@ function toggleEdicaoMaoDeObra(editando) {
 }
 
 // ==========================================
-// MÓDULO: CUSTOS INDIRETOS (COM CALCULADORA)
+// MÓDULO: CUSTOS INDIRETOS (COM CALCULADORA E PAGINAÇÃO)
 // ==========================================
 
 export async function carregarCustosIndiretos() {
@@ -691,65 +669,99 @@ export async function zerarCustoIndireto(descricao, idOpcional) {
     }
 }
 
+// ATUALIZADO: Função com suporte a Paginação e Filtro
 export function atualizarTabelaCustosIndiretos() {
     const tbody = document.querySelector('#tabela-custos-indiretos tbody');
+    const btnAnt = document.getElementById("btn-ant-custo");
+    const btnProx = document.getElementById("btn-prox-custo");
+    const infoPag = document.getElementById("info-pag-custo");
+
     if(!tbody) return;
     tbody.innerHTML = '';
     
-    const todos = [...custosIndiretosPredefinidos, ...custosIndiretosAdicionais];
+    // Combina predefinidos e adicionais
+    let todos = [...custosIndiretosPredefinidos, ...custosIndiretosAdicionais];
     
-    todos.filter(c => c.valorMensal > 0).forEach(c => {
-        const row = tbody.insertRow();
-        const horasDivisor = maoDeObra.horas || 220;
-        const vHora = c.valorMensal / horasDivisor;
-        
-        const idParam = c.id ? `'${c.id}'` : 'undefined';
-        
-        row.innerHTML = `
-            <td>${c.descricao}</td>
-            <td>${formatarMoeda(c.valorMensal)}</td>
-            <td>${formatarMoeda(vHora)}</td>
-            <td>
-                <button class="btn-zerar" onclick="zerarCustoIndireto('${c.descricao}', ${idParam})">Zerar</button>
-            </td>
-        `;
+    // 1. Filtragem (Busca)
+    const termo = termoBuscaCustos.trim().toLowerCase();
+    let filtrados = todos.filter(c => {
+        // Exibe apenas custos ativos (valor > 0 ou recém criados) E que batem com a busca
+        const matchBusca = c.descricao.toLowerCase().includes(termo);
+        const temValor = c.valorMensal > 0; 
+        return matchBusca && temValor; 
     });
+
+    // 2. Ordenação (Alfabética)
+    filtrados.sort((a,b) => a.descricao.localeCompare(b.descricao));
+
+    // 3. Paginação
+    const totalPaginas = Math.ceil(filtrados.length / ITENS_POR_PAGINA) || 1;
+    if (pagAtualCustos > totalPaginas) pagAtualCustos = totalPaginas;
+    if (pagAtualCustos < 1) pagAtualCustos = 1;
+
+    const inicio = (pagAtualCustos - 1) * ITENS_POR_PAGINA;
+    const fim = inicio + ITENS_POR_PAGINA;
+    const itensPagina = filtrados.slice(inicio, fim);
+
+    // 4. Renderização
+    if (itensPagina.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Nenhum gasto encontrado.</td></tr>';
+    } else {
+        itensPagina.forEach(c => {
+            const row = tbody.insertRow();
+            const horasDivisor = maoDeObra.horas || 220;
+            const vHora = c.valorMensal / horasDivisor;
+            const idParam = c.id ? `'${c.id}'` : 'undefined';
+            
+            row.innerHTML = `
+                <td>${c.descricao}</td>
+                <td>${formatarMoeda(c.valorMensal)}</td>
+                <td>${formatarMoeda(vHora)}</td>
+                <td>
+                    <button class="btn-zerar" onclick="zerarCustoIndireto('${c.descricao}', ${idParam})">Zerar</button>
+                </td>
+            `;
+        });
+    }
+
+    // 5. Atualizar Controles
+    if (infoPag) infoPag.textContent = `Página ${pagAtualCustos} de ${totalPaginas}`;
+    if (btnAnt) {
+        btnAnt.disabled = (pagAtualCustos === 1);
+        btnAnt.onclick = () => { if(pagAtualCustos > 1) { pagAtualCustos--; atualizarTabelaCustosIndiretos(); } };
+    }
+    if (btnProx) {
+        btnProx.disabled = (pagAtualCustos === totalPaginas);
+        btnProx.onclick = () => { if(pagAtualCustos < totalPaginas) { pagAtualCustos++; atualizarTabelaCustosIndiretos(); } };
+    }
 }
 
 export function buscarCustosIndiretosCadastrados() {
-    const termo = document.getElementById('busca-custo-indireto').value.toLowerCase().trim();
-    
-    // Filtra a Tabela de Resumo (Itens Predefinidos + Adicionais)
-    const rows = document.querySelectorAll('#tabela-custos-indiretos tbody tr');
-    let encontrouNaTabela = false;
-
-    rows.forEach(r => {
-        // Pega o texto da primeira célula (Descrição)
-        const descricao = r.cells[0]?.textContent.toLowerCase() || "";
-        const match = descricao.includes(termo);
-        
-        r.style.display = match ? '' : 'none';
-        if (match) encontrouNaTabela = true;
-    });
-
-    // Opcional: Feedback visual se nada for encontrado
-    const tabela = document.getElementById('tabela-custos-indiretos');
-    // Se quiser esconder o cabeçalho quando não achar nada, descomente abaixo:
-    // tabela.style.display = encontrouNaTabela ? '' : 'none';
+    // Depreciado: substituído pelo listener de debounce
 }
 
-// 2. Adicione o listener com Debounce na função 'initListenersMateriais' (ou crie uma nova 'initListenersCustos')
-// Vamos aproveitar a função de inicialização que já editamos anteriormente:
-
-export function initListenersInsumos() { // Sugiro renomear 'initListenersMateriais' para 'initListenersInsumos' para englobar tudo
+// ==========================================
+// INICIALIZAÇÃO DE LISTENERS (MATERIAIS E CUSTOS)
+// ==========================================
+export function initListenersInsumos() {
     
-    // ... Listener de Materiais (código anterior) ...
+    // Listener de Materiais (existente)
+    const inputBuscaMat = document.getElementById('busca-material');
+    if(inputBuscaMat) {
+        inputBuscaMat.addEventListener('input', debounce((e) => {
+            termoBuscaMat = e.target.value;
+            pagAtualMat = 1; 
+            atualizarTabelaMateriaisInsumos();
+        }));
+    }
 
-    // NOVO: Listener para Gastos Fixos
+    // NOVO: Listener de Gastos Fixos
     const inputBuscaCustos = document.getElementById('busca-custo-indireto');
     if(inputBuscaCustos) {
         inputBuscaCustos.addEventListener('input', debounce((e) => {
-            buscarCustosIndiretosCadastrados();
+            termoBuscaCustos = e.target.value;
+            pagAtualCustos = 1; // Reseta para pág 1 na busca
+            atualizarTabelaCustosIndiretos();
         }, 300));
     }
 }
