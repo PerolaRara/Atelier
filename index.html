@@ -134,6 +134,7 @@
         <div class="container mobile-container">
             <header class="module-header-styled">
                  <img src="assets/images/logo_perola_rara.png" class="module-logo-small" alt="Logo">
+                 <!-- Header Padronizado -->
                  <h1 class="module-title-main">
                     Pérola Rara
                     <span style="display: block; font-size: 0.5em; font-weight: 400; margin-top: 5px;">(Gestão de Pedidos)</span>
@@ -209,7 +210,7 @@
                 <section id="orcamentos-gerados" class="pagina" style="display: none;">
                     <h2 class="section-title-lined">Orçamentos Gerados</h2>
                     
-                    <!-- Barra de Busca (NOVO) -->
+                    <!-- Barra de Busca -->
                     <div class="search-container">
                         <input type="text" id="busca-orcamentos" placeholder="🔍 Buscar por Cliente, Número ou Data..." class="search-input">
                     </div>
@@ -221,7 +222,7 @@
                         </table>
                     </div>
 
-                    <!-- Controles de Paginação (NOVO) -->
+                    <!-- Controles de Paginação -->
                     <div class="pagination-controls">
                         <button id="btn-ant-orc" class="btn-paginacao">❮ Anterior</button>
                         <span id="info-pag-orc">Página 1</span>
@@ -233,7 +234,7 @@
                 <section id="lista-pedidos" class="pagina" style="display: none;">
                     <h2 class="section-title-lined">Pedidos Realizados</h2>
                     
-                    <!-- Barra de Busca (NOVO) -->
+                    <!-- Barra de Busca -->
                     <div class="search-container">
                         <input type="text" id="busca-pedidos" placeholder="🔍 Buscar por Cliente, Número ou Data..." class="search-input">
                     </div>
@@ -245,7 +246,7 @@
                         </table>
                     </div>
 
-                    <!-- Controles de Paginação (NOVO) -->
+                    <!-- Controles de Paginação -->
                     <div class="pagination-controls">
                         <button id="btn-ant-ped" class="btn-paginacao">❮ Anterior</button>
                         <span id="info-pag-ped">Página 1</span>
@@ -337,7 +338,7 @@
                     <button type="button" id="btnSalvarPedidoEdicao">Salvar Pedido</button>
                 </section>
 
-                 <!-- RELATÓRIOS (Atualizado v1.1.0) -->
+                 <!-- RELATÓRIOS -->
                  <section id="relatorio" class="pagina" style="display: none;">
                     <h2 class="section-title-lined">Relatório Financeiro Mensal</h2>
                     
@@ -353,10 +354,10 @@
                         <button onclick="gerarRelatorioFinanceiro()">Gerar Relatório</button>
                     </div>
 
-                    <!-- MENSAGEM MOTIVACIONAL (NOVO v1.1.0) -->
+                    <!-- MENSAGEM MOTIVACIONAL -->
                     <div id="mensagem-motivacional" class="feedback-card" style="display: none;"></div>
 
-                    <!-- DASHBOARD KPIS (NOVO v1.1.0) -->
+                    <!-- DASHBOARD KPIS -->
                     <div class="dashboard-resumo" style="display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; margin-bottom: 20px;">
                         <!-- Contador de Vitórias -->
                         <div class="card-kpi card-destaque-qtd">
@@ -385,7 +386,7 @@
                         </div>
                     </div>
 
-                    <!-- BARRA VISUAL DE DISTRIBUIÇÃO (NOVO v1.1.0) -->
+                    <!-- BARRA VISUAL DE DISTRIBUIÇÃO -->
                     <div class="distribuicao-financeira-container">
                         <h3 style="font-size: 0.9rem; color: #555; margin-bottom: 5px;">Para onde foi o dinheiro?</h3>
                         <div class="barra-empilhada">
@@ -424,24 +425,24 @@
         </div>
     </section>
 
-    <!-- 5. MÓDULO: PRECIFICAÇÃO (ATUALIZADO V1.1.0) -->
+    <!-- 5. MÓDULO: PRECIFICAÇÃO -->
     <section id="module-precificacao" style="display: none;">
         <button class="btn-back-hub">⬅ Voltar ao Menu</button>
 
         <div id="app-container-precificacao" class="mobile-container">
             <header class="module-header-styled">
                  <img src="assets/images/logo_perola_rara.png" class="module-logo-small" alt="Logo">
+                 <!-- Header Padronizado -->
                  <h1 class="module-title-main">
                     Pérola Rara
                     <span style="display: block; font-size: 0.5em; font-weight: 400; margin-top: 5px;">(Precificação)</span>
                  </h1>
                  
-                 <!-- NAVEGAÇÃO ATUALIZADA (TERMINOLOGIA HUMANIZADA) -->
                  <nav class="nav-lined">
                      <ul>
                         <li><a href="#" data-submenu="materiais-insumos" class="nav-link">Materiais</a></li>
-                        <li><a href="#" data-submenu="mao-de-obra" class="nav-link">Meu Salário</a></li> <!-- Alterado -->
-                        <li><a href="#" data-submenu="custos-indiretos" class="nav-link">Gastos Fixos</a></li> <!-- Alterado -->
+                        <li><a href="#" data-submenu="mao-de-obra" class="nav-link">Meu Salário</a></li> 
+                        <li><a href="#" data-submenu="custos-indiretos" class="nav-link">Gastos Fixos</a></li> 
                         <li><a href="#" data-submenu="cadastrar-produtos" class="nav-link">Produtos</a></li>
                         <li><a href="#" data-submenu="calculo-precificacao" class="nav-link">Precificação</a></li>
                         <li><a href="#" data-submenu="precificacoes-geradas" class="nav-link">Histórico</a></li>
@@ -501,10 +502,9 @@
                     <button type="button" id="cadastrar-material-insumo-btn">Cadastrar Material</button>
                 </form>
                 
-                <!-- ADICIONADO: Linha Separadora Harmônica -->
                 <hr class="menu">
 
-                <!-- ATUALIZADO: Barra de Busca Estilizada -->
+                <!-- Barra de Busca -->
                 <div class="search-container">
                     <input type="text" id="busca-material" placeholder="🔍 Buscar Material..." class="search-input">
                 </div>
@@ -516,7 +516,7 @@
                     </table>
                 </div>
 
-                <!-- ADICIONADO: Controles de Paginação -->
+                <!-- Controles de Paginação -->
                 <div class="pagination-controls">
                     <button id="btn-ant-mat" class="btn-paginacao">❮ Anterior</button>
                     <span id="info-pag-mat">Página 1</span>
@@ -524,9 +524,9 @@
                 </div>
             </div>
 
-            <!-- ABA: MÃO DE OBRA (AGORA: MEU SALÁRIO) -->
+            <!-- ABA: MÃO DE OBRA (MEU SALÁRIO) -->
             <div id="mao-de-obra" class="subpagina" style="display:none;">
-                <h2 class="section-title-lined">Definição do Meu Salário</h2> <!-- Título Humanizado -->
+                <h2 class="section-title-lined">Definição do Meu Salário</h2>
                 <form id="form-mao-de-obra">
                     <div class="form-group">
                         <label>Salário a receber (R$):</label>
@@ -559,9 +559,9 @@
                 </form>
             </div>
 
-          <!-- ABA: CUSTOS INDIRETOS (AGORA: GASTOS FIXOS) -->
+          <!-- ABA: CUSTOS INDIRETOS (GASTOS FIXOS) -->
             <div id="custos-indiretos" class="subpagina" style="display:none;">
-                <h2 class="section-title-lined">Gastos Fixos (Indiretos)</h2> <!-- Título Humanizado -->
+                <h2 class="section-title-lined">Gastos Fixos (Indiretos)</h2>
                 
                 <!-- Lista para edição dos valores -->
                 <ul id="lista-custos-indiretos">
@@ -570,10 +570,9 @@
                 
                 <button type="button" id="adicionarCustoIndiretoBtn">+ Custo Adicional</button>
                 
-                <!-- Separador Visual Padronizado -->
                 <hr class="menu">
                 
-                <!-- Barra de Busca Padronizada -->
+                <!-- Barra de Busca -->
                 <div class="search-container">
                     <input type="text" id="busca-custo-indireto" placeholder="🔍 Buscar Gasto Fixo..." class="search-input">
                 </div>
@@ -585,7 +584,7 @@
                     </table>
                 </div>
 
-                <!-- CONTROLES DE PAGINAÇÃO (Adicionado na Prioridade 2) -->
+                <!-- Paginação de Custos (NOVO) -->
                 <div class="pagination-controls">
                     <button id="btn-ant-custo" class="btn-paginacao">❮ Anterior</button>
                     <span id="info-pag-custo">Página 1</span>
@@ -617,12 +616,11 @@
                     <button type="button" id="cadastrar-produto-btn">Cadastrar Produto</button>
                 </form>
 
-                <!-- ADICIONADO: Linha Separadora Harmônica -->
                 <hr class="menu">
 
                 <h2>Produtos Cadastrados</h2>
 
-                <!-- ATUALIZADO: Barra de Busca Estilizada -->
+                <!-- Barra de Busca -->
                 <div class="search-container">
                     <input type="text" id="busca-produto-lista" placeholder="🔍 Buscar Produto..." class="search-input">
                 </div>
@@ -634,7 +632,7 @@
                     </table>
                 </div>
 
-                <!-- ADICIONADO: Controles de Paginação -->
+                <!-- Controles de Paginação -->
                 <div class="pagination-controls">
                     <button id="btn-ant-prod" class="btn-paginacao">❮ Anterior</button>
                     <span id="info-pag-prod">Página 1</span>
@@ -720,7 +718,7 @@
                         </div>
                     </div>
 
-                    <!-- COLUNA 2: CARTÃO DE RESULTADO (ATUALIZADO V1.1.0) -->
+                    <!-- COLUNA 2: CARTÃO DE RESULTADO -->
                     <div class="pricing-results-area">
                         <div class="result-card">
                             <div class="result-header">
@@ -743,7 +741,6 @@
                                         <span id="res-custo-mat">R$ 0,00</span>
                                     </div>
                                     <div class="result-row">
-                                        <!-- Rótulo Humanizado + Tooltip Educativo -->
                                         <span title="Energia, aluguel, depreciação, etc.">Gastos Fixos:</span>
                                         <span id="custo-indireto">R$ 0,00</span>
                                     </div>
@@ -760,7 +757,6 @@
                                             <circle cx="12" cy="12" r="10"></circle>
                                             <polyline points="12 6 12 12 16 14"></polyline>
                                         </svg>
-                                        <!-- Rótulo Humanizado -->
                                         Meu Salário (Mão de Obra)
                                     </h5>
                                     <div class="result-row highlight-blue">
@@ -777,7 +773,6 @@
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4CAF50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 5px;">
                                             <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
                                         </svg>
-                                        <!-- Rótulo Humanizado -->
                                         Caixa da Empresa (Crescimento)
                                     </h5>
                                     <div class="result-row highlight-green">
@@ -807,7 +802,7 @@
                             </details>
 
                             <details class="details-ci">
-                                <summary>Ver detalhe Gastos Fixos</summary> <!-- Humanizado -->
+                                <summary>Ver detalhe Gastos Fixos</summary>
                                 <ul id="lista-custos-indiretos-detalhes"></ul>
                             </details>
                         </div>
@@ -815,24 +810,34 @@
                 </div>
             </div>
 
-            <!-- ABA: HISTÓRICO -->
+            <!-- ABA: HISTÓRICO (ESTRUTURA ATUALIZADA) -->
             <div id="precificacoes-geradas" class="subpagina" style="display:none;">
                 <h2 class="section-title-lined">Histórico de Precificações</h2>
-                <div class="form-group">
-                    <input type="text" id="busca-precificacao" placeholder="Filtrar por produto..." onkeyup="buscarPrecificacoesGeradas()">
+                
+                <!-- Barra de Busca Padronizada -->
+                <div class="search-container">
+                    <input type="text" id="busca-precificacao" placeholder="🔍 Buscar por Produto ou Número..." class="search-input">
                 </div>
+
                 <div class="table-responsive">
                     <table id="tabela-precificacoes-geradas" class="tabela-gerada">
-                        <thead><tr><th>Nº</th><th>Produto</th><th>Ações</th></tr></thead>
+                        <thead><tr><th>Nº</th><th>Produto</th><th>Data</th><th>Total</th><th>Ações</th></tr></thead>
                         <tbody></tbody>
                     </table>
+                </div>
+
+                <!-- Controles de Paginação -->
+                <div class="pagination-controls">
+                    <button id="btn-ant-hist" class="btn-paginacao">❮ Anterior</button>
+                    <span id="info-pag-hist">Página 1</span>
+                    <button id="btn-prox-hist" class="btn-paginacao">Próximo ❯</button>
                 </div>
             </div>
 
         </div>
     </section>
 
-    <!-- 6. MODAL: ASSISTENTE DE CÁLCULO DE CUSTOS (NOVO) -->
+    <!-- 6. MODAL: ASSISTENTE DE CÁLCULO DE CUSTOS -->
     <div id="modal-calculadora-custos" class="modal-overlay" style="display: none;">
         <div class="modal-content calculator-modal">
             <div class="modal-header">
