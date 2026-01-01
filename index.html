@@ -553,17 +553,25 @@
                 </form>
             </div>
 
-            <!-- ABA: CUSTOS INDIRETOS (AGORA: GASTOS FIXOS) -->
+          <!-- ABA: CUSTOS INDIRETOS (AGORA: GASTOS FIXOS) -->
             <div id="custos-indiretos" class="subpagina" style="display:none;">
                 <h2 class="section-title-lined">Gastos Fixos (Indiretos)</h2> <!-- Título Humanizado -->
+                
+                <!-- Lista para edição dos valores -->
                 <ul id="lista-custos-indiretos">
                     <!-- Preenchido via JS -->
                 </ul>
+                
                 <button type="button" id="adicionarCustoIndiretoBtn">+ Custo Adicional</button>
                 
-                <div class="form-group" style="margin-top:20px;">
-                    <input type="text" id="busca-custo-indireto" placeholder="Buscar custo..." onkeyup="buscarCustosIndiretosCadastrados()">
+                <!-- Separador Visual Padronizado -->
+                <hr class="menu">
+                
+                <!-- Barra de Busca Padronizada -->
+                <div class="search-container">
+                    <input type="text" id="busca-custo-indireto" placeholder="🔍 Buscar Gasto Fixo..." class="search-input">
                 </div>
+                
                 <div class="table-responsive">
                     <table id="tabela-custos-indiretos" class="tabela-gerada">
                         <thead><tr><th>Descrição</th><th>Mensal</th><th>Por Hora</th><th>Ação</th></tr></thead>
