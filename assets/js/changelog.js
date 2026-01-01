@@ -6,6 +6,16 @@
  */
 const changeLogData = [
     {
+        version: "1.1.3",
+        date: "01/01/2026",
+        changes: [
+            "📦 **Arquitetura Modular:** Realizamos uma grande refatoração nos bastidores! O módulo de Precificação foi dividido para separar a 'Gestão de Produtos' (Receitas) da 'Calculadora Financeira'.",
+            "🛡️ **Maior Estabilidade:** Com essa divisão, alterações nos cálculos de preço não correm mais o risco de afetar o cadastro dos seus produtos, tornando o sistema mais robusto.",
+            "🚀 **Performance de Código:** Arquivos menores e mais organizados facilitam o carregamento e futuras atualizações do sistema.",
+            "🔧 **Base Preparada para o Futuro:** Essa estrutura permite que, em breve, possamos adicionar funcionalidades como 'Duplicar Produto' ou 'Importar Receitas' com muito mais facilidade."
+        ]
+    },
+    {
         version: "1.1.2",
         date: "31/12/2025",
         changes: [
