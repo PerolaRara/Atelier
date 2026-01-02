@@ -5,6 +5,16 @@
  * Adicione novas versões no topo do array.
  */
 const changeLogData = [
+    {
+        version: "1.1.5",
+        date: "02/01/2026",
+        changes: [
+            "🎨 **Design de Impressão Premium:** Transformação total dos documentos gerados (Orçamentos e Pedidos). Agora eles possuem um layout visual de 'Papel Timbrado', alinhado à identidade da marca Pérola Rara.",
+            "📄 **Nova 'Nota de Pedido':** Adicionado um botão exclusivo na lista de pedidos para gerar um documento formal para o cliente, separado do Checklist interno de produção.",
+            "💰 **Transparência Financeira na Impressão:** A nova Nota de Pedido agora exibe claramente para o cliente o valor da 'Entrada' (Já pago) e o 'Restante' (A pagar na entrega), com destaque visual nas cores da marca.",
+            "🖋️ **Tipografia & Branding:** Integração das fontes oficiais ('Dancing Script' para títulos e 'Roboto' para dados) e inserção automática do logotipo em alta resolução nos documentos impressos."
+        ]
+    },
 {
 version: "1.1.4",
 date: "02/01/2026",
