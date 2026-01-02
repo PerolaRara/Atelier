@@ -1,9 +1,5 @@
 // assets/js/pedidos.js
 
-import { db } from './firebase-config.js';
-// Nota: Importamos Firestore apenas para garantir tipos se necessário, 
-// mas a função de salvar principal virá injetada do orcamentos.js para centralizar a lógica.
-
 // ==========================================================================
 // ESTADO LOCAL DO MÓDULO DE PEDIDOS
 // ==========================================================================
@@ -38,6 +34,7 @@ export function setupPedidos(config) {
     window.atualizarPedido = atualizarPedido;
     window.imprimirChecklist = imprimirChecklist;
     window.gerarRelatorioFinanceiro = gerarRelatorioFinanceiro;
+    window.gerarRelatorioXLSX = gerarRelatorioXLSX; // <--- RESTAURADO
     
     // Funções auxiliares da tabela de edição
     window.adicionarProdutoEdicao = adicionarProdutoEdicao;
@@ -109,6 +106,17 @@ function initListenersPedidos() {
 
     const btnAddProd = document.getElementById('btnAddProdutoEdicao');
     if(btnAddProd) btnAddProd.addEventListener('click', adicionarProdutoEdicao);
+
+    // RESTAURADO: Listener para o botão de XLSX
+    // Procura qualquer botão dentro da área de relatório que tenha a intenção de gerar XLSX
+    const btnXLSX = document.querySelector('#relatorio button[onclick="gerarRelatorioXLSX()"]') || 
+                    document.querySelector('#btn-gerar-xlsx'); // Caso você adicione um ID no futuro
+    
+    if(btnXLSX) {
+        // Removemos o onclick inline para garantir que o JS controle (opcional, mas boa prática)
+        btnXLSX.removeAttribute('onclick');
+        btnXLSX.addEventListener('click', gerarRelatorioXLSX);
+    }
 }
 
 // ==========================================================================
@@ -206,14 +214,19 @@ function editarPedido(id) {
     setValMoeda("maoDeObraPedido", pedido.custoMaoDeObra || 0);
     setValMoeda("lucroPedido", pedido.margemLucro || 0);
     
-    // Compatibilidade Legado
+    // Compatibilidade Legado (Caso o HTML ainda use estes IDs antigos)
     setValMoeda("custoMaoDeObraEdicao", pedido.custoMaoDeObra || 0);
     setValMoeda("margemLucroEdicao", pedido.margemLucro || 0);
 
     // Produtos
     const tbody = document.querySelector("#tabelaProdutosEdicao tbody");
     tbody.innerHTML = '';
-    pedido.produtos.forEach(p => adicionarRowProdutoEdicao(tbody, p));
+    if(pedido.produtos && pedido.produtos.length > 0) {
+        pedido.produtos.forEach(p => adicionarRowProdutoEdicao(tbody, p));
+    } else {
+        // Se não houver produtos, adiciona uma linha vazia para começar
+        adicionarRowProdutoEdicao(tbody, { quantidade: 1, descricao: '', valorUnit: 0, valorTotal: 0 });
+    }
 
     mostrarPagina('form-edicao-pedido');
 }
@@ -474,6 +487,11 @@ function gerarRelatorioFinanceiro() {
             boxMsg.style.display = "none";
         }
     }
+}
+
+// RESTAURADO: Função de Exportação (Alert Temporário)
+function gerarRelatorioXLSX() {
+    alert("Exportação XLSX em breve.");
 }
 
 function updateElementText(id, value, isMoney = true) {
