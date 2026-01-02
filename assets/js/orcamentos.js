@@ -3,6 +3,9 @@
 import { db, auth } from './firebase-config.js';
 import { collection, addDoc, getDocs, doc, setDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 
+// IMPORTAÇÃO ESTRATÉGICA DO MÓDULO DE PEDIDOS
+import { setupPedidos, adicionarPedidoNaLista } from './pedidos.js';
+
 // Referências
 const orcamentosPedidosRef = collection(db, "Orcamento-Pedido");
 
@@ -11,45 +14,65 @@ let numeroOrcamento = 1;
 let numeroPedido = 1;
 const anoAtual = new Date().getFullYear();
 let orcamentoEditando = null;
-let pedidoEditando = null;
 let orcamentos = [];
-let pedidos = [];
 let moduleInitialized = false;
 
-// Variáveis de Estado (Paginação e Busca) - NOVAS
+// Variáveis de Estado (Paginação e Busca)
 const ITENS_POR_PAGINA = 10;
 let pagAtualOrc = 1;
-let pagAtualPed = 1;
 let termoBuscaOrc = "";
-let termoBuscaPed = "";
 
 // ==========================================================================
-// 1. INICIALIZAÇÃO
+// 1. HELPERS E FORMATAÇÃO (Definidos aqui e passados para pedidos.js)
+// ==========================================================================
+
+const helpers = {
+    formatarMoeda: (valor) => {
+        if (valor === undefined || valor === null) return 'R$ 0,00';
+        return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    },
+    converterMoedaParaNumero: (valor) => {
+        if (typeof valor === 'number') return valor;
+        if (typeof valor !== 'string') return 0;
+        return parseFloat(valor.replace(/R\$\s?|\./g, '').replace(',', '.')) || 0;
+    }
+};
+
+// Helpers expostos para o HTML (oninput)
+window.formatarEntradaMoeda = (input) => {
+    if (!input.value) {
+        input.value = 'R$ 0,00';
+        return;
+    }
+    let valor = input.value.replace(/\D/g, '');
+    valor = (valor / 100).toFixed(2) + '';
+    valor = valor.replace(".", ",");
+    valor = valor.replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.');
+    input.value = 'R$ ' + valor;
+};
+
+// ==========================================================================
+// 2. INICIALIZAÇÃO E CARREGAMENTO
 // ==========================================================================
 export async function initOrcamentos() {
-    console.log("Inicializando Módulo Orçamentos...");
+    console.log("Inicializando Módulo Orçamentos (Controlador Principal)...");
     
-    // EXPOR FUNÇÕES PARA O HTML
+    // EXPOR FUNÇÕES DE ORÇAMENTO PARA O HTML
     window.excluirProduto = excluirProduto;
-    window.excluirProdutoEdicao = excluirProdutoEdicao;
-    window.formatarEntradaMoeda = formatarEntradaMoeda;
-    window.atualizarTotaisEdicao = atualizarTotaisEdicao;
-    window.atualizarRestanteEdicao = atualizarRestanteEdicao;
     window.visualizarImpressao = visualizarImpressao;
     window.editarOrcamento = editarOrcamento;
-    window.gerarPedido = gerarPedido;
-    window.editarPedido = editarPedido;
-    window.imprimirChecklist = imprimirChecklist;
-    window.gerarRelatorioFinanceiro = gerarRelatorioFinanceiro;
+    window.gerarPedido = gerarPedido; // A ponte entre Vendas e Produção
+    window.gerarOrcamento = gerarOrcamento;
+    window.atualizarOrcamento = atualizarOrcamento;
 
-    // Carregar dados do banco
+    // Carregar dados do banco e distribuir para os módulos
     await carregarDados();
     
     // Configurar eventos (apenas uma vez)
     if (!moduleInitialized) {
         setupEventListeners();
         
-        // Popular Select de Anos no Relatório
+        // Popular Select de Anos no Relatório (UI Global)
         const selectAno = document.getElementById("relatorio-ano");
         if(selectAno) {
             for(let i = anoAtual; i >= anoAtual - 2; i--) {
@@ -59,17 +82,11 @@ export async function initOrcamentos() {
                 selectAno.appendChild(opt);
             }
         }
-
         moduleInitialized = true;
     }
     
-    // Mostrar tela inicial
     mostrarPagina('form-orcamento');
 }
-
-// ==========================================================================
-// 2. CARREGAMENTO E SALVAMENTO (FIREBASE)
-// ==========================================================================
 
 async function carregarDados() {
     const user = auth.currentUser;
@@ -77,8 +94,8 @@ async function carregarDados() {
 
     try {
         orcamentos = [];
-        pedidos = [];
-        // Trazemos ordenado por número para facilitar, mas a ordenação final será na memória
+        const pedidosTemp = []; // Lista temporária para passar ao módulo de pedidos
+
         const q = query(orcamentosPedidosRef, orderBy("numero"));
         const snapshot = await getDocs(q);
 
@@ -91,22 +108,30 @@ async function carregarDados() {
                 const num = parseInt(data.numero.split('/')[0]);
                 if (num >= numeroOrcamento) numeroOrcamento = num + 1;
             } else if (data.tipo === 'pedido') {
-                pedidos.push(data);
+                pedidosTemp.push(data);
                 const num = parseInt(data.numero.split('/')[0]);
                 if (num >= numeroPedido) numeroPedido = num + 1;
             }
         });
         
-        console.log(`Orçamentos: ${orcamentos.length}, Pedidos: ${pedidos.length}`);
-        // Renderiza as tabelas com paginação inicial
+        console.log(`Carregado: ${orcamentos.length} Orçamentos, ${pedidosTemp.length} Pedidos`);
+        
+        // 1. Renderiza Orçamentos (Responsabilidade deste arquivo)
         mostrarOrcamentosGerados();
-        mostrarPedidosRealizados();
+        
+        // 2. Inicializa o Módulo de Pedidos com os dados separados (Injeção)
+        setupPedidos({
+            listaPedidos: pedidosTemp,
+            salvarDadosFn: salvarDados,
+            helpers: helpers
+        });
 
     } catch (error) {
-        console.error("Erro ao carregar dados orçamentos:", error);
+        console.error("Erro ao carregar dados:", error);
     }
 }
 
+// Função de Salvamento Genérica (Centralizada para uso dos dois módulos)
 async function salvarDados(dados, tipo) {
     if (!auth.currentUser) {
         alert("Sessão expirada.");
@@ -127,10 +152,9 @@ async function salvarDados(dados, tipo) {
 }
 
 // ==========================================================================
-// 3. EVENT LISTENERS, UTILS E NAVEGAÇÃO
+// 3. LISTENERS E NAVEGAÇÃO
 // ==========================================================================
 
-// Função Debounce (Melhoria UX - Prioridade 3)
 function debounce(func, timeout = 300) {
     let timer;
     return (...args) => {
@@ -140,7 +164,7 @@ function debounce(func, timeout = 300) {
 }
 
 function setupEventListeners() {
-    // Abas
+    // Navegação entre Abas
     document.querySelectorAll('#module-orcamentos nav ul li a[data-pagina]').forEach(link => {
         link.addEventListener('click', (e) => {
             e.preventDefault();
@@ -148,62 +172,30 @@ function setupEventListeners() {
         });
     });
 
-    // Botões Principais de Ação
+    // Botões de Orçamento
     bindClick('#btnAddProdutoOrcamento', adicionarProduto);
     bindClick('#btnGerarOrcamento', gerarOrcamento);
     bindClick('#btnAtualizarOrcamento', atualizarOrcamento);
-    bindClick('#btnAddProdutoEdicao', adicionarProdutoEdicao);
-    bindClick('#btnSalvarPedidoEdicao', atualizarPedido);
 
-    // --- NOVOS LISTENERS: Busca e Paginação (Prioridade 1) ---
-    
-    // 1. Orçamentos
+    // Busca de Orçamentos
     const inputBuscaOrc = document.getElementById('busca-orcamentos');
     if(inputBuscaOrc) {
-        // Aplica Debounce na busca
         inputBuscaOrc.addEventListener('input', debounce((e) => {
             termoBuscaOrc = e.target.value.toLowerCase();
-            pagAtualOrc = 1; // Reseta para a primeira página ao buscar
+            pagAtualOrc = 1; 
             mostrarOrcamentosGerados();
         }));
     }
+    
+    // Paginação de Orçamentos
     bindClick('#btn-ant-orc', () => { 
-        if(pagAtualOrc > 1) { 
-            pagAtualOrc--; 
-            mostrarOrcamentosGerados(); 
-        } 
+        if(pagAtualOrc > 1) { pagAtualOrc--; mostrarOrcamentosGerados(); } 
     });
     bindClick('#btn-prox-orc', () => { 
-        pagAtualOrc++; 
-        mostrarOrcamentosGerados(); 
+        pagAtualOrc++; mostrarOrcamentosGerados(); 
     });
 
-    // 2. Pedidos
-    const inputBuscaPed = document.getElementById('busca-pedidos');
-    if(inputBuscaPed) {
-        // Aplica Debounce na busca
-        inputBuscaPed.addEventListener('input', debounce((e) => {
-            termoBuscaPed = e.target.value.toLowerCase();
-            pagAtualPed = 1; // Reseta para a primeira página ao buscar
-            mostrarPedidosRealizados();
-        }));
-    }
-    bindClick('#btn-ant-ped', () => { 
-        if(pagAtualPed > 1) { 
-            pagAtualPed--; 
-            mostrarPedidosRealizados(); 
-        } 
-    });
-    bindClick('#btn-prox-ped', () => { 
-        pagAtualPed++; 
-        mostrarPedidosRealizados(); 
-    });
-
-    // Filtros e Relatórios (Botão de Atualizar Lista antigo foi removido - Prioridade 2)
-    const btnXLSX = document.querySelector('#relatorio button[onclick="gerarRelatorioXLSX()"]');
-    if(btnXLSX) btnXLSX.onclick = gerarRelatorioXLSX;
-
-    // Listeners Dinâmicos (Inputs de Tabela)
+    // Listeners Dinâmicos (Inputs da Tabela de Orçamento)
     const tabProd = document.querySelector('#tabelaProdutos');
     if(tabProd) {
         tabProd.addEventListener('input', (e) => {
@@ -213,7 +205,7 @@ function setupEventListeners() {
     
     const freteInput = document.querySelector('#valorFrete');
     if(freteInput) freteInput.addEventListener('input', () => {
-        formatarEntradaMoeda(freteInput);
+        window.formatarEntradaMoeda(freteInput);
         atualizarTotais();
     });
 }
@@ -228,37 +220,8 @@ function mostrarPagina(idPagina) {
     const target = document.getElementById(idPagina);
     if(target) {
         target.style.display = 'block';
-        // Recarrega as tabelas ao entrar na aba para garantir dados frescos
         if(idPagina === 'orcamentos-gerados') mostrarOrcamentosGerados();
-        if(idPagina === 'lista-pedidos') mostrarPedidosRealizados();
     }
-}
-
-// ==========================================================================
-// 4. FUNÇÕES AUXILIARES DE FORMATAÇÃO
-// ==========================================================================
-
-function formatarMoeda(valor) {
-    if (valor === undefined || valor === null) return 'R$ 0,00';
-    return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-}
-
-function formatarEntradaMoeda(input) {
-    if (!input.value) {
-        input.value = 'R$ 0,00';
-        return;
-    }
-    let valor = input.value.replace(/\D/g, '');
-    valor = (valor / 100).toFixed(2) + '';
-    valor = valor.replace(".", ",");
-    valor = valor.replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.');
-    input.value = 'R$ ' + valor;
-}
-
-function converterMoedaParaNumero(valor) {
-    if (typeof valor === 'number') return valor;
-    if (typeof valor !== 'string') return 0;
-    return parseFloat(valor.replace(/R\$\s?|\./g, '').replace(',', '.')) || 0;
 }
 
 function gerarNumeroFormatado(numero) {
@@ -266,18 +229,14 @@ function gerarNumeroFormatado(numero) {
 }
 
 function limparCamposMoeda() {
-    const campos = [
-        'valorFrete', 'valorOrcamento', 'total', 'entrada', 'restante', 
-        'margemLucroEdicao', 'custoMaoDeObraEdicao', 'custoTotalPedido', 'maoDeObraPedido', 'lucroPedido'
-    ];
-    campos.forEach(id => {
+    ['valorFrete', 'valorOrcamento', 'total'].forEach(id => {
         const el = document.getElementById(id);
         if(el) el.value = 'R$ 0,00';
     });
 }
 
 // ==========================================================================
-// 5. LÓGICA DE NEGÓCIO (ORÇAMENTOS)
+// 4. LÓGICA DE NEGÓCIO: ORÇAMENTOS (VENDAS)
 // ==========================================================================
 
 function adicionarProduto() {
@@ -301,18 +260,17 @@ function atualizarTotais() {
     let totalProd = 0;
     document.querySelectorAll("#tabelaProdutos tbody tr").forEach(row => {
         const qtd = parseFloat(row.querySelector(".produto-quantidade").value) || 0;
-        const unit = converterMoedaParaNumero(row.querySelector(".produto-valor-unit").value);
+        const unit = helpers.converterMoedaParaNumero(row.querySelector(".produto-valor-unit").value);
         const total = qtd * unit;
-        row.cells[3].textContent = formatarMoeda(total);
+        row.cells[3].textContent = helpers.formatarMoeda(total);
         totalProd += total;
     });
     
-    const frete = converterMoedaParaNumero(document.getElementById("valorFrete").value);
-    document.getElementById("valorOrcamento").value = formatarMoeda(totalProd);
-    document.getElementById("total").value = formatarMoeda(totalProd + frete);
+    const frete = helpers.converterMoedaParaNumero(document.getElementById("valorFrete").value);
+    document.getElementById("valorOrcamento").value = helpers.formatarMoeda(totalProd);
+    document.getElementById("total").value = helpers.formatarMoeda(totalProd + frete);
 }
 
-// GERAÇÃO DE ORÇAMENTO
 async function gerarOrcamento() {
     const dados = {
         numero: gerarNumeroFormatado(numeroOrcamento),
@@ -326,9 +284,9 @@ async function gerarOrcamento() {
         email: document.getElementById("clienteEmail").value,
         cores: document.getElementById("cores").value,
         pagamento: Array.from(document.querySelectorAll('input[name="pagamento"]:checked')).map(el => el.value),
-        valorFrete: converterMoedaParaNumero(document.getElementById("valorFrete").value),
-        valorOrcamento: converterMoedaParaNumero(document.getElementById("valorOrcamento").value),
-        total: converterMoedaParaNumero(document.getElementById("total").value),
+        valorFrete: helpers.converterMoedaParaNumero(document.getElementById("valorFrete").value),
+        valorOrcamento: helpers.converterMoedaParaNumero(document.getElementById("valorOrcamento").value),
+        total: helpers.converterMoedaParaNumero(document.getElementById("total").value),
         observacoes: document.getElementById("observacoes").value,
         produtos: [],
         pedidoGerado: false,
@@ -339,8 +297,8 @@ async function gerarOrcamento() {
         dados.produtos.push({
             quantidade: parseFloat(row.querySelector(".produto-quantidade").value),
             descricao: row.querySelector(".produto-descricao").value,
-            valorUnit: converterMoedaParaNumero(row.querySelector(".produto-valor-unit").value),
-            valorTotal: converterMoedaParaNumero(row.cells[3].textContent)
+            valorUnit: helpers.converterMoedaParaNumero(row.querySelector(".produto-valor-unit").value),
+            valorTotal: helpers.converterMoedaParaNumero(row.cells[3].textContent)
         });
     });
 
@@ -356,7 +314,6 @@ async function gerarOrcamento() {
     mostrarPagina('orcamentos-gerados');
 }
 
-// ATUALIZAÇÃO DE ORÇAMENTO
 async function atualizarOrcamento() {
     if (!orcamentoEditando) return;
     
@@ -375,9 +332,9 @@ async function atualizarOrcamento() {
         email: document.getElementById("clienteEmail").value,
         cores: document.getElementById("cores").value,
         pagamento: Array.from(document.querySelectorAll('input[name="pagamento"]:checked')).map(el => el.value),
-        valorFrete: converterMoedaParaNumero(document.getElementById("valorFrete").value),
-        valorOrcamento: converterMoedaParaNumero(document.getElementById("valorOrcamento").value),
-        total: converterMoedaParaNumero(document.getElementById("total").value),
+        valorFrete: helpers.converterMoedaParaNumero(document.getElementById("valorFrete").value),
+        valorOrcamento: helpers.converterMoedaParaNumero(document.getElementById("valorOrcamento").value),
+        total: helpers.converterMoedaParaNumero(document.getElementById("total").value),
         observacoes: document.getElementById("observacoes").value,
         produtos: []
     };
@@ -386,8 +343,8 @@ async function atualizarOrcamento() {
         dados.produtos.push({
             quantidade: parseFloat(row.querySelector(".produto-quantidade").value),
             descricao: row.querySelector(".produto-descricao").value,
-            valorUnit: converterMoedaParaNumero(row.querySelector(".produto-valor-unit").value),
-            valorTotal: converterMoedaParaNumero(row.cells[3].textContent)
+            valorUnit: helpers.converterMoedaParaNumero(row.querySelector(".produto-valor-unit").value),
+            valorTotal: helpers.converterMoedaParaNumero(row.cells[3].textContent)
         });
     });
 
@@ -403,10 +360,6 @@ async function atualizarOrcamento() {
     mostrarPagina('orcamentos-gerados');
 }
 
-// ==========================================================================
-// 6. LISTAGEM COM FILTRO E PAGINAÇÃO (REESCRITA COMPLETA)
-// ==========================================================================
-
 function mostrarOrcamentosGerados() {
     const tbody = document.querySelector("#tabela-orcamentos tbody");
     const btnAnt = document.getElementById("btn-ant-orc");
@@ -416,39 +369,29 @@ function mostrarOrcamentosGerados() {
     if(!tbody) return;
     tbody.innerHTML = '';
 
-    // 1. Filtragem (Busca)
     const termo = termoBuscaOrc.trim();
     const filtrados = orcamentos.filter(orc => {
         if (!termo) return true;
-        
         const dataFormatada = orc.dataOrcamento ? orc.dataOrcamento.split('-').reverse().join('/') : '';
-        const matchCliente = orc.cliente.toLowerCase().includes(termo);
-        const matchNumero = orc.numero.toLowerCase().includes(termo);
-        const matchData = dataFormatada.includes(termo);
-        
-        return matchCliente || matchNumero || matchData;
+        return orc.cliente.toLowerCase().includes(termo) || 
+               orc.numero.toLowerCase().includes(termo) || 
+               dataFormatada.includes(termo);
     });
 
-    // 2. Ordenação (Decrescente por número -> mais recente no topo)
-    filtrados.sort((a,b) => {
-        // Extrai números para comparação correta (ex: 2/2025 > 10/2024)
-        // Simplificação: comparação string localeCompare geralmente funciona bem para "0000/0000"
-        return b.numero.localeCompare(a.numero);
-    });
+    // Ordenação (Mais recentes primeiro)
+    filtrados.sort((a,b) => b.numero.localeCompare(a.numero));
 
-    // 3. Paginação
+    // Paginação
     const totalItens = filtrados.length;
     const totalPaginas = Math.ceil(totalItens / ITENS_POR_PAGINA) || 1;
 
-    // Correção se a página atual ultrapassar o total (ex: filtrou e reduziu itens)
     if (pagAtualOrc > totalPaginas) pagAtualOrc = totalPaginas;
     if (pagAtualOrc < 1) pagAtualOrc = 1;
 
-    const indiceInicio = (pagAtualOrc - 1) * ITENS_POR_PAGINA;
-    const indiceFim = indiceInicio + ITENS_POR_PAGINA;
-    const itensPagina = filtrados.slice(indiceInicio, indiceFim);
+    const inicio = (pagAtualOrc - 1) * ITENS_POR_PAGINA;
+    const fim = inicio + ITENS_POR_PAGINA;
+    const itensPagina = filtrados.slice(inicio, fim);
 
-    // 4. Renderização
     if (itensPagina.length === 0) {
         tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Nenhum orçamento encontrado.</td></tr>';
     } else {
@@ -458,14 +401,13 @@ function mostrarOrcamentosGerados() {
                 <td>${orc.numero}</td>
                 <td>${orc.dataOrcamento ? orc.dataOrcamento.split('-').reverse().join('/') : '-'}</td>
                 <td>${orc.cliente}</td>
-                <td>${formatarMoeda(orc.total)}</td>
+                <td>${helpers.formatarMoeda(orc.total)}</td>
                 <td>${orc.pedidoGerado ? orc.numeroPedido : 'Não'}</td>
                 <td></td>
             `;
             
             const cellAcoes = row.cells[5];
             
-            // Botão Imprimir
             const btnImprimir = document.createElement('button');
             btnImprimir.textContent = "Imprimir";
             btnImprimir.style.marginRight = "5px";
@@ -492,15 +434,14 @@ function mostrarOrcamentosGerados() {
         });
     }
 
-    // 5. Atualizar Controles de Paginação
     if (infoPag) infoPag.textContent = `Página ${pagAtualOrc} de ${totalPaginas}`;
     if (btnAnt) btnAnt.disabled = (pagAtualOrc === 1);
     if (btnProx) btnProx.disabled = (pagAtualOrc === totalPaginas);
 }
 
 function visualizarImpressao(orcamento) {
+    // (Mesma lógica de template de impressão do arquivo original)
     const janela = window.open('', '_blank');
-    
     const dtOrc = orcamento.dataOrcamento ? orcamento.dataOrcamento.split('-').reverse().join('/') : '';
     const dtVal = orcamento.dataValidade ? orcamento.dataValidade.split('-').reverse().join('/') : '';
     const pagamento = Array.isArray(orcamento.pagamento) ? orcamento.pagamento.join(', ') : orcamento.pagamento;
@@ -549,16 +490,16 @@ function visualizarImpressao(orcamento) {
                         <tr>
                             <td>${p.quantidade}</td>
                             <td>${p.descricao}</td>
-                            <td>${formatarMoeda(p.valorUnit)}</td>
-                            <td>${formatarMoeda(p.valorTotal)}</td>
+                            <td>${helpers.formatarMoeda(p.valorUnit)}</td>
+                            <td>${helpers.formatarMoeda(p.valorTotal)}</td>
                         </tr>
                     `).join('')}
                 </tbody>
             </table>
 
             <div class="totais">
-                <p><strong>Frete:</strong> ${formatarMoeda(orcamento.valorFrete)}</p>
-                <h3>Total Geral: ${formatarMoeda(orcamento.total)}</h3>
+                <p><strong>Frete:</strong> ${helpers.formatarMoeda(orcamento.valorFrete)}</p>
+                <h3>Total Geral: ${helpers.formatarMoeda(orcamento.total)}</h3>
                 <p><strong>Forma de Pagamento:</strong> ${pagamento}</p>
             </div>
 
@@ -570,7 +511,6 @@ function visualizarImpressao(orcamento) {
         </body>
         </html>
     `;
-    
     janela.document.write(html);
     janela.document.close();
 }
@@ -590,9 +530,9 @@ function editarOrcamento(id) {
     document.getElementById("telefone").value = orc.telefone;
     document.getElementById("clienteEmail").value = orc.email || "";
     document.getElementById("cores").value = orc.cores;
-    document.getElementById("valorFrete").value = formatarMoeda(orc.valorFrete);
-    document.getElementById("valorOrcamento").value = formatarMoeda(orc.valorOrcamento);
-    document.getElementById("total").value = formatarMoeda(orc.total);
+    document.getElementById("valorFrete").value = helpers.formatarMoeda(orc.valorFrete);
+    document.getElementById("valorOrcamento").value = helpers.formatarMoeda(orc.valorOrcamento);
+    document.getElementById("total").value = helpers.formatarMoeda(orc.total);
     document.getElementById("observacoes").value = orc.observacoes;
 
     const tbody = document.querySelector("#tabelaProdutos tbody");
@@ -602,8 +542,8 @@ function editarOrcamento(id) {
         row.innerHTML = `
             <td><input type="number" class="produto-quantidade" value="${p.quantidade}" min="1"></td>
             <td><input type="text" class="produto-descricao" value="${p.descricao}"></td>
-            <td><input type="text" class="produto-valor-unit" value="${formatarMoeda(p.valorUnit)}" oninput="formatarEntradaMoeda(this)"></td>
-            <td>${formatarMoeda(p.valorTotal)}</td>
+            <td><input type="text" class="produto-valor-unit" value="${helpers.formatarMoeda(p.valorUnit)}" oninput="formatarEntradaMoeda(this)"></td>
+            <td>${helpers.formatarMoeda(p.valorTotal)}</td>
             <td><button type="button" onclick="excluirProduto(this)">Excluir</button></td>
         `;
     });
@@ -614,7 +554,7 @@ function editarOrcamento(id) {
 }
 
 // ==========================================================================
-// 7. LÓGICA DE NEGÓCIO (PEDIDOS)
+// 5. PONTE VENDAS -> PRODUÇÃO (GERAR PEDIDO)
 // ==========================================================================
 
 async function gerarPedido(orcamentoId) {
@@ -649,383 +589,21 @@ async function gerarPedido(orcamentoId) {
 
     await salvarDados(pedido, 'pedido');
     numeroPedido++;
-    pedidos.push(pedido);
+    // Nota: O novo pedido é adicionado à lista local do módulo de pedidos 
+    // através da função exportada abaixo, para não precisar recarregar tudo.
 
     orc.pedidoGerado = true;
     orc.numeroPedido = pedido.numero;
     await salvarDados(orc, 'orcamento');
 
+    // Notifica o módulo de Pedidos sobre o novo item
+    adicionarPedidoNaLista(pedido);
+
     alert(`Pedido ${pedido.numero} gerado!`);
-    mostrarPagina('lista-pedidos');
-    // Atualiza ambas as listas para refletir o novo pedido e o status "Gerado" no orçamento
-    mostrarPedidosRealizados();
+    
+    // Atualiza a tabela de orçamentos para mostrar que já foi gerado
     mostrarOrcamentosGerados();
-}
-
-// LISTAGEM DE PEDIDOS (REESCRITA COMPLETA COM FILTRO E PAGINAÇÃO)
-function mostrarPedidosRealizados() {
-    const tbody = document.querySelector("#tabela-pedidos tbody");
-    const btnAnt = document.getElementById("btn-ant-ped");
-    const btnProx = document.getElementById("btn-prox-ped");
-    const infoPag = document.getElementById("info-pag-ped");
-
-    if(!tbody) return;
-    tbody.innerHTML = '';
-
-    // 1. Filtragem (Busca)
-    const termo = termoBuscaPed.trim();
-    const filtrados = pedidos.filter(ped => {
-        if (!termo) return true;
-        
-        const dataFormatada = ped.dataPedido ? ped.dataPedido.split('-').reverse().join('/') : '';
-        const matchCliente = ped.cliente.toLowerCase().includes(termo);
-        const matchNumero = ped.numero.toLowerCase().includes(termo);
-        const matchData = dataFormatada.includes(termo);
-        
-        return matchCliente || matchNumero || matchData;
-    });
-
-    // 2. Ordenação (Decrescente por número)
-    filtrados.sort((a,b) => b.numero.localeCompare(a.numero));
-
-    // 3. Paginação
-    const totalItens = filtrados.length;
-    const totalPaginas = Math.ceil(totalItens / ITENS_POR_PAGINA) || 1;
-
-    if (pagAtualPed > totalPaginas) pagAtualPed = totalPaginas;
-    if (pagAtualPed < 1) pagAtualPed = 1;
-
-    const indiceInicio = (pagAtualPed - 1) * ITENS_POR_PAGINA;
-    const indiceFim = indiceInicio + ITENS_POR_PAGINA;
-    const itensPagina = filtrados.slice(indiceInicio, indiceFim);
-
-    // 4. Renderização
-    if (itensPagina.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Nenhum pedido encontrado.</td></tr>';
-    } else {
-        itensPagina.forEach(p => {
-            const row = tbody.insertRow();
-            row.innerHTML = `
-                <td>${p.numero}</td>
-                <td>${p.dataPedido ? p.dataPedido.split('-').reverse().join('/') : '-'}</td>
-                <td>${p.cliente}</td>
-                <td>${formatarMoeda(p.total)}</td>
-                <td>
-                    <button class="btn-editar-pedido" onclick="editarPedido('${p.id}')">Editar</button>
-                    <button class="btn-checklist" style="background:#687f82; margin-left:5px;" onclick="imprimirChecklist('${p.id}')">Checklist</button>
-                </td>
-            `;
-        });
-    }
-
-    // 5. Atualizar Controles de Paginação
-    if (infoPag) infoPag.textContent = `Página ${pagAtualPed} de ${totalPaginas}`;
-    if (btnAnt) btnAnt.disabled = (pagAtualPed === 1);
-    if (btnProx) btnProx.disabled = (pagAtualPed === totalPaginas);
-}
-
-function editarPedido(id) {
-    const pedido = pedidos.find(p => p.id === id);
-    if (!pedido) return;
-    pedidoEditando = id;
-
-    // Dados Gerais
-    document.getElementById("dataPedidoEdicao").value = pedido.dataPedido;
-    document.getElementById("dataEntregaEdicao").value = pedido.dataEntrega;
-    document.getElementById("clienteEdicao").value = pedido.cliente;
-    document.getElementById("enderecoEdicao").value = pedido.endereco;
-    document.getElementById("temaEdicao").value = pedido.tema;
-    document.getElementById("cidadeEdicao").value = pedido.cidade;
-    document.getElementById("contatoEdicao").value = pedido.telefone;
-    document.getElementById("coresEdicao").value = pedido.cores;
-    document.getElementById("valorFreteEdicao").value = formatarMoeda(pedido.valorFrete);
-    document.getElementById("valorPedidoEdicao").value = formatarMoeda(pedido.valorOrcamento || 0);
-    document.getElementById("totalEdicao").value = formatarMoeda(pedido.total);
-    document.getElementById("entradaEdicao").value = formatarMoeda(pedido.entrada || 0);
-    document.getElementById("restanteEdicao").value = formatarMoeda(pedido.restante || 0);
-    document.getElementById("observacoesEdicao").value = pedido.observacoes;
-
-    // --- NOVOS CAMPOS FINANCEIROS ---
-    if(document.getElementById("custoTotalPedido")) {
-        document.getElementById("custoTotalPedido").value = formatarMoeda(pedido.custosTotais || 0);
-    }
-    if(document.getElementById("maoDeObraPedido")) {
-        document.getElementById("maoDeObraPedido").value = formatarMoeda(pedido.custoMaoDeObra || 0);
-    }
-    if(document.getElementById("lucroPedido")) {
-        document.getElementById("lucroPedido").value = formatarMoeda(pedido.margemLucro || 0);
-    }
-    // Compatibilidade com campos antigos se existirem no HTML
-    if (document.getElementById("custoMaoDeObraEdicao")) {
-        document.getElementById("custoMaoDeObraEdicao").value = formatarMoeda(pedido.custoMaoDeObra || 0);
-    }
-    if (document.getElementById("margemLucroEdicao")) {
-        document.getElementById("margemLucroEdicao").value = formatarMoeda(pedido.margemLucro || 0);
-    }
-    // --------------------------------
-
-    const tbody = document.querySelector("#tabelaProdutosEdicao tbody");
-    tbody.innerHTML = '';
-    pedido.produtos.forEach(p => {
-        const row = tbody.insertRow();
-        row.innerHTML = `
-            <td><input type="number" class="produto-quantidade" value="${p.quantidade}" min="1" onchange="atualizarTotaisEdicao()"></td>
-            <td><input type="text" class="produto-descricao" value="${p.descricao}"></td>
-            <td><input type="text" class="produto-valor-unit" value="${formatarMoeda(p.valorUnit)}" oninput="formatarEntradaMoeda(this)" onblur="atualizarTotaisEdicao()"></td>
-            <td>${formatarMoeda(p.valorTotal)}</td>
-            <td><button type="button" onclick="excluirProdutoEdicao(this)">Excluir</button></td>
-        `;
-    });
-
-    mostrarPagina('form-edicao-pedido');
-}
-
-async function atualizarPedido() {
-    if (!pedidoEditando) return;
-    const index = pedidos.findIndex(p => p.id === pedidoEditando);
     
-    // Ler valores novos
-    const custosTotais = document.getElementById("custoTotalPedido") ? converterMoedaParaNumero(document.getElementById("custoTotalPedido").value) : 0;
-    const custoMO = document.getElementById("maoDeObraPedido") ? converterMoedaParaNumero(document.getElementById("maoDeObraPedido").value) : 0;
-    const margem = document.getElementById("lucroPedido") ? converterMoedaParaNumero(document.getElementById("lucroPedido").value) : 0;
-
-    const dados = {
-        ...pedidos[index],
-        cliente: document.getElementById("clienteEdicao").value,
-        dataEntrega: document.getElementById("dataEntregaEdicao").value,
-        valorFrete: converterMoedaParaNumero(document.getElementById("valorFreteEdicao").value),
-        total: converterMoedaParaNumero(document.getElementById("totalEdicao").value),
-        entrada: converterMoedaParaNumero(document.getElementById("entradaEdicao").value),
-        restante: converterMoedaParaNumero(document.getElementById("restanteEdicao").value),
-        
-        // Salvar campos financeiros
-        custosTotais: custosTotais,
-        custoMaoDeObra: custoMO,
-        margemLucro: margem,
-        
-        produtos: []
-    };
-
-    document.querySelectorAll("#tabelaProdutosEdicao tbody tr").forEach(row => {
-        dados.produtos.push({
-            quantidade: parseFloat(row.querySelector(".produto-quantidade").value),
-            descricao: row.querySelector(".produto-descricao").value,
-            valorUnit: converterMoedaParaNumero(row.querySelector(".produto-valor-unit").value),
-            valorTotal: converterMoedaParaNumero(row.cells[3].textContent)
-        });
-    });
-
-    await salvarDados(dados, 'pedido');
-    pedidos[index] = dados;
-    alert("Pedido Atualizado e Dados Financeiros Salvos!");
-    pedidoEditando = null;
-    mostrarPagina('lista-pedidos');
-    // Força atualização da tabela para refletir edições
-    mostrarPedidosRealizados();
+    // Redireciona para a aba de pedidos
+    document.querySelector('a[data-pagina="lista-pedidos"]').click();
 }
-
-// Funções de Edição (Dinâmicas)
-function adicionarProdutoEdicao() {
-    const tbody = document.querySelector("#tabelaProdutosEdicao tbody");
-    const row = tbody.insertRow();
-    row.innerHTML = `
-        <td><input type="number" class="produto-quantidade" value="1" min="1" onchange="atualizarTotaisEdicao()"></td>
-        <td><input type="text" class="produto-descricao"></td>
-        <td><input type="text" class="produto-valor-unit" value="R$ 0,00" oninput="formatarEntradaMoeda(this)" onblur="atualizarTotaisEdicao()"></td>
-        <td>R$ 0,00</td>
-        <td><button type="button" onclick="excluirProdutoEdicao(this)">Excluir</button></td>
-    `;
-}
-
-function excluirProdutoEdicao(btn) {
-    btn.closest('tr').remove();
-    atualizarTotaisEdicao();
-}
-
-function atualizarTotaisEdicao() {
-    let total = 0;
-    document.querySelectorAll("#tabelaProdutosEdicao tbody tr").forEach(row => {
-        const qtd = parseFloat(row.querySelector(".produto-quantidade").value) || 0;
-        const unit = converterMoedaParaNumero(row.querySelector(".produto-valor-unit").value);
-        const sub = qtd * unit;
-        row.cells[3].textContent = formatarMoeda(sub);
-        total += sub;
-    });
-    
-    const frete = converterMoedaParaNumero(document.getElementById("valorFreteEdicao").value);
-    const totalFinal = total + frete;
-    document.getElementById("valorPedidoEdicao").value = formatarMoeda(total);
-    document.getElementById("totalEdicao").value = formatarMoeda(totalFinal);
-    atualizarRestanteEdicao();
-}
-
-function atualizarRestanteEdicao() {
-    const total = converterMoedaParaNumero(document.getElementById("totalEdicao").value);
-    const entrada = converterMoedaParaNumero(document.getElementById("entradaEdicao").value);
-    document.getElementById("restanteEdicao").value = formatarMoeda(total - entrada);
-}
-
-// ==========================================================================
-// 8. CHECKLIST E RELATÓRIOS
-// ==========================================================================
-
-function imprimirChecklist(id) {
-    const p = pedidos.find(o => o.id === id);
-    if (!p) return;
-
-    const janela = window.open('', '_blank');
-    const html = `
-        <html>
-        <head>
-            <title>Checklist - ${p.numero}</title>
-            <style>
-                body { font-family: 'Arial', sans-serif; padding: 20px; color: #000; }
-                h1 { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; }
-                .info { display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 14px; }
-                table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-                th, td { border: 1px solid #000; padding: 8px; text-align: left; }
-                .box { width: 20px; height: 20px; border: 2px solid #000; display: inline-block; }
-            </style>
-        </head>
-        <body>
-            <h1>Ordem de Produção - ${p.numero}</h1>
-            <div class="info">
-                <div><strong>Cliente:</strong> ${p.cliente}</div>
-                <div><strong>Entrega:</strong> ${p.dataEntrega ? p.dataEntrega.split('-').reverse().join('/') : '-'}</div>
-            </div>
-            <div class="info">
-                <div><strong>Tema:</strong> ${p.tema}</div>
-                <div><strong>Cores:</strong> ${p.cores}</div>
-            </div>
-            
-            <h3>Itens para Conferência</h3>
-            <table>
-                <thead><tr><th style="width:50px">OK</th><th>Qtd</th><th>Descrição</th><th>Obs. Item</th></tr></thead>
-                <tbody>
-                    ${p.produtos.map(prod => `
-                        <tr>
-                            <td style="text-align:center;"><div class="box"></div></td>
-                            <td>${prod.quantidade}</td>
-                            <td>${prod.descricao}</td>
-                            <td></td>
-                        </tr>
-                    `).join('')}
-                </tbody>
-            </table>
-            
-            <div style="margin-top: 30px; border: 1px solid #000; padding: 10px; min-height: 100px;">
-                <strong>Observações Gerais:</strong><br>${p.observacoes}
-            </div>
-            <div style="text-align: center; margin-top: 30px;">
-                <button onclick="window.print()">Imprimir</button>
-            </div>
-        </body>
-        </html>
-    `;
-    janela.document.write(html);
-    janela.document.close();
-}
-
-function gerarRelatorioFinanceiro() {
-    const mes = parseInt(document.getElementById("relatorio-mes").value);
-    const anoSelect = document.getElementById("relatorio-ano");
-    const ano = parseInt(anoSelect ? anoSelect.value : new Date().getFullYear());
-
-    let totalFat = 0, totalMO = 0, totalLucro = 0, totalCustos = 0;
-    const tbody = document.querySelector("#tabela-relatorio tbody");
-    if(!tbody) return;
-    
-    tbody.innerHTML = "";
-
-    const pedidosFiltrados = pedidos.filter(p => {
-        if(!p.dataPedido) return false;
-        const parts = p.dataPedido.split('-');
-        const pMes = parseInt(parts[1]) - 1; // Mes 0-indexado
-        const pAno = parseInt(parts[0]);
-        return pMes === mes && pAno === ano;
-    });
-
-    // 1. Processamento da Tabela e Somas
-    pedidosFiltrados.forEach(p => {
-        totalFat += (p.total || 0);
-        totalMO += (p.custoMaoDeObra || 0);
-        totalLucro += (p.margemLucro || 0);
-        totalCustos += (p.custosTotais || 0);
-
-        const row = tbody.insertRow();
-        
-        // Prio 2: Truncar nome para mobile e adicionar classe de ocultação
-        const nomeCliente = p.cliente.length > 15 ? p.cliente.substring(0, 15) + '...' : p.cliente;
-
-        row.innerHTML = `
-            <td>${p.dataPedido.split('-').reverse().join('/').substring(0, 5)}</td>
-            <td class="col-oculta-mobile">${p.numero}</td>
-            <td><span title="${p.cliente}">${nomeCliente}</span></td>
-            <td style="color:#2196F3; font-weight:bold;">${formatarMoeda(p.custoMaoDeObra)}</td>
-            <td style="color:#4CAF50; font-weight:bold;">${formatarMoeda(p.margemLucro)}</td>
-            <td style="color:#e53935; font-weight:bold;">${formatarMoeda(p.custosTotais)}</td>
-            <td style="color:#ff9800; font-weight:bold;">${formatarMoeda(p.total)}</td>
-        `;
-    });
-
-    if(pedidosFiltrados.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 20px; color: #777;">Nenhum pedido entregue neste período.</td></tr>';
-    }
-
-    // 2. Atualização dos KPIs Numéricos
-    const kpiQtd = document.getElementById("kpi-qtd-pedidos");
-    if(kpiQtd) kpiQtd.textContent = pedidosFiltrados.length;
-
-    updateElementText("kpi-mao-obra", totalMO);
-    updateElementText("kpi-lucro", totalLucro);
-    updateElementText("kpi-custos", totalCustos);
-    updateElementText("kpi-total", totalFat);
-
-    // 3. Atualização da Barra Visual
-    if (totalFat > 0) {
-        const pctCustos = (totalCustos / totalFat) * 100;
-        const pctMO = (totalMO / totalFat) * 100;
-        const pctLucro = (totalLucro / totalFat) * 100;
-
-        setBarWidth("barra-custos", pctCustos);
-        setBarWidth("barra-salario", pctMO);
-        setBarWidth("barra-lucro", pctLucro);
-    } else {
-        setBarWidth("barra-custos", 0);
-        setBarWidth("barra-salario", 0);
-        setBarWidth("barra-lucro", 0);
-    }
-
-    // 4. Mensagem Motivacional
-    const boxMsg = document.getElementById("mensagem-motivacional");
-    if (boxMsg) {
-        if (pedidosFiltrados.length > 0) {
-            boxMsg.style.display = "block";
-            let mensagem = "";
-            
-            // Lógica de Feedback Emocional
-            if (totalLucro > totalCustos) {
-                mensagem = "🎉 <strong>Uau!</strong> O caixa da sua empresa cresceu mais que seus gastos este mês!";
-            } else if (totalMO > totalLucro && totalMO > totalCustos) {
-                mensagem = "💼 <strong>Ótimo trabalho!</strong> Seu salário (Mão de Obra) foi o destaque do mês.";
-            } else {
-                mensagem = `🚀 <strong>Produção a todo vapor!</strong> Você entregou ${pedidosFiltrados.length} pedidos. Continue firme!`;
-            }
-            boxMsg.innerHTML = mensagem;
-        } else {
-            boxMsg.style.display = "none";
-        }
-    }
-}
-
-// Helpers internos para o relatório
-function updateElementText(id, value) {
-    const el = document.getElementById(id);
-    if(el) el.textContent = formatarMoeda(value);
-}
-function setBarWidth(id, pct) {
-    const el = document.getElementById(id);
-    if(el) el.style.width = `${pct}%`;
-}
-
-function gerarRelatorioXLSX() { alert("Exportação XLSX em breve."); }
