@@ -33,7 +33,9 @@ export function setupPedidos(config) {
     window.editarPedido = editarPedido;
     window.atualizarPedido = atualizarPedido;
     window.imprimirChecklist = imprimirChecklist;
-    window.imprimirNotaPedido = imprimirNotaPedido; // <--- NOVA FUNÇÃO EXPOSTA
+    // NOVA FUNÇÃO EXPOSTA PARA O HTML
+    window.imprimirNotaPedido = imprimirNotaPedido;
+    
     window.gerarRelatorioFinanceiro = gerarRelatorioFinanceiro;
     window.gerarRelatorioXLSX = gerarRelatorioXLSX;
     
@@ -108,7 +110,7 @@ function initListenersPedidos() {
     const btnAddProd = document.getElementById('btnAddProdutoEdicao');
     if(btnAddProd) btnAddProd.addEventListener('click', adicionarProdutoEdicao);
 
-    // RESTAURADO: Listener para o botão de XLSX
+    // Listener para o botão de XLSX
     const btnXLSX = document.querySelector('#relatorio button[onclick="gerarRelatorioXLSX()"]') || 
                     document.querySelector('#btn-gerar-xlsx'); 
     
@@ -162,7 +164,7 @@ function mostrarPedidosRealizados() {
     } else {
         itensPagina.forEach(p => {
             const row = tbody.insertRow();
-            // INCLUSÃO DO BOTÃO "NOTA" ABAIXO
+            // ADICIONADO BOTÃO "NOTA" ABAIXO
             row.innerHTML = `
                 <td>${p.numero}</td>
                 <td>${p.dataPedido ? p.dataPedido.split('-').reverse().join('/') : '-'}</td>
@@ -351,58 +353,102 @@ function atualizarRestanteEdicao() {
 }
 
 // ==========================================================================
-// 6. RELATÓRIOS, CHECKLIST E ***NOVA NOTA DE PEDIDO***
+// 6. RELATÓRIOS E CHECKLIST
 // ==========================================================================
 
 function imprimirChecklist(id) {
     const p = pedidos.find(o => o.id === id);
     if (!p) return;
-
     const janela = window.open('', '_blank');
+    const dtEnt = p.dataEntrega ? p.dataEntrega.split('-').reverse().join('/') : '-';
+    // Logo para impressão
+    const logoSrc = window.location.href.substring(0, window.location.href.lastIndexOf('/')) + '/assets/images/logo_perola_rara.png';
+
     const html = `
+        <!DOCTYPE html>
         <html>
         <head>
-            <title>Checklist - ${p.numero}</title>
+            <title>Checklist ${p.numero}</title>
+            <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
             <style>
-                body { font-family: 'Arial', sans-serif; padding: 20px; color: #000; }
-                h1 { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; }
-                .info { display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 14px; }
+                * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                body { font-family: 'Roboto', sans-serif; color: #333; margin: 0; padding: 40px; background: #fff; font-size: 14px; }
+                
+                /* Cabeçalho Compacto Centralizado */
+                .header-container { text-align: center; border-bottom: 2px solid #555; padding-bottom: 15px; margin-bottom: 25px; }
+                .logo-box { margin: 0 auto 5px auto; width: 80px; }
+                .logo-box img { max-width: 100%; height: auto; grayscale: 100%; } /* Logo em escala de cinza */
+                .company-info h1 { font-family: 'Dancing Script', cursive; color: #555; font-size: 2em; margin: 0; }
+                
+                .doc-title { text-align: center; margin-bottom: 20px; }
+                .doc-title h2 { background-color: #333; color: #fff; display: inline-block; padding: 5px 25px; border-radius: 4px; text-transform: uppercase; font-size: 1.2em; letter-spacing: 2px; margin: 0; }
+                .doc-meta { font-size: 1.1em; margin-top: 10px; font-weight: bold; }
+
+                /* Box de Produção */
+                .production-box { border: 2px solid #333; padding: 15px; margin-bottom: 20px; background: #f0f0f0; }
+                .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+                .info-item { font-size: 1.1em; }
+                .info-item strong { display: block; font-size: 0.75em; text-transform: uppercase; color: #666; margin-bottom: 3px; }
+
+                /* Tabela de Checklist */
                 table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-                th, td { border: 1px solid #000; padding: 8px; text-align: left; }
-                .box { width: 20px; height: 20px; border: 2px solid #000; display: inline-block; }
+                th { background-color: #ddd; color: #000; font-weight: bold; text-transform: uppercase; font-size: 0.8em; padding: 10px; text-align: left; border: 1px solid #999; }
+                td { padding: 12px; border: 1px solid #999; vertical-align: middle; }
+                tr:nth-child(even) { background-color: #fafafa; }
+                
+                /* Checkbox Desenhado */
+                .check-box { width: 25px; height: 25px; border: 2px solid #333; display: block; margin: 0 auto; background: #fff; }
+                
+                .footer-area { margin-top: 30px; border: 2px dashed #999; padding: 15px; min-height: 100px; }
+                
+                @media print { .no-print { display: none; } body { padding: 0; } }
             </style>
         </head>
         <body>
-            <h1>Ordem de Produção - ${p.numero}</h1>
-            <div class="info">
-                <div><strong>Cliente:</strong> ${p.cliente}</div>
-                <div><strong>Entrega:</strong> ${p.dataEntrega ? p.dataEntrega.split('-').reverse().join('/') : '-'}</div>
+            <div class="header-container">
+                <div class="logo-box"><img src="${logoSrc}" alt="Pérola Rara"></div>
+                <div class="company-info"><h1>Ordem de Produção</h1></div>
             </div>
-            <div class="info">
-                <div><strong>Tema:</strong> ${p.tema}</div>
-                <div><strong>Cores:</strong> ${p.cores}</div>
+
+            <div class="doc-title">
+                <h2>Pedido Nº ${p.numero}</h2>
+                <div class="doc-meta">Entrega: ${dtEnt}</div>
             </div>
-            
-            <h3>Itens para Conferência</h3>
+
+            <div class="production-box">
+                <div class="info-grid">
+                    <div class="info-item"><strong>Cliente</strong> ${p.cliente}</div>
+                    <div class="info-item"><strong>Tema</strong> ${p.tema || 'N/A'}</div>
+                    <div class="info-item" style="grid-column: span 2;"><strong>Cores / Detalhes</strong> ${p.cores || 'N/A'}</div>
+                </div>
+            </div>
+
             <table>
-                <thead><tr><th style="width:50px">OK</th><th>Qtd</th><th>Descrição</th><th>Obs. Item</th></tr></thead>
+                <thead>
+                    <tr>
+                        <th style="width: 10%; text-align:center;">FEITO</th>
+                        <th style="width: 10%; text-align:center;">QTD</th>
+                        <th style="width: 80%">DESCRIÇÃO DO ITEM</th>
+                    </tr>
+                </thead>
                 <tbody>
                     ${p.produtos.map(prod => `
                         <tr>
-                            <td style="text-align:center;"><div class="box"></div></td>
-                            <td>${prod.quantidade}</td>
-                            <td>${prod.descricao}</td>
-                            <td></td>
+                            <td><div class="check-box"></div></td>
+                            <td style="text-align:center; font-weight:bold; font-size:1.2em;">${prod.quantidade}</td>
+                            <td style="font-size:1.1em;">${prod.descricao}</td>
                         </tr>
                     `).join('')}
                 </tbody>
             </table>
-            
-            <div style="margin-top: 30px; border: 1px solid #000; padding: 10px; min-height: 100px;">
-                <strong>Observações Gerais:</strong><br>${p.observacoes}
+
+            <div class="footer-area">
+                <strong>Observações Técnicas / Anotações de Produção:</strong><br>
+                ${p.observacoes ? p.observacoes.replace(/\n/g, '<br>') : ''}
             </div>
-            <div style="text-align: center; margin-top: 30px;">
-                <button onclick="window.print()">Imprimir</button>
+
+            <div class="no-print" style="text-align:center; margin-top:30px;">
+                <button onclick="window.print()" style="padding:15px 40px; background:#333; color:#fff; border:none; border-radius:5px; cursor:pointer; font-weight:bold; font-size:16px;">IMPRIMIR CHECKLIST</button>
             </div>
         </body>
         </html>
@@ -411,101 +457,72 @@ function imprimirChecklist(id) {
     janela.document.close();
 }
 
-/**
- * Função NOVA: Gera uma nota de pedido profissional para o cliente.
- * Design similar ao Orçamento, mas com informações de pagamento.
- */
 function imprimirNotaPedido(id) {
     const p = pedidos.find(o => o.id === id);
     if (!p) return;
-
     const janela = window.open('', '_blank');
     const dtPed = p.dataPedido ? p.dataPedido.split('-').reverse().join('/') : '-';
-    const dtEnt = p.dataEntrega ? p.dataEntrega.split('-').reverse().join('/') : '-';
-    
-    // Caminho absoluto para garantir carregamento da imagem na nova janela
-    const pathBase = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
-    const logoSrc = `${pathBase}/assets/images/logo_perola_rara.png`;
+    const logoSrc = window.location.href.substring(0, window.location.href.lastIndexOf('/')) + '/assets/images/logo_perola_rara.png';
 
     const html = `
         <!DOCTYPE html>
         <html>
         <head>
-            <title>Pedido ${p.numero} - Pérola Rara</title>
+            <title>Pedido ${p.numero}</title>
             <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
             <style>
-                /* RESET & BASE */
                 * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
                 body { font-family: 'Roboto', sans-serif; color: #555; margin: 0; padding: 40px; background: #fff; font-size: 14px; }
                 
-                /* HEADER & LOGO */
-                .header-container { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #7aa2a9; padding-bottom: 20px; margin-bottom: 30px; }
-                .logo-box { width: 150px; text-align: left; }
+                .header-container { text-align: center; border-bottom: 3px solid #7aa2a9; padding-bottom: 20px; margin-bottom: 30px; }
+                .logo-box { margin: 0 auto 10px auto; width: 120px; }
                 .logo-box img { max-width: 100%; height: auto; }
-                .company-info { text-align: right; }
-                .company-info h1 { font-family: 'Dancing Script', cursive; color: #7aa2a9; font-size: 2.5em; margin: 0; }
+                .company-info h1 { font-family: 'Dancing Script', cursive; color: #7aa2a9; font-size: 3em; margin: 0; line-height: 1.2; }
                 .company-info p { margin: 2px 0; font-size: 0.9em; color: #888; }
                 
-                /* DOC INFO */
                 .doc-title { text-align: center; margin-bottom: 30px; }
-                /* Título em Verde para Pedido */
                 .doc-title h2 { background-color: #7aa2a9; color: #fff; display: inline-block; padding: 8px 30px; border-radius: 50px; text-transform: uppercase; font-size: 1.1em; letter-spacing: 1px; margin: 0; }
                 .doc-meta { font-size: 0.9em; margin-top: 5px; color: #999; }
 
-                /* CLIENT GRID - Borda Rosa para diferenciar */
-                .client-box { background-color: #f8f9fa; border-left: 5px solid #dfb6b0; padding: 20px; margin-bottom: 30px; border-radius: 0 10px 10px 0; }
+                .client-box { background-color: #f8f9fa; border-top: 5px solid #dfb6b0; padding: 20px; margin-bottom: 30px; border-radius: 8px; }
                 .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
                 .info-item strong { color: #7aa2a9; text-transform: uppercase; font-size: 0.8em; display: block; margin-bottom: 2px; }
 
-                /* TABLE - Header Rosa para diferenciar */
                 table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
                 th { background-color: #dfb6b0; color: #fff; font-weight: 500; text-transform: uppercase; font-size: 0.85em; padding: 12px; text-align: left; }
                 td { padding: 12px; border-bottom: 1px solid #eee; color: #444; }
                 tr:nth-child(even) { background-color: #fcfcfc; }
                 .col-money { text-align: right; font-family: 'Roboto', monospace; font-weight: 500; }
 
-                /* TOTALS */
                 .totals-section { display: flex; justify-content: flex-end; }
                 .totals-box { width: 280px; background: #fff9f8; border: 1px solid #efebe9; padding: 20px; border-radius: 8px; }
                 .total-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.95em; }
                 .total-row.final { border-top: 2px solid #dfb6b0; padding-top: 10px; margin-top: 10px; font-size: 1.2em; font-weight: bold; color: #7aa2a9; }
-
-                /* FOOTER */
-                .footer-notes { margin-top: 40px; padding-top: 20px; border-top: 1px dashed #ccc; font-size: 0.85em; color: #777; line-height: 1.5; }
-                .footer-notes strong { color: #555; }
                 
-                @media print { 
-                    body { padding: 0; }
-                    .no-print { display: none; }
-                }
+                .footer-notes { margin-top: 40px; padding-top: 20px; border-top: 1px dashed #ccc; font-size: 0.85em; color: #777; }
+                @media print { .no-print { display: none; } body { padding: 0; } }
             </style>
         </head>
         <body>
             <div class="header-container">
-                <div class="logo-box">
-                    <img src="${logoSrc}" alt="Pérola Rara">
-                </div>
+                <div class="logo-box"><img src="${logoSrc}" alt="Pérola Rara"></div>
                 <div class="company-info">
                     <h1>Pérola Rara</h1>
-                    <p>Fraldas Personalizadas</p>
-                    <p>(65) 99250-3151</p>
-                    <p>@perolararafraldapersonalizada</p>
+                    <p>Fraldas Personalizadas • (65) 99250-3151</p>
                 </div>
             </div>
 
             <div class="doc-title">
                 <h2>Nota de Pedido Nº ${p.numero}</h2>
-                <div class="doc-meta">Data Pedido: ${dtPed} • Previsão Entrega: ${dtEnt}</div>
+                <div class="doc-meta">Data Pedido: ${dtPed} • Entrega: ${p.dataEntrega ? p.dataEntrega.split('-').reverse().join('/') : '-'}</div>
             </div>
 
             <div class="client-box">
                 <div class="info-grid">
                     <div class="info-item"><strong>Cliente</strong> ${p.cliente || '-'}</div>
-                    <div class="info-item"><strong>Cidade</strong> ${p.cidade || '-'}</div>
-                    <div class="info-item"><strong>Telefone</strong> ${p.telefone || '-'}</div>
-                    <div class="info-item"><strong>Email</strong> ${p.email || '-'}</div>
+                    <div class="info-item"><strong>Contato</strong> ${p.telefone || '-'}</div>
+                    <div class="info-item" style="grid-column: span 2;"><strong>Endereço</strong> ${p.endereco || '-'}</div>
                     <div class="info-item" style="grid-column: span 2;"><strong>Tema / Cores</strong> ${p.tema || '-'} / ${p.cores || '-'}</div>
-                    <div class="info-item" style="grid-column: span 2;"><strong>Endereço Entrega</strong> ${p.endereco || '-'}</div>
                 </div>
             </div>
 
@@ -514,7 +531,7 @@ function imprimirNotaPedido(id) {
                     <tr>
                         <th style="width: 10%">Qtd</th>
                         <th style="width: 50%">Descrição</th>
-                        <th class="col-money" style="width: 20%">Valor Unit.</th>
+                        <th class="col-money" style="width: 20%">Unit.</th>
                         <th class="col-money" style="width: 20%">Total</th>
                     </tr>
                 </thead>
@@ -535,22 +552,17 @@ function imprimirNotaPedido(id) {
                     <div class="total-row"><span>Subtotal:</span> <span>${helpers.formatarMoeda(p.valorOrcamento)}</span></div>
                     <div class="total-row"><span>Frete:</span> <span>${helpers.formatarMoeda(p.valorFrete)}</span></div>
                     <div class="total-row final"><span>Total Geral:</span> <span>${helpers.formatarMoeda(p.total)}</span></div>
-                    
-                    <div style="margin-top:15px; border-top: 1px dotted #ccc; padding-top:10px;">
-                        <div class="total-row" style="color:#4CAF50;"><span>Pago (Entrada):</span> <span>${helpers.formatarMoeda(p.entrada)}</span></div>
-                        <div class="total-row" style="color:#e53935; font-weight:bold;"><span>A Pagar (Restante):</span> <span>${helpers.formatarMoeda(p.restante)}</span></div>
+                    <div style="margin-top:15px; border-top:1px dotted #ccc; padding-top:10px;">
+                        <div class="total-row" style="color:#4CAF50;"><span>Entrada:</span> <span>${helpers.formatarMoeda(p.entrada)}</span></div>
+                        <div class="total-row" style="color:#e53935; font-weight:bold;"><span>Restante:</span> <span>${helpers.formatarMoeda(p.restante)}</span></div>
                     </div>
                 </div>
             </div>
-
-            ${p.observacoes ? `
-            <div class="footer-notes">
-                <strong>Observações e Termos:</strong><br>
-                ${p.observacoes.replace(/\n/g, '<br>')}
-            </div>` : ''}
-
-            <div style="text-align: center; margin-top: 50px;" class="no-print">
-                <button onclick="window.print()" style="padding: 12px 30px; background: #dfb6b0; color: white; border: none; border-radius: 30px; cursor: pointer; font-size: 16px; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">IMPRIMIR NOTA</button>
+            
+            ${p.observacoes ? `<div class="footer-notes"><strong>Observações:</strong><br>${p.observacoes.replace(/\n/g, '<br>')}</div>` : ''}
+            
+            <div class="no-print" style="text-align:center; margin-top:40px;">
+                <button onclick="window.print()" style="padding:12px 30px; background:#dfb6b0; color:#fff; border:none; border-radius:30px; cursor:pointer; font-weight:bold;">IMPRIMIR NOTA</button>
             </div>
         </body>
         </html>
@@ -638,7 +650,6 @@ function gerarRelatorioFinanceiro() {
     }
 }
 
-// RESTAURADO: Função de Exportação (Alert Temporário)
 function gerarRelatorioXLSX() {
     alert("Exportação XLSX em breve.");
 }
