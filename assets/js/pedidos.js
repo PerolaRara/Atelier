@@ -33,8 +33,9 @@ export function setupPedidos(config) {
     window.editarPedido = editarPedido;
     window.atualizarPedido = atualizarPedido;
     window.imprimirChecklist = imprimirChecklist;
+    window.imprimirNotaPedido = imprimirNotaPedido; // <--- NOVA FUNÇÃO EXPOSTA
     window.gerarRelatorioFinanceiro = gerarRelatorioFinanceiro;
-    window.gerarRelatorioXLSX = gerarRelatorioXLSX; // <--- RESTAURADO
+    window.gerarRelatorioXLSX = gerarRelatorioXLSX;
     
     // Funções auxiliares da tabela de edição
     window.adicionarProdutoEdicao = adicionarProdutoEdicao;
@@ -108,12 +109,10 @@ function initListenersPedidos() {
     if(btnAddProd) btnAddProd.addEventListener('click', adicionarProdutoEdicao);
 
     // RESTAURADO: Listener para o botão de XLSX
-    // Procura qualquer botão dentro da área de relatório que tenha a intenção de gerar XLSX
     const btnXLSX = document.querySelector('#relatorio button[onclick="gerarRelatorioXLSX()"]') || 
-                    document.querySelector('#btn-gerar-xlsx'); // Caso você adicione um ID no futuro
+                    document.querySelector('#btn-gerar-xlsx'); 
     
     if(btnXLSX) {
-        // Removemos o onclick inline para garantir que o JS controle (opcional, mas boa prática)
         btnXLSX.removeAttribute('onclick');
         btnXLSX.addEventListener('click', gerarRelatorioXLSX);
     }
@@ -163,6 +162,7 @@ function mostrarPedidosRealizados() {
     } else {
         itensPagina.forEach(p => {
             const row = tbody.insertRow();
+            // INCLUSÃO DO BOTÃO "NOTA" ABAIXO
             row.innerHTML = `
                 <td>${p.numero}</td>
                 <td>${p.dataPedido ? p.dataPedido.split('-').reverse().join('/') : '-'}</td>
@@ -171,6 +171,7 @@ function mostrarPedidosRealizados() {
                 <td>
                     <button class="btn-editar-pedido" onclick="editarPedido('${p.id}')">Editar</button>
                     <button class="btn-checklist" style="background:#687f82; margin-left:5px;" onclick="imprimirChecklist('${p.id}')">Checklist</button>
+                    <button class="btn-nota" style="background:#dfb6b0; margin-left:5px;" onclick="imprimirNotaPedido('${p.id}')">Nota</button>
                 </td>
             `;
         });
@@ -350,7 +351,7 @@ function atualizarRestanteEdicao() {
 }
 
 // ==========================================================================
-// 6. RELATÓRIOS E CHECKLIST
+// 6. RELATÓRIOS, CHECKLIST E ***NOVA NOTA DE PEDIDO***
 // ==========================================================================
 
 function imprimirChecklist(id) {
@@ -402,6 +403,154 @@ function imprimirChecklist(id) {
             </div>
             <div style="text-align: center; margin-top: 30px;">
                 <button onclick="window.print()">Imprimir</button>
+            </div>
+        </body>
+        </html>
+    `;
+    janela.document.write(html);
+    janela.document.close();
+}
+
+/**
+ * Função NOVA: Gera uma nota de pedido profissional para o cliente.
+ * Design similar ao Orçamento, mas com informações de pagamento.
+ */
+function imprimirNotaPedido(id) {
+    const p = pedidos.find(o => o.id === id);
+    if (!p) return;
+
+    const janela = window.open('', '_blank');
+    const dtPed = p.dataPedido ? p.dataPedido.split('-').reverse().join('/') : '-';
+    const dtEnt = p.dataEntrega ? p.dataEntrega.split('-').reverse().join('/') : '-';
+    
+    // Caminho absoluto para garantir carregamento da imagem na nova janela
+    const pathBase = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
+    const logoSrc = `${pathBase}/assets/images/logo_perola_rara.png`;
+
+    const html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Pedido ${p.numero} - Pérola Rara</title>
+            <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+            <style>
+                /* RESET & BASE */
+                * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                body { font-family: 'Roboto', sans-serif; color: #555; margin: 0; padding: 40px; background: #fff; font-size: 14px; }
+                
+                /* HEADER & LOGO */
+                .header-container { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #7aa2a9; padding-bottom: 20px; margin-bottom: 30px; }
+                .logo-box { width: 150px; text-align: left; }
+                .logo-box img { max-width: 100%; height: auto; }
+                .company-info { text-align: right; }
+                .company-info h1 { font-family: 'Dancing Script', cursive; color: #7aa2a9; font-size: 2.5em; margin: 0; }
+                .company-info p { margin: 2px 0; font-size: 0.9em; color: #888; }
+                
+                /* DOC INFO */
+                .doc-title { text-align: center; margin-bottom: 30px; }
+                /* Título em Verde para Pedido */
+                .doc-title h2 { background-color: #7aa2a9; color: #fff; display: inline-block; padding: 8px 30px; border-radius: 50px; text-transform: uppercase; font-size: 1.1em; letter-spacing: 1px; margin: 0; }
+                .doc-meta { font-size: 0.9em; margin-top: 5px; color: #999; }
+
+                /* CLIENT GRID - Borda Rosa para diferenciar */
+                .client-box { background-color: #f8f9fa; border-left: 5px solid #dfb6b0; padding: 20px; margin-bottom: 30px; border-radius: 0 10px 10px 0; }
+                .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+                .info-item strong { color: #7aa2a9; text-transform: uppercase; font-size: 0.8em; display: block; margin-bottom: 2px; }
+
+                /* TABLE - Header Rosa para diferenciar */
+                table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+                th { background-color: #dfb6b0; color: #fff; font-weight: 500; text-transform: uppercase; font-size: 0.85em; padding: 12px; text-align: left; }
+                td { padding: 12px; border-bottom: 1px solid #eee; color: #444; }
+                tr:nth-child(even) { background-color: #fcfcfc; }
+                .col-money { text-align: right; font-family: 'Roboto', monospace; font-weight: 500; }
+
+                /* TOTALS */
+                .totals-section { display: flex; justify-content: flex-end; }
+                .totals-box { width: 280px; background: #fff9f8; border: 1px solid #efebe9; padding: 20px; border-radius: 8px; }
+                .total-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.95em; }
+                .total-row.final { border-top: 2px solid #dfb6b0; padding-top: 10px; margin-top: 10px; font-size: 1.2em; font-weight: bold; color: #7aa2a9; }
+
+                /* FOOTER */
+                .footer-notes { margin-top: 40px; padding-top: 20px; border-top: 1px dashed #ccc; font-size: 0.85em; color: #777; line-height: 1.5; }
+                .footer-notes strong { color: #555; }
+                
+                @media print { 
+                    body { padding: 0; }
+                    .no-print { display: none; }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="header-container">
+                <div class="logo-box">
+                    <img src="${logoSrc}" alt="Pérola Rara">
+                </div>
+                <div class="company-info">
+                    <h1>Pérola Rara</h1>
+                    <p>Fraldas Personalizadas</p>
+                    <p>(65) 99250-3151</p>
+                    <p>@perolararafraldapersonalizada</p>
+                </div>
+            </div>
+
+            <div class="doc-title">
+                <h2>Nota de Pedido Nº ${p.numero}</h2>
+                <div class="doc-meta">Data Pedido: ${dtPed} • Previsão Entrega: ${dtEnt}</div>
+            </div>
+
+            <div class="client-box">
+                <div class="info-grid">
+                    <div class="info-item"><strong>Cliente</strong> ${p.cliente || '-'}</div>
+                    <div class="info-item"><strong>Cidade</strong> ${p.cidade || '-'}</div>
+                    <div class="info-item"><strong>Telefone</strong> ${p.telefone || '-'}</div>
+                    <div class="info-item"><strong>Email</strong> ${p.email || '-'}</div>
+                    <div class="info-item" style="grid-column: span 2;"><strong>Tema / Cores</strong> ${p.tema || '-'} / ${p.cores || '-'}</div>
+                    <div class="info-item" style="grid-column: span 2;"><strong>Endereço Entrega</strong> ${p.endereco || '-'}</div>
+                </div>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 10%">Qtd</th>
+                        <th style="width: 50%">Descrição</th>
+                        <th class="col-money" style="width: 20%">Valor Unit.</th>
+                        <th class="col-money" style="width: 20%">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${p.produtos.map(prod => `
+                        <tr>
+                            <td>${prod.quantidade}</td>
+                            <td>${prod.descricao}</td>
+                            <td class="col-money">${helpers.formatarMoeda(prod.valorUnit)}</td>
+                            <td class="col-money">${helpers.formatarMoeda(prod.valorTotal)}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+
+            <div class="totals-section">
+                <div class="totals-box">
+                    <div class="total-row"><span>Subtotal:</span> <span>${helpers.formatarMoeda(p.valorOrcamento)}</span></div>
+                    <div class="total-row"><span>Frete:</span> <span>${helpers.formatarMoeda(p.valorFrete)}</span></div>
+                    <div class="total-row final"><span>Total Geral:</span> <span>${helpers.formatarMoeda(p.total)}</span></div>
+                    
+                    <div style="margin-top:15px; border-top: 1px dotted #ccc; padding-top:10px;">
+                        <div class="total-row" style="color:#4CAF50;"><span>Pago (Entrada):</span> <span>${helpers.formatarMoeda(p.entrada)}</span></div>
+                        <div class="total-row" style="color:#e53935; font-weight:bold;"><span>A Pagar (Restante):</span> <span>${helpers.formatarMoeda(p.restante)}</span></div>
+                    </div>
+                </div>
+            </div>
+
+            ${p.observacoes ? `
+            <div class="footer-notes">
+                <strong>Observações e Termos:</strong><br>
+                ${p.observacoes.replace(/\n/g, '<br>')}
+            </div>` : ''}
+
+            <div style="text-align: center; margin-top: 50px;" class="no-print">
+                <button onclick="window.print()" style="padding: 12px 30px; background: #dfb6b0; color: white; border: none; border-radius: 30px; cursor: pointer; font-size: 16px; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">IMPRIMIR NOTA</button>
             </div>
         </body>
         </html>
