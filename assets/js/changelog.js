@@ -5,6 +5,16 @@
  * Adicione novas versões no topo do array.
  */
 const changeLogData = [
+{
+version: "1.1.4",
+date: "02/01/2026",
+changes: [
+"🏗️ Refatoração Estratégica: O antigo arquivo 'gigante' de Orçamentos foi dividido em dois especialistas: Vendas (orcamentos.js) e Produção (pedidos.js).",
+"🏭 Foco em Produção: O novo módulo de Pedidos agora gerencia exclusivamente o 'chão de fábrica' (checklists, edição de entregas e relatórios), garantindo que a área de vendas não seja impactada por mudanças na produção.",
+"🧩 Arquitetura Limpa: Implementamos um padrão de 'Injeção de Dependências', permitindo que os módulos compartilhem ferramentas (como formatação de moeda e salvamento) sem criar conflitos técnicos.",
+"🚀 Base Sólida: Essa separação prepara o terreno para futuras funcionalidades avançadas, como um Kanban de Produção e controle de estoque, sem a necessidade de reescrever o código antigo."
+]
+},
     {
         version: "1.1.3",
         date: "01/01/2026",
