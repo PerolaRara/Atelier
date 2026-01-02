@@ -439,74 +439,140 @@ function mostrarOrcamentosGerados() {
     if (btnProx) btnProx.disabled = (pagAtualOrc === totalPaginas);
 }
 
+// ==========================================================================
+// *** ATUALIZAÇÃO VISUAL: IMPRESSÃO PROFISSIONAL (Prioridade 1) ***
+// ==========================================================================
 function visualizarImpressao(orcamento) {
-    // (Mesma lógica de template de impressão do arquivo original)
     const janela = window.open('', '_blank');
-    const dtOrc = orcamento.dataOrcamento ? orcamento.dataOrcamento.split('-').reverse().join('/') : '';
-    const dtVal = orcamento.dataValidade ? orcamento.dataValidade.split('-').reverse().join('/') : '';
+    const dtOrc = orcamento.dataOrcamento ? orcamento.dataOrcamento.split('-').reverse().join('/') : '-';
+    const dtVal = orcamento.dataValidade ? orcamento.dataValidade.split('-').reverse().join('/') : '-';
     const pagamento = Array.isArray(orcamento.pagamento) ? orcamento.pagamento.join(', ') : orcamento.pagamento;
+    
+    // Constrói o caminho absoluto para o logo, garantindo carregamento em janelas pop-up
+    const pathBase = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
+    const logoSrc = `${pathBase}/assets/images/logo_perola_rara.png`;
 
     const html = `
+        <!DOCTYPE html>
         <html>
         <head>
-            <title>Orçamento ${orcamento.numero}</title>
+            <title>Orçamento ${orcamento.numero} - Pérola Rara</title>
+            <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
             <style>
-                body { font-family: 'Arial', sans-serif; padding: 40px; color: #333; }
-                .header { text-align: center; margin-bottom: 40px; border-bottom: 2px solid #7aa2a9; padding-bottom: 20px; }
-                .header h1 { color: #7aa2a9; margin: 0; }
-                .header p { color: #777; font-size: 0.9em; margin: 5px 0; }
-                .info-section { margin-bottom: 30px; line-height: 1.6; }
-                table { width: 100%; border-collapse: collapse; margin-top: 20px; margin-bottom: 20px; }
-                th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
-                th { background-color: #f2f2f2; color: #333; }
-                .totais { text-align: right; margin-top: 30px; }
-                .totais h3 { color: #7aa2a9; }
-                .obs { margin-top: 40px; font-size: 0.9em; color: #555; border-top: 1px solid #eee; padding-top: 10px; }
-                @media print { button { display: none; } }
+                /* RESET & BASE */
+                * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                body { font-family: 'Roboto', sans-serif; color: #555; margin: 0; padding: 40px; background: #fff; font-size: 14px; }
+                
+                /* HEADER & LOGO */
+                .header-container { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #7aa2a9; padding-bottom: 20px; margin-bottom: 30px; }
+                .logo-box { width: 150px; text-align: left; }
+                .logo-box img { max-width: 100%; height: auto; }
+                .company-info { text-align: right; }
+                .company-info h1 { font-family: 'Dancing Script', cursive; color: #7aa2a9; font-size: 2.5em; margin: 0; }
+                .company-info p { margin: 2px 0; font-size: 0.9em; color: #888; }
+                
+                /* DOC INFO */
+                .doc-title { text-align: center; margin-bottom: 30px; }
+                .doc-title h2 { background-color: #dfb6b0; color: #fff; display: inline-block; padding: 8px 30px; border-radius: 50px; text-transform: uppercase; font-size: 1.1em; letter-spacing: 1px; margin: 0; }
+                .doc-meta { font-size: 0.9em; margin-top: 5px; color: #999; }
+
+                /* CLIENT GRID */
+                .client-box { background-color: #f8f9fa; border-left: 5px solid #7aa2a9; padding: 20px; margin-bottom: 30px; border-radius: 0 10px 10px 0; }
+                .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+                .info-item strong { color: #7aa2a9; text-transform: uppercase; font-size: 0.8em; display: block; margin-bottom: 2px; }
+
+                /* TABLE */
+                table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+                th { background-color: #7aa2a9; color: #fff; font-weight: 500; text-transform: uppercase; font-size: 0.85em; padding: 12px; text-align: left; }
+                td { padding: 12px; border-bottom: 1px solid #eee; color: #444; }
+                tr:nth-child(even) { background-color: #fcfcfc; }
+                .col-money { text-align: right; font-family: 'Roboto', monospace; font-weight: 500; }
+
+                /* TOTALS */
+                .totals-section { display: flex; justify-content: flex-end; }
+                .totals-box { width: 280px; background: #fff9f8; border: 1px solid #efebe9; padding: 20px; border-radius: 8px; }
+                .total-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.95em; }
+                .total-row.final { border-top: 2px solid #dfb6b0; padding-top: 10px; margin-top: 10px; font-size: 1.2em; font-weight: bold; color: #7aa2a9; }
+
+                /* FOOTER */
+                .footer-notes { margin-top: 40px; padding-top: 20px; border-top: 1px dashed #ccc; font-size: 0.85em; color: #777; line-height: 1.5; }
+                .footer-notes strong { color: #555; }
+                
+                @media print { 
+                    body { padding: 0; }
+                    .no-print { display: none; }
+                }
             </style>
         </head>
         <body>
-            <div class="header">
-                <h1>Pérola Rara</h1>
-                <p>Orçamento Nº ${orcamento.numero}</p>
-                <p>(65) 99250-3151 | @perolararafraldapersonalizada</p>
-            </div>
-            
-            <div class="info-section">
-                <strong>Cliente:</strong> ${orcamento.cliente || '-'}<br>
-                <strong>Cidade:</strong> ${orcamento.cidade || '-'}<br>
-                <strong>Telefone:</strong> ${orcamento.telefone || '-'}<br>
-                <strong>Data:</strong> ${dtOrc}<br>
-                <strong>Validade:</strong> ${dtVal}<br>
-                <strong>Tema:</strong> ${orcamento.tema || '-'}<br>
-                <strong>Cores:</strong> ${orcamento.cores || '-'}
+            <div class="header-container">
+                <div class="logo-box">
+                    <img src="${logoSrc}" alt="Pérola Rara">
+                </div>
+                <div class="company-info">
+                    <h1>Pérola Rara</h1>
+                    <p>Fraldas Personalizadas</p>
+                    <p>(65) 99250-3151</p>
+                    <p>@perolararafraldapersonalizada</p>
+                </div>
             </div>
 
-            <h3>Produtos</h3>
+            <div class="doc-title">
+                <h2>Orçamento Nº ${orcamento.numero}</h2>
+                <div class="doc-meta">Emitido em: ${dtOrc} • Válido até: ${dtVal}</div>
+            </div>
+
+            <div class="client-box">
+                <div class="info-grid">
+                    <div class="info-item"><strong>Cliente</strong> ${orcamento.cliente || '-'}</div>
+                    <div class="info-item"><strong>Cidade</strong> ${orcamento.cidade || '-'}</div>
+                    <div class="info-item"><strong>Telefone</strong> ${orcamento.telefone || '-'}</div>
+                    <div class="info-item"><strong>Email</strong> ${orcamento.email || '-'}</div>
+                    <div class="info-item" style="grid-column: span 2;"><strong>Tema / Cores</strong> ${orcamento.tema || '-'} / ${orcamento.cores || '-'}</div>
+                    <div class="info-item" style="grid-column: span 2;"><strong>Endereço</strong> ${orcamento.endereco || '-'}</div>
+                </div>
+            </div>
+
             <table>
-                <thead><tr><th>Qtd</th><th>Descrição</th><th>Valor Unit.</th><th>Total</th></tr></thead>
+                <thead>
+                    <tr>
+                        <th style="width: 10%">Qtd</th>
+                        <th style="width: 50%">Descrição</th>
+                        <th class="col-money" style="width: 20%">Valor Unit.</th>
+                        <th class="col-money" style="width: 20%">Total</th>
+                    </tr>
+                </thead>
                 <tbody>
                     ${orcamento.produtos.map(p => `
                         <tr>
                             <td>${p.quantidade}</td>
                             <td>${p.descricao}</td>
-                            <td>${helpers.formatarMoeda(p.valorUnit)}</td>
-                            <td>${helpers.formatarMoeda(p.valorTotal)}</td>
+                            <td class="col-money">${helpers.formatarMoeda(p.valorUnit)}</td>
+                            <td class="col-money">${helpers.formatarMoeda(p.valorTotal)}</td>
                         </tr>
                     `).join('')}
                 </tbody>
             </table>
 
-            <div class="totais">
-                <p><strong>Frete:</strong> ${helpers.formatarMoeda(orcamento.valorFrete)}</p>
-                <h3>Total Geral: ${helpers.formatarMoeda(orcamento.total)}</h3>
-                <p><strong>Forma de Pagamento:</strong> ${pagamento}</p>
+            <div class="totals-section">
+                <div class="totals-box">
+                    <div class="total-row"><span>Subtotal:</span> <span>${helpers.formatarMoeda(orcamento.valorOrcamento)}</span></div>
+                    <div class="total-row"><span>Frete:</span> <span>${helpers.formatarMoeda(orcamento.valorFrete)}</span></div>
+                    <div class="total-row final"><span>Total Geral:</span> <span>${helpers.formatarMoeda(orcamento.total)}</span></div>
+                    <div style="margin-top:15px; font-size:0.8em; color:#888; text-align:right;">
+                        Pagamento: ${pagamento}
+                    </div>
+                </div>
             </div>
 
-            ${orcamento.observacoes ? `<div class="obs"><strong>Observações:</strong><br>${orcamento.observacoes}</div>` : ''}
+            ${orcamento.observacoes ? `
+            <div class="footer-notes">
+                <strong>Observações:</strong><br>
+                ${orcamento.observacoes.replace(/\n/g, '<br>')}
+            </div>` : ''}
 
-            <div style="text-align: center; margin-top: 50px;">
-                <button onclick="window.print()" style="padding: 10px 20px; background: #7aa2a9; color: white; border: none; border-radius: 5px; cursor: pointer;">Imprimir</button>
+            <div style="text-align: center; margin-top: 50px;" class="no-print">
+                <button onclick="window.print()" style="padding: 12px 30px; background: #7aa2a9; color: white; border: none; border-radius: 30px; cursor: pointer; font-size: 16px; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">IMPRIMIR DOCUMENTO</button>
             </div>
         </body>
         </html>
