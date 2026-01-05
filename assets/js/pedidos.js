@@ -33,7 +33,6 @@ export function setupPedidos(config) {
     window.editarPedido = editarPedido;
     window.atualizarPedido = atualizarPedido;
     window.imprimirChecklist = imprimirChecklist;
-    // NOVA FUNÇÃO EXPOSTA PARA O HTML
     window.imprimirNotaPedido = imprimirNotaPedido;
     
     window.gerarRelatorioFinanceiro = gerarRelatorioFinanceiro;
@@ -164,7 +163,6 @@ function mostrarPedidosRealizados() {
     } else {
         itensPagina.forEach(p => {
             const row = tbody.insertRow();
-            // ADICIONADO BOTÃO "NOTA" ABAIXO
             row.innerHTML = `
                 <td>${p.numero}</td>
                 <td>${p.dataPedido ? p.dataPedido.split('-').reverse().join('/') : '-'}</td>
@@ -464,6 +462,7 @@ function imprimirNotaPedido(id) {
     const dtPed = p.dataPedido ? p.dataPedido.split('-').reverse().join('/') : '-';
     const logoSrc = window.location.href.substring(0, window.location.href.lastIndexOf('/')) + '/assets/images/logo_perola_rara.png';
 
+    // HTML gerado para a Nota de Pedido
     const html = `
         <!DOCTYPE html>
         <html>
@@ -484,6 +483,7 @@ function imprimirNotaPedido(id) {
                 .doc-title h2 { background-color: #7aa2a9; color: #fff; display: inline-block; padding: 8px 30px; border-radius: 50px; text-transform: uppercase; font-size: 1.1em; letter-spacing: 1px; margin: 0; }
                 .doc-meta { font-size: 0.9em; margin-top: 5px; color: #999; }
 
+                /* Box Cliente: Removido Tema/Cores */
                 .client-box { background-color: #f8f9fa; border-top: 5px solid #dfb6b0; padding: 20px; margin-bottom: 30px; border-radius: 8px; }
                 .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
                 .info-item strong { color: #7aa2a9; text-transform: uppercase; font-size: 0.8em; display: block; margin-bottom: 2px; }
@@ -499,6 +499,24 @@ function imprimirNotaPedido(id) {
                 .total-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.95em; }
                 .total-row.final { border-top: 2px solid #dfb6b0; padding-top: 10px; margin-top: 10px; font-size: 1.2em; font-weight: bold; color: #7aa2a9; }
                 
+                /* Estilos do Demonstrativo Financeiro Interno */
+                .finance-breakdown-container { margin-top: 30px; border-top: 2px dashed #ccc; padding-top: 20px; page-break-inside: avoid; }
+                .finance-breakdown-container h3 { text-align: center; font-size: 1em; color: #555; text-transform: uppercase; margin-bottom: 15px; }
+                .cards-wrapper { display: flex; justify-content: space-between; gap: 10px; }
+                .card { flex: 1; padding: 10px; border-radius: 6px; text-align: center; border: 1px solid; }
+                .card-label { display: block; font-size: 0.8em; font-weight: bold; margin-bottom: 4px; }
+                .card-value { display: block; font-size: 1.1em; color: #333; font-weight: bold; }
+                
+                /* Cores dos Cards */
+                .card-costs { background: #ffebee; border-color: #ef5350; }
+                .card-costs .card-label { color: #c62828; }
+                
+                .card-salary { background: #e3f2fd; border-color: #42a5f5; }
+                .card-salary .card-label { color: #1565c0; }
+                
+                .card-profit { background: #e8f5e9; border-color: #66bb6a; }
+                .card-profit .card-label { color: #2e7d32; }
+
                 .footer-notes { margin-top: 40px; padding-top: 20px; border-top: 1px dashed #ccc; font-size: 0.85em; color: #777; }
                 @media print { .no-print { display: none; } body { padding: 0; } }
             </style>
@@ -522,7 +540,7 @@ function imprimirNotaPedido(id) {
                     <div class="info-item"><strong>Cliente</strong> ${p.cliente || '-'}</div>
                     <div class="info-item"><strong>Contato</strong> ${p.telefone || '-'}</div>
                     <div class="info-item" style="grid-column: span 2;"><strong>Endereço</strong> ${p.endereco || '-'}</div>
-                    <div class="info-item" style="grid-column: span 2;"><strong>Tema / Cores</strong> ${p.tema || '-'} / ${p.cores || '-'}</div>
+                    <!-- Campo Tema/Cores removido conforme solicitado -->
                 </div>
             </div>
 
@@ -555,6 +573,28 @@ function imprimirNotaPedido(id) {
                     <div style="margin-top:15px; border-top:1px dotted #ccc; padding-top:10px;">
                         <div class="total-row" style="color:#4CAF50;"><span>Entrada:</span> <span>${helpers.formatarMoeda(p.entrada)}</span></div>
                         <div class="total-row" style="color:#e53935; font-weight:bold;"><span>Restante:</span> <span>${helpers.formatarMoeda(p.restante)}</span></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Inclusão do Painel Financeiro Colorido -->
+            <div class="finance-breakdown-container">
+                <h3>Demonstrativo Financeiro (Controle Interno)</h3>
+                <div class="cards-wrapper">
+                    <!-- Card Custos (Vermelho) -->
+                    <div class="card card-costs">
+                        <span class="card-label">CUSTOS TOTAIS</span>
+                        <span class="card-value">${helpers.formatarMoeda(p.custosTotais || 0)}</span>
+                    </div>
+                    <!-- Card Salário (Azul) - Renomeado para 'Meu Salário' -->
+                    <div class="card card-salary">
+                        <span class="card-label">MEU SALÁRIO</span>
+                        <span class="card-value">${helpers.formatarMoeda(p.custoMaoDeObra || 0)}</span>
+                    </div>
+                    <!-- Card Lucro (Verde) - Renomeado para 'Caixa Empresa' -->
+                    <div class="card card-profit">
+                        <span class="card-label">CAIXA EMPRESA</span>
+                        <span class="card-value">${helpers.formatarMoeda(p.margemLucro || 0)}</span>
                     </div>
                 </div>
             </div>
