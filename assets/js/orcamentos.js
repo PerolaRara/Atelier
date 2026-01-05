@@ -484,7 +484,11 @@ function visualizarImpressao(orcamento) {
                 .total-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.95em; }
                 .total-row.final { border-top: 2px solid #dfb6b0; padding-top: 10px; margin-top: 10px; font-size: 1.2em; font-weight: bold; color: #7aa2a9; }
 
-                .footer-notes { margin-top: 40px; padding-top: 20px; border-top: 1px dashed #ccc; font-size: 0.85em; color: #777; line-height: 1.5; }
+                /* CSS para a caixa de Termos Fixos */
+                .terms-box { margin-top: 40px; padding: 20px; background-color: #fcfcfc; border: 1px solid #eee; border-radius: 8px; }
+                .terms-box h4 { margin: 0 0 10px 0; color: #7aa2a9; font-size: 0.9em; text-transform: uppercase; border-bottom: 1px solid #7aa2a9; display: inline-block; padding-bottom: 2px; }
+                .terms-list { padding-left: 20px; margin: 0; font-size: 0.85em; color: #555; line-height: 1.6; }
+                .terms-list li { margin-bottom: 5px; }
                 
                 @media print { .no-print { display: none; } body { padding: 0; } }
             </style>
@@ -501,14 +505,14 @@ function visualizarImpressao(orcamento) {
 
             <div class="doc-title">
                 <h2>Orçamento Nº ${orcamento.numero}</h2>
-                <div class="doc-meta">Data: ${dtOrc} • Validade: ${dtVal}</div>
+                <div class="doc-meta">Data do Orçamento: ${dtOrc} • Validade: ${dtVal}</div>
             </div>
 
             <div class="client-box">
                 <div class="info-grid">
                     <div class="info-item"><strong>Cliente</strong> ${orcamento.cliente || '-'}</div>
                     <div class="info-item"><strong>Cidade/Contato</strong> ${orcamento.cidade || '-'} • ${orcamento.telefone || '-'}</div>
-                    <div class="info-item" style="grid-column: span 2;"><strong>Tema / Cores</strong> ${orcamento.tema || '-'} / ${orcamento.cores || '-'}</div>
+                    <!-- Campo Tema/Cores removido conforme solicitado -->
                 </div>
             </div>
 
@@ -541,7 +545,17 @@ function visualizarImpressao(orcamento) {
                 </div>
             </div>
 
-            ${orcamento.observacoes ? `<div class="footer-notes"><strong>Observações:</strong><br>${orcamento.observacoes.replace(/\n/g, '<br>')}</div>` : ''}
+            <div class="terms-box">
+                <h4>Observações e Termos:</h4>
+                <ol class="terms-list">
+                    <li>Trabalhamos com enxoval personalizado com bordado computadorizado.</li>
+                    <li>Após a confirmação do pagamento, enviaremos a arte. Em caso de desistência, não haverá reembolso.</li>
+                    <li>Serão enviadas 3 opções de imagens para escolher, e em seguida a arte final com o nome será enviada para aprovação.</li>
+                    <li>Aceitamos Pix, débito, e crédito (juros por conta do cliente).</li>
+                    <li>Entregamos com taxa.</li>
+                </ol>
+                ${orcamento.observacoes ? `<p style="margin-top:10px; font-style:italic; font-size:0.9em; border-top: 1px dotted #ccc; padding-top: 5px;"><strong>Nota Adicional:</strong> ${orcamento.observacoes.replace(/\n/g, '<br>')}</p>` : ''}
+            </div>
 
             <div class="no-print" style="text-align:center; margin-top:40px;">
                 <button onclick="window.print()" style="padding:12px 30px; background:#7aa2a9; color:#fff; border:none; border-radius:30px; cursor:pointer; font-weight:bold;">IMPRIMIR</button>
