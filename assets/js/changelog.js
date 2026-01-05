@@ -6,6 +6,16 @@
  */
 const changeLogData = [
     {
+        version: "1.1.6",
+        date: "05/01/2026",
+        changes: [
+            "📄 **Orçamentos Padronizados:** A impressão agora inclui automaticamente os 5 termos de serviço do ateliê (regras de pagamento, artes e prazos), garantindo segurança e clareza jurídica para todos os clientes.",
+            "📊 **Nota de Pedido Inteligente:** Ao imprimir um pedido, o sistema agora gera um 'Demonstrativo Financeiro' visual com cores, separando claramente o que é Custo (Vermelho), seu Salário (Azul) e o Caixa da Empresa (Verde).",
+            "🗣️ **Linguagem Natural:** Atualização do termo técnico 'Mão de Obra' para 'Meu Salário' na tela de edição de pedidos, reforçando a valorização do tempo da artesã.",
+            "🧹 **Limpeza Visual:** Refinamento dos documentos impressos com a remoção de campos redundantes e ajuste nas datas para maior precisão."
+        ]
+    },
+    {
         version: "1.1.5",
         date: "02/01/2026",
         changes: [
@@ -15,16 +25,16 @@ const changeLogData = [
             "🖋️ **Tipografia & Branding:** Integração das fontes oficiais ('Dancing Script' para títulos e 'Roboto' para dados) e inserção automática do logotipo em alta resolução nos documentos impressos."
         ]
     },
-{
-version: "1.1.4",
-date: "02/01/2026",
-changes: [
-"🏗️ Refatoração Estratégica: O antigo arquivo 'gigante' de Orçamentos foi dividido em dois especialistas: Vendas (orcamentos.js) e Produção (pedidos.js).",
-"🏭 Foco em Produção: O novo módulo de Pedidos agora gerencia exclusivamente o 'chão de fábrica' (checklists, edição de entregas e relatórios), garantindo que a área de vendas não seja impactada por mudanças na produção.",
-"🧩 Arquitetura Limpa: Implementamos um padrão de 'Injeção de Dependências', permitindo que os módulos compartilhem ferramentas (como formatação de moeda e salvamento) sem criar conflitos técnicos.",
-"🚀 Base Sólida: Essa separação prepara o terreno para futuras funcionalidades avançadas, como um Kanban de Produção e controle de estoque, sem a necessidade de reescrever o código antigo."
-]
-},
+    {
+    version: "1.1.4",
+    date: "02/01/2026",
+    changes: [
+    "🏗️ Refatoração Estratégica: O antigo arquivo 'gigante' de Orçamentos foi dividido em dois especialistas: Vendas (orcamentos.js) e Produção (pedidos.js).",
+    "🏭 Foco em Produção: O novo módulo de Pedidos agora gerencia exclusivamente o 'chão de fábrica' (checklists, edição de entregas e relatórios), garantindo que a área de vendas não seja impactada por mudanças na produção.",
+    "🧩 Arquitetura Limpa: Implementamos um padrão de 'Injeção de Dependências', permitindo que os módulos compartilhem ferramentas (como formatação de moeda e salvamento) sem criar conflitos técnicos.",
+    "🚀 Base Sólida: Essa separação prepara o terreno para futuras funcionalidades avançadas, como um Kanban de Produção e controle de estoque, sem a necessidade de reescrever o código antigo."
+    ]
+    },
     {
         version: "1.1.3",
         date: "01/01/2026",
