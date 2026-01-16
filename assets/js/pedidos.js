@@ -351,7 +351,7 @@ function atualizarRestanteEdicao() {
 }
 
 // ==========================================================================
-// 6. RELATÓRIOS E CHECKLIST
+// 6. RELATÓRIOS E CHECKLIST (MODIFICADOS)
 // ==========================================================================
 
 function imprimirChecklist(id) {
@@ -366,38 +366,52 @@ function imprimirChecklist(id) {
         <!DOCTYPE html>
         <html>
         <head>
-            <title>Checklist ${p.numero}</title>
-            <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+            <title>Checklist Produção</title>
+            <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
             <style>
                 * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-                body { font-family: 'Roboto', sans-serif; color: #333; margin: 0; padding: 40px; background: #fff; font-size: 14px; }
+                body { font-family: 'Roboto', sans-serif; color: #444; margin: 0; padding: 40px; background: #fff; font-size: 14px; }
                 
-                /* Cabeçalho Compacto Centralizado */
-                .header-container { text-align: center; border-bottom: 2px solid #555; padding-bottom: 15px; margin-bottom: 25px; }
-                .logo-box { margin: 0 auto 5px auto; width: 80px; }
-                .logo-box img { max-width: 100%; height: auto; grayscale: 100%; } /* Logo em escala de cinza */
-                .company-info h1 { font-family: 'Dancing Script', cursive; color: #555; font-size: 2em; margin: 0; }
+                /* Cabeçalho Estilizado (Igual Nota de Pedido) */
+                .header-container { text-align: center; border-bottom: 3px solid #7aa2a9; padding-bottom: 20px; margin-bottom: 25px; }
+                .logo-box { margin: 0 auto 5px auto; width: 100px; }
+                .logo-box img { max-width: 100%; height: auto; }
                 
+                /* Título Principal */
                 .doc-title { text-align: center; margin-bottom: 20px; }
-                .doc-title h2 { background-color: #333; color: #fff; display: inline-block; padding: 5px 25px; border-radius: 4px; text-transform: uppercase; font-size: 1.2em; letter-spacing: 2px; margin: 0; }
-                .doc-meta { font-size: 1.1em; margin-top: 10px; font-weight: bold; }
+                .doc-title h2 { background-color: #7aa2a9; color: #fff; display: inline-block; padding: 8px 30px; border-radius: 50px; text-transform: uppercase; font-size: 1.2em; letter-spacing: 1px; margin: 0; }
+                
+                /* Data de Entrega (Destaque) */
+                .delivery-highlight { 
+                    text-align: center; 
+                    margin: 15px 0 30px 0; 
+                    font-size: 1.1em; 
+                    color: #e53935; /* Vermelho para atenção na data */
+                    font-weight: bold; 
+                    border: 2px dashed #dfb6b0;
+                    padding: 10px;
+                    border-radius: 8px;
+                    background: #fff9f8;
+                    display: inline-block;
+                }
 
-                /* Box de Produção */
-                .production-box { border: 2px solid #333; padding: 15px; margin-bottom: 20px; background: #f0f0f0; }
+                /* Box de Informações (Cores da Marca) */
+                .production-box { border-top: 5px solid #dfb6b0; padding: 20px; margin-bottom: 20px; background: #f8f9fa; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
                 .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
                 .info-item { font-size: 1.1em; }
-                .info-item strong { display: block; font-size: 0.75em; text-transform: uppercase; color: #666; margin-bottom: 3px; }
+                .info-item strong { display: block; font-size: 0.8em; text-transform: uppercase; color: #7aa2a9; margin-bottom: 4px; font-weight: 700; }
 
-                /* Tabela de Checklist */
+                /* Tabela de Checklist Colorida */
                 table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-                th { background-color: #ddd; color: #000; font-weight: bold; text-transform: uppercase; font-size: 0.8em; padding: 10px; text-align: left; border: 1px solid #999; }
-                td { padding: 12px; border: 1px solid #999; vertical-align: middle; }
-                tr:nth-child(even) { background-color: #fafafa; }
+                th { background-color: #dfb6b0; color: #fff; font-weight: bold; text-transform: uppercase; font-size: 0.85em; padding: 10px; text-align: left; }
+                td { padding: 12px; border-bottom: 1px solid #eee; vertical-align: middle; color: #333; }
+                tr:nth-child(even) { background-color: #fcfcfc; }
                 
-                /* Checkbox Desenhado */
-                .check-box { width: 25px; height: 25px; border: 2px solid #333; display: block; margin: 0 auto; background: #fff; }
+                /* Checkbox Estilizado */
+                .check-box { width: 24px; height: 24px; border: 2px solid #7aa2a9; display: block; margin: 0 auto; background: #fff; border-radius: 4px; }
                 
-                .footer-area { margin-top: 30px; border: 2px dashed #999; padding: 15px; min-height: 100px; }
+                .footer-area { margin-top: 30px; border: 1px solid #b2d8d8; background-color: #f0f7f7; padding: 15px; min-height: 100px; border-radius: 8px; }
+                .footer-area strong { color: #5a8289; display: block; margin-bottom: 5px; }
                 
                 @media print { .no-print { display: none; } body { padding: 0; } }
             </style>
@@ -405,12 +419,14 @@ function imprimirChecklist(id) {
         <body>
             <div class="header-container">
                 <div class="logo-box"><img src="${logoSrc}" alt="Pérola Rara"></div>
-                <div class="company-info"><h1>Ordem de Produção</h1></div>
             </div>
 
-            <div class="doc-title">
-                <h2>Pedido Nº ${p.numero}</h2>
-                <div class="doc-meta">Entrega: ${dtEnt}</div>
+            <div style="text-align: center;">
+                <div class="doc-title">
+                    <h2>Checklist de Produção</h2>
+                </div>
+                <!-- Exibe apenas a Data de Entrega, sem Número/Ano -->
+                <div class="delivery-highlight">Entrega: ${dtEnt}</div>
             </div>
 
             <div class="production-box">
@@ -424,16 +440,16 @@ function imprimirChecklist(id) {
             <table>
                 <thead>
                     <tr>
-                        <th style="width: 10%; text-align:center;">FEITO</th>
+                        <th style="width: 10%; text-align:center;">OK</th>
                         <th style="width: 10%; text-align:center;">QTD</th>
-                        <th style="width: 80%">DESCRIÇÃO DO ITEM</th>
+                        <th style="width: 80%">ITEM / DESCRIÇÃO</th>
                     </tr>
                 </thead>
                 <tbody>
                     ${p.produtos.map(prod => `
                         <tr>
                             <td><div class="check-box"></div></td>
-                            <td style="text-align:center; font-weight:bold; font-size:1.2em;">${prod.quantidade}</td>
+                            <td style="text-align:center; font-weight:bold; font-size:1.2em; color: #7aa2a9;">${prod.quantidade}</td>
                             <td style="font-size:1.1em;">${prod.descricao}</td>
                         </tr>
                     `).join('')}
@@ -446,7 +462,7 @@ function imprimirChecklist(id) {
             </div>
 
             <div class="no-print" style="text-align:center; margin-top:30px;">
-                <button onclick="window.print()" style="padding:15px 40px; background:#333; color:#fff; border:none; border-radius:5px; cursor:pointer; font-weight:bold; font-size:16px;">IMPRIMIR CHECKLIST</button>
+                <button onclick="window.print()" style="padding:15px 40px; background:#7aa2a9; color:#fff; border:none; border-radius:30px; cursor:pointer; font-weight:bold; font-size:16px;">IMPRIMIR CHECKLIST</button>
             </div>
         </body>
         </html>
@@ -476,7 +492,17 @@ function imprimirNotaPedido(id) {
                 .header-container { text-align: center; border-bottom: 3px solid #7aa2a9; padding-bottom: 20px; margin-bottom: 30px; }
                 .logo-box { margin: 0 auto 10px auto; width: 120px; }
                 .logo-box img { max-width: 100%; height: auto; }
-                .company-info h1 { font-family: 'Dancing Script', cursive; color: #7aa2a9; font-size: 3em; margin: 0; line-height: 1.2; }
+                
+                /* FONTE ALTERADA PARA ROBOTO (SANS-SERIF) CONFORME SOLICITADO */
+                .company-info h1 { 
+                    font-family: 'Roboto', sans-serif; 
+                    font-weight: 700;
+                    color: #7aa2a9; 
+                    font-size: 2.5em; 
+                    margin: 0; 
+                    line-height: 1.2;
+                    text-transform: uppercase;
+                }
                 .company-info p { margin: 2px 0; font-size: 0.9em; color: #888; }
                 
                 .doc-title { text-align: center; margin-bottom: 30px; }
