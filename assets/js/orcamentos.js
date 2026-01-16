@@ -452,26 +452,28 @@ function visualizarImpressao(orcamento) {
         <!DOCTYPE html>
         <html>
         <head>
-            <title>Orçamento ${orcamento.numero} - Pérola Rara</title>
-            <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+            <title>Orçamento - Pérola Rara</title>
+            <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
             <style>
                 * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
                 body { font-family: 'Roboto', sans-serif; color: #555; margin: 0; padding: 40px; background: #fff; font-size: 14px; }
                 
-                /* HEADER CENTRALIZADO */
-                .header-container { text-align: center; border-bottom: 3px solid #7aa2a9; padding-bottom: 20px; margin-bottom: 30px; }
-                .logo-box { margin: 0 auto 10px auto; width: 120px; } /* Centraliza a imagem */
+                /* HEADER */
+                .header-container { text-align: center; border-bottom: 3px solid #7aa2a9; padding-bottom: 20px; margin-bottom: 20px; }
+                .logo-box { margin: 0 auto 10px auto; width: 120px; }
                 .logo-box img { max-width: 100%; height: auto; }
-                .company-info h1 { font-family: 'Dancing Script', cursive; color: #7aa2a9; font-size: 3em; margin: 0; line-height: 1.2; }
+                /* Fonte Padronizada */
+                .company-info h1 { font-family: 'Roboto', sans-serif; font-weight: 700; color: #7aa2a9; font-size: 2.2em; margin: 0; text-transform: uppercase; letter-spacing: 2px; }
                 .company-info p { margin: 2px 0; font-size: 0.9em; color: #888; }
                 
-                .doc-title { text-align: center; margin-bottom: 30px; }
-                .doc-title h2 { background-color: #dfb6b0; color: #fff; display: inline-block; padding: 8px 30px; border-radius: 50px; text-transform: uppercase; font-size: 1.1em; letter-spacing: 1px; margin: 0; }
-                .doc-meta { font-size: 0.9em; margin-top: 5px; color: #999; }
+                /* Barra de Datas (Reposicionada e sem número interno) */
+                .date-bar { display: flex; justify-content: space-between; background-color: #f0f7f7; padding: 10px 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #b2d8d8; }
+                .date-item { font-size: 0.95em; color: #555; }
+                .date-item strong { color: #7aa2a9; text-transform: uppercase; margin-right: 5px; }
 
-                .client-box { background-color: #f8f9fa; border-top: 5px solid #7aa2a9; padding: 20px; margin-bottom: 30px; border-radius: 8px; }
+                .client-box { background-color: #fff; border: 1px solid #eee; padding: 20px; margin-bottom: 30px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
                 .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-                .info-item strong { color: #7aa2a9; text-transform: uppercase; font-size: 0.8em; display: block; margin-bottom: 2px; }
+                .info-item strong { color: #dfb6b0; text-transform: uppercase; font-size: 0.8em; display: block; margin-bottom: 2px; font-weight: 700; }
 
                 table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
                 th { background-color: #7aa2a9; color: #fff; font-weight: 500; text-transform: uppercase; font-size: 0.85em; padding: 12px; text-align: left; }
@@ -484,7 +486,6 @@ function visualizarImpressao(orcamento) {
                 .total-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.95em; }
                 .total-row.final { border-top: 2px solid #dfb6b0; padding-top: 10px; margin-top: 10px; font-size: 1.2em; font-weight: bold; color: #7aa2a9; }
 
-                /* CSS para a caixa de Termos Fixos */
                 .terms-box { margin-top: 40px; padding: 20px; background-color: #fcfcfc; border: 1px solid #eee; border-radius: 8px; }
                 .terms-box h4 { margin: 0 0 10px 0; color: #7aa2a9; font-size: 0.9em; text-transform: uppercase; border-bottom: 1px solid #7aa2a9; display: inline-block; padding-bottom: 2px; }
                 .terms-list { padding-left: 20px; margin: 0; font-size: 0.85em; color: #555; line-height: 1.6; }
@@ -503,16 +504,16 @@ function visualizarImpressao(orcamento) {
                 </div>
             </div>
 
-            <div class="doc-title">
-                <h2>Orçamento Nº ${orcamento.numero}</h2>
-                <div class="doc-meta">Data do Orçamento: ${dtOrc} • Validade: ${dtVal}</div>
+            <!-- Datas Reposicionadas (Sem Número/Ano) -->
+            <div class="date-bar">
+                <div class="date-item"><strong>Data do Orçamento:</strong> ${dtOrc}</div>
+                <div class="date-item"><strong>Validade da Proposta:</strong> ${dtVal}</div>
             </div>
 
             <div class="client-box">
                 <div class="info-grid">
                     <div class="info-item"><strong>Cliente</strong> ${orcamento.cliente || '-'}</div>
                     <div class="info-item"><strong>Cidade/Contato</strong> ${orcamento.cidade || '-'} • ${orcamento.telefone || '-'}</div>
-                    <!-- Campo Tema/Cores removido conforme solicitado -->
                 </div>
             </div>
 
