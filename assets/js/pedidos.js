@@ -379,7 +379,7 @@ function imprimirChecklist(id) {
                 
                 /* Título Principal */
                 .doc-title { text-align: center; margin-bottom: 20px; }
-                .doc-title h2 { background-color: #7aa2a9; color: #fff; display: inline-block; padding: 8px 30px; border-radius: 50px; text-transform: uppercase; font-size: 1.2em; letter-spacing: 1px; margin: 0; }
+                .doc-title h2 { background-color: #7aa2a9; color: #fff; display: inline-block; padding: 8px 30px; border-radius: 50px; text-transform: uppercase; font-size: 1.2em; margin: 0; }
                 
                 /* Data de Entrega (Destaque) */
                 .delivery-highlight { 
