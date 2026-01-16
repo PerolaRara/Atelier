@@ -6,6 +6,16 @@
  */
 const changeLogData = [
     {
+        version: "1.1.7",
+        date: "06/01/2026",
+        changes: [
+            "🖨️ **Identidade Visual Padronizada:** A nota de Orçamento agora utiliza a fonte oficial ('Roboto') em vez da fonte cursiva, garantindo maior legibilidade e profissionalismo.",
+            "🛡️ **Privacidade de Dados:** Removida a numeração interna (ex: 0001/2026) da Nota de Orçamento impressa, conforme solicitação administrativa.",
+            "📅 **Reorganização de Layout:** As datas de emissão e validade foram reposicionadas estrategicamente para uma leitura mais fluida, substituindo o antigo cabeçalho numérico.",
+            "🎨 **Coesão Visual:** O Checklist de Produção foi reformulado para seguir a paleta de cores da marca (Teal e Rosé), abandonando o visual monocromático antigo."
+        ]
+    },
+    {
         version: "1.1.6",
         date: "05/01/2026",
         changes: [
