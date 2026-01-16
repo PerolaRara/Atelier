@@ -1,4 +1,4 @@
-/* assets/css/orcamentos.css - ARQUIVO COMPLETO */
+/* assets/css/orcamentos.css - ARQUIVO COMPLETO (v1.2.0 - Pronta Entrega) */
 
 /* ==== 1. RESET DE SEGURANÇA ==== */
 * {
@@ -467,7 +467,93 @@ nav ul li a[onclick="limparPagina()"]:hover {
     color: #555;
 }
 
-/* ==== 11. MEDIA QUERIES (MOBILE) ==== */
+/* ==== 11. MÓDULO PRONTA ENTREGA (NOVO) ==== */
+/* Card de Cadastro de Estoque */
+.stock-card {
+    background: #fff;
+    padding: 20px;
+    border-radius: 12px;
+    border: 1px solid #eee;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+}
+
+.stock-card h3 {
+    margin-top: 0;
+    color: #7aa2a9;
+    font-size: 1.2rem;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+}
+
+/* Botão de Venda (Destaque Verde - Prioridade 1) */
+.btn-vender {
+    background-color: #4CAF50 !important; /* Verde Sucesso/Dinheiro */
+    color: white;
+    font-weight: 500;
+    padding: 8px 15px !important;
+    font-size: 0.9rem !important;
+    box-shadow: 0 2px 4px rgba(76, 175, 80, 0.2);
+    transition: transform 0.2s, background-color 0.2s;
+}
+
+.btn-vender:hover {
+    background-color: #43a047 !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(76, 175, 80, 0.3);
+}
+
+.btn-vender:active {
+    transform: translateY(0);
+}
+
+/* Botão de Exclusão de Estoque (Vermelho Discreto) */
+.btn-excluir-estoque {
+    background-color: #ef5350 !important;
+    color: white;
+    padding: 8px 15px !important;
+    font-size: 0.9rem !important;
+    margin-left: 5px;
+}
+
+.btn-excluir-estoque:hover {
+    background-color: #e53935 !important;
+}
+
+/* Dropdown de Busca de Produtos (Integração Precificação - Prioridade 3) */
+.dropdown-sugestoes {
+    position: absolute;
+    background: white;
+    border: 1px solid #ccc;
+    border-radius: 0 0 8px 8px;
+    width: 100%;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1000;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    margin-top: -12px; /* Ajuste para colar no input acima */
+}
+
+.dropdown-item {
+    padding: 10px 15px;
+    cursor: pointer;
+    border-bottom: 1px solid #eee;
+    font-size: 0.95rem;
+    color: #555;
+    background-color: #fff; /* Garantir fundo branco */
+}
+
+.dropdown-item:hover {
+    background-color: #f0f7f7;
+    color: #7aa2a9;
+}
+
+.dropdown-item:last-child {
+    border-bottom: none;
+}
+
+/* ==== 12. MEDIA QUERIES (MOBILE) ==== */
 @media (max-width: 768px) {
     .container, 
     .mobile-container,
@@ -551,7 +637,7 @@ nav ul li a[onclick="limparPagina()"]:hover {
     #tabela-relatorio td:nth-child(2) { display: none; } /* Oculta coluna Nº Pedido especificamente na tabela de relatórios */
 }
 
-/* ==== 12. REGRAS DE IMPRESSÃO ==== */
+/* ==== 13. REGRAS DE IMPRESSÃO ==== */
 @media print {
     /* Ocultar elementos de navegação e interface do sistema */
     body > *:not(#appContent), 
