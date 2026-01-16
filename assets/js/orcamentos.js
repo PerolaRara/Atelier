@@ -1,13 +1,15 @@
 // assets/js/orcamentos.js
 
 import { db, auth } from './firebase-config.js';
-import { collection, addDoc, getDocs, doc, setDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+import { collection, addDoc, getDocs, doc, setDoc, updateDoc, deleteDoc, query, orderBy, where } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 
 // IMPORTAÇÃO ESTRATÉGICA DO MÓDULO DE PEDIDOS
 import { setupPedidos, adicionarPedidoNaLista } from './pedidos.js';
 
 // Referências
 const orcamentosPedidosRef = collection(db, "Orcamento-Pedido");
+const estoqueRef = collection(db, "estoque"); // Nova referência para Pronta Entrega
+const precificacoesRef = collection(db, "precificacoes-geradas"); // Referência para integração (Prioridade 3)
 
 // Variáveis de Estado (Dados)
 let numeroOrcamento = 1;
@@ -15,6 +17,8 @@ let numeroPedido = 1;
 const anoAtual = new Date().getFullYear();
 let orcamentoEditando = null;
 let orcamentos = [];
+let itensEstoque = []; // Estado local do estoque
+let precificacoesCache = []; // Cache para busca rápida
 let moduleInitialized = false;
 
 // Variáveis de Estado (Paginação e Busca)
@@ -23,7 +27,7 @@ let pagAtualOrc = 1;
 let termoBuscaOrc = "";
 
 // ==========================================================================
-// 1. HELPERS E FORMATAÇÃO (Definidos aqui e passados para pedidos.js)
+// 1. HELPERS E FORMATAÇÃO
 // ==========================================================================
 
 const helpers = {
@@ -61,9 +65,15 @@ export async function initOrcamentos() {
     window.excluirProduto = excluirProduto;
     window.visualizarImpressao = visualizarImpressao;
     window.editarOrcamento = editarOrcamento;
-    window.gerarPedido = gerarPedido; // A ponte entre Vendas e Produção
+    window.gerarPedido = gerarPedido; 
     window.gerarOrcamento = gerarOrcamento;
     window.atualizarOrcamento = atualizarOrcamento;
+
+    // EXPOR FUNÇÕES DE ESTOQUE (NOVO)
+    window.cadastrarItemEstoque = cadastrarItemEstoque;
+    window.venderItemEstoque = venderItemEstoque;
+    window.excluirItemEstoque = excluirItemEstoque;
+    window.selecionarSugestaoEstoque = selecionarSugestaoEstoque; // Integração
 
     // Carregar dados do banco e distribuir para os módulos
     await carregarDados();
@@ -94,8 +104,9 @@ async function carregarDados() {
 
     try {
         orcamentos = [];
-        const pedidosTemp = []; // Lista temporária para passar ao módulo de pedidos
+        const pedidosTemp = []; 
 
+        // Carregar Orçamentos e Pedidos
         const q = query(orcamentosPedidosRef, orderBy("numero"));
         const snapshot = await getDocs(q);
 
@@ -114,12 +125,23 @@ async function carregarDados() {
             }
         });
         
-        console.log(`Carregado: ${orcamentos.length} Orçamentos, ${pedidosTemp.length} Pedidos`);
+        // Carregar Estoque (NOVO)
+        await carregarEstoque();
+
+        // Carregar Precificações para Cache de Sugestão (Prioridade 3)
+        const qPrec = query(precificacoesRef, orderBy("data", "desc"));
+        const snapPrec = await getDocs(qPrec);
+        precificacoesCache = [];
+        snapPrec.forEach(doc => {
+            precificacoesCache.push({ id: doc.id, ...doc.data() });
+        });
         
-        // 1. Renderiza Orçamentos (Responsabilidade deste arquivo)
+        console.log(`Carregado: ${orcamentos.length} Orçamentos, ${pedidosTemp.length} Pedidos, ${itensEstoque.length} Itens Estoque`);
+        
+        // 1. Renderiza Orçamentos
         mostrarOrcamentosGerados();
         
-        // 2. Inicializa o Módulo de Pedidos com os dados separados (Injeção)
+        // 2. Inicializa o Módulo de Pedidos
         setupPedidos({
             listaPedidos: pedidosTemp,
             salvarDadosFn: salvarDados,
@@ -131,7 +153,17 @@ async function carregarDados() {
     }
 }
 
-// Função de Salvamento Genérica (Centralizada para uso dos dois módulos)
+// Carregamento Específico de Estoque
+async function carregarEstoque() {
+    itensEstoque = [];
+    const snapshot = await getDocs(estoqueRef);
+    snapshot.forEach(doc => {
+        itensEstoque.push({ id: doc.id, ...doc.data() });
+    });
+    renderizarTabelaEstoque();
+}
+
+// Função de Salvamento Genérica
 async function salvarDados(dados, tipo) {
     if (!auth.currentUser) {
         alert("Sessão expirada.");
@@ -177,6 +209,9 @@ function setupEventListeners() {
     bindClick('#btnGerarOrcamento', gerarOrcamento);
     bindClick('#btnAtualizarOrcamento', atualizarOrcamento);
 
+    // Botão Adicionar ao Estoque (NOVO)
+    bindClick('#btn-add-estoque', cadastrarItemEstoque);
+
     // Busca de Orçamentos
     const inputBuscaOrc = document.getElementById('busca-orcamentos');
     if(inputBuscaOrc) {
@@ -185,6 +220,30 @@ function setupEventListeners() {
             pagAtualOrc = 1; 
             mostrarOrcamentosGerados();
         }));
+    }
+
+    // Busca/Filtro de Estoque (NOVO)
+    const inputBuscaEstoque = document.getElementById('busca-estoque');
+    if(inputBuscaEstoque) {
+        inputBuscaEstoque.addEventListener('input', (e) => {
+            const termo = e.target.value.toLowerCase();
+            renderizarTabelaEstoque(termo);
+        });
+    }
+
+    // Autocomplete do Produto no Estoque (Integração - Prioridade 3)
+    const inputProdEstoque = document.getElementById('estoque-produto');
+    if (inputProdEstoque) {
+        inputProdEstoque.addEventListener('input', (e) => {
+            buscarSugestoesEstoque(e.target.value);
+        });
+        // Fechar sugestões ao clicar fora
+        document.addEventListener('click', (e) => {
+            if (e.target.id !== 'estoque-produto') {
+                const lista = document.getElementById('sugestoes-estoque');
+                if(lista) lista.style.display = 'none';
+            }
+        });
     }
     
     // Paginação de Orçamentos
@@ -504,7 +563,6 @@ function visualizarImpressao(orcamento) {
                 </div>
             </div>
 
-            <!-- Datas Reposicionadas (Sem Número/Ano) -->
             <div class="date-bar">
                 <div class="date-item"><strong>Data do Orçamento:</strong> ${dtOrc}</div>
                 <div class="date-item"><strong>Validade da Proposta:</strong> ${dtVal}</div>
@@ -659,4 +717,234 @@ async function gerarPedido(orcamentoId) {
     
     // Redireciona para a aba de pedidos
     document.querySelector('a[data-pagina="lista-pedidos"]').click();
+}
+
+// ==========================================================================
+// 6. MÓDULO DE PRONTA ENTREGA (NOVO - PRIORIDADES 1, 2 e 3)
+// ==========================================================================
+
+// Renderiza a tabela de estoque
+function renderizarTabelaEstoque(termo = "") {
+    const tbody = document.querySelector("#tabela-estoque tbody");
+    if (!tbody) return;
+    tbody.innerHTML = "";
+
+    const filtrados = itensEstoque.filter(item => 
+        item.produto.toLowerCase().includes(termo) || 
+        (item.detalhes && item.detalhes.toLowerCase().includes(termo))
+    );
+
+    if (filtrados.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Nenhum item em estoque.</td></tr>';
+        return;
+    }
+
+    filtrados.forEach(item => {
+        const row = tbody.insertRow();
+        row.innerHTML = `
+            <td>
+                <strong>${item.produto}</strong><br>
+                <small style="color:#666;">${item.detalhes || ''}</small>
+            </td>
+            <td style="text-align:center;">${item.quantidade}</td>
+            <td>${helpers.formatarMoeda(item.valorVenda)}</td>
+            <td>
+                <button class="btn-vender" onclick="venderItemEstoque('${item.id}')" style="margin-right:5px; background-color:#4CAF50;">Vender</button>
+                <button onclick="excluirItemEstoque('${item.id}')" style="background-color:#e53935;">Excluir</button>
+            </td>
+        `;
+    });
+}
+
+// INTEGRAÇÃO (Prioridade 3): Busca inteligente de precificação
+function buscarSugestoesEstoque(termo) {
+    const lista = document.getElementById('sugestoes-estoque') || criarListaSugestoes();
+    lista.innerHTML = '';
+    
+    if (termo.length < 2) {
+        lista.style.display = 'none';
+        return;
+    }
+
+    const sugestoes = precificacoesCache.filter(p => p.produto.toLowerCase().includes(termo.toLowerCase()));
+    
+    if (sugestoes.length === 0) {
+        lista.style.display = 'none';
+        return;
+    }
+
+    sugestoes.forEach(sug => {
+        const div = document.createElement('div');
+        div.className = 'sugestao-item';
+        div.style.padding = '8px';
+        div.style.cursor = 'pointer';
+        div.style.borderBottom = '1px solid #eee';
+        div.style.backgroundColor = '#fff';
+        div.innerHTML = `<strong>${sug.produto}</strong> - ${helpers.formatarMoeda(sug.precoVendaSugerido)}`;
+        
+        div.onclick = () => selecionarSugestaoEstoque(sug);
+        div.onmouseover = () => div.style.backgroundColor = '#f0f7f7';
+        div.onmouseout = () => div.style.backgroundColor = '#fff';
+        
+        lista.appendChild(div);
+    });
+    
+    lista.style.display = 'block';
+}
+
+function criarListaSugestoes() {
+    const input = document.getElementById('estoque-produto');
+    const div = document.createElement('div');
+    div.id = 'sugestoes-estoque';
+    div.style.position = 'absolute';
+    div.style.zIndex = '1000';
+    div.style.width = input.offsetWidth + 'px';
+    div.style.border = '1px solid #ccc';
+    div.style.maxHeight = '150px';
+    div.style.overflowY = 'auto';
+    div.style.background = '#fff';
+    div.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
+    input.parentNode.insertBefore(div, input.nextSibling);
+    return div;
+}
+
+function selecionarSugestaoEstoque(precificacao) {
+    document.getElementById('estoque-produto').value = precificacao.produto;
+    document.getElementById('estoque-valor').value = helpers.formatarMoeda(precificacao.precoVendaSugerido);
+    document.getElementById('estoque-custo').value = helpers.formatarMoeda(precificacao.custosTotais || 0);
+    
+    // Armazena dados invisíveis (meta-dados) no formulário para uso no cadastro
+    const form = document.getElementById('form-estoque');
+    form.dataset.maoDeObra = precificacao.maoDeObraTotal || 0;
+    form.dataset.margemLucro = precificacao.margemLucroValor || 0;
+    form.dataset.custoProducao = precificacao.custosTotais || 0;
+
+    document.getElementById('sugestoes-estoque').style.display = 'none';
+}
+
+// Cadastro de Estoque (Prioridade 1 + 2)
+async function cadastrarItemEstoque() {
+    const produto = document.getElementById('estoque-produto').value;
+    const valor = helpers.converterMoedaParaNumero(document.getElementById('estoque-valor').value);
+    
+    if(!produto || valor <= 0) return alert("Preencha produto e valor.");
+
+    const form = document.getElementById('form-estoque');
+    const custoManual = helpers.converterMoedaParaNumero(document.getElementById('estoque-custo').value);
+    
+    // Tenta pegar os dados detalhados da integração, senão usa manual/zero
+    const maoDeObra = parseFloat(form.dataset.maoDeObra) || 0;
+    const margemLucro = parseFloat(form.dataset.margemLucro) || (valor - custoManual); // Estimativa se não houver dado
+    const custoProducao = parseFloat(form.dataset.custoProducao) || custoManual;
+
+    const item = {
+        produto,
+        quantidade: parseInt(document.getElementById('estoque-qtd').value) || 1,
+        valorVenda: valor,
+        detalhes: document.getElementById('estoque-detalhes').value,
+        dataCadastro: new Date().toISOString(),
+        // Dados Financeiros para Relatórios (Prioridade 2)
+        financeiro: {
+            custoProducao,
+            maoDeObra,
+            margemLucro
+        }
+    };
+
+    try {
+        const docRef = await addDoc(estoqueRef, item);
+        item.id = docRef.id;
+        itensEstoque.push(item);
+        
+        alert("Item adicionado ao estoque!");
+        document.getElementById('form-estoque').reset();
+        // Limpa dataset
+        delete form.dataset.maoDeObra;
+        delete form.dataset.margemLucro;
+        delete form.dataset.custoProducao;
+        
+        renderizarTabelaEstoque();
+    } catch (e) {
+        console.error(e);
+        alert("Erro ao cadastrar item.");
+    }
+}
+
+// Venda Rápida (Prioridade 1 + 2)
+async function venderItemEstoque(id) {
+    const item = itensEstoque.find(i => i.id === id);
+    if(!item) return;
+
+    const confirmacao = confirm(`Confirmar venda de 1 unidade de "${item.produto}"?`);
+    if(!confirmacao) return;
+
+    // 1. GERA O PEDIDO AUTOMATICAMENTE
+    const novoPedido = {
+        numero: gerarNumeroFormatado(numeroPedido), 
+        tipo: 'pedido',
+        dataPedido: new Date().toISOString().split('T')[0],
+        dataEntrega: new Date().toISOString().split('T')[0], // Entrega imediata
+        cliente: "Venda Pronta Entrega", // Cliente genérico
+        endereco: "Retirada no local",
+        telefone: "",
+        tema: "Pronta Entrega",
+        cores: item.detalhes || "N/A",
+        
+        // Dados Financeiros (Prioridade 2 - Relatório)
+        total: item.valorVenda,
+        entrada: item.valorVenda, // Considera pago integralmente
+        restante: 0,
+        valorFrete: 0,
+        valorOrcamento: item.valorVenda,
+        
+        // Populando dados gerenciais
+        custosTotais: item.financeiro ? item.financeiro.custoProducao : (item.custoProducao || 0),
+        margemLucro: item.financeiro ? item.financeiro.margemLucro : (item.valorVenda), 
+        custoMaoDeObra: item.financeiro ? item.financeiro.maoDeObra : 0,
+
+        produtos: [{
+            descricao: item.produto,
+            quantidade: 1,
+            valorUnit: item.valorVenda,
+            valorTotal: item.valorVenda
+        }],
+        observacoes: "Venda realizada via módulo Pronta Entrega."
+    };
+
+    try {
+        // Salva o pedido
+        await salvarDados(novoPedido, 'pedido');
+        numeroPedido++; 
+
+        // 2. ATUALIZA O ESTOQUE
+        if(item.quantidade > 1) {
+            await updateDoc(doc(estoqueRef, id), { quantidade: item.quantidade - 1 });
+            item.quantidade--;
+        } else {
+            await deleteDoc(doc(estoqueRef, id));
+            itensEstoque = itensEstoque.filter(i => i.id !== id);
+        }
+
+        // 3. FEEDBACK E ATUALIZAÇÃO
+        alert("Venda registrada! Pedido gerado e financeiro atualizado.");
+        renderizarTabelaEstoque();
+        
+        // Adiciona o pedido à lista global para aparecer no relatório sem refresh
+        adicionarPedidoNaLista(novoPedido); 
+        
+    } catch (e) {
+        console.error(e);
+        alert("Erro ao processar venda.");
+    }
+}
+
+async function excluirItemEstoque(id) {
+    if(!confirm("Tem certeza que deseja remover este item do estoque?")) return;
+    try {
+        await deleteDoc(doc(estoqueRef, id));
+        itensEstoque = itensEstoque.filter(i => i.id !== id);
+        renderizarTabelaEstoque();
+    } catch (e) {
+        alert("Erro ao excluir.");
+    }
 }
