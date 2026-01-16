@@ -500,8 +500,7 @@ function imprimirNotaPedido(id) {
                     color: #7aa2a9; 
                     font-size: 2.5em; 
                     margin: 0; 
-                    line-height: 1.2;
-                    text-transform: uppercase;
+                    line-height: 1.2;                    
                 }
                 .company-info p { margin: 2px 0; font-size: 0.9em; color: #888; }
                 
