@@ -463,7 +463,7 @@ function visualizarImpressao(orcamento) {
                 .logo-box { margin: 0 auto 10px auto; width: 120px; }
                 .logo-box img { max-width: 100%; height: auto; }
                 /* Fonte Padronizada */
-                .company-info h1 { font-family: 'Roboto', sans-serif; font-weight: 700; color: #7aa2a9; font-size: 2.2em; margin: 0; text-transform: uppercase;}
+                .company-info h1 { font-family: 'Roboto', sans-serif; font-weight: 700; color: #7aa2a9; font-size: 2.2em; margin: 0;}
                 .company-info p { margin: 2px 0; font-size: 0.9em; color: #888; }
                 
                 /* Barra de Datas (Reposicionada e sem número interno) */
