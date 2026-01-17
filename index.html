@@ -256,18 +256,24 @@
                     </div>
                 </section>
                 
-                <!-- NOVA SEÇÃO: PRONTA ENTREGA (ESTOQUE) -->
+                <!-- 
+                    SEÇÃO REFATORADA: PRONTA ENTREGA -> CATÁLOGO DE VENDAS 
+                    Prioridades 1, 2 e 3 atendidas
+                -->
                 <section id="pronta-entrega" class="pagina" style="display: none;">
-                    <h2 class="section-title-lined">Estoque / Pronta Entrega</h2>
+                    <h2 class="section-title-lined">Catálogo de Pronta Entrega</h2>
                     
-                    <!-- Card de Cadastro Rápido -->
+                    <!-- Card de Cadastro / Edição -->
                     <div class="input-card" style="background: #fff; padding: 20px; border-radius: 12px; border: 1px solid #eee; margin-bottom: 20px;">
-                        <h3 style="margin-top:0; color: #7aa2a9; font-size: 1.1rem; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 15px;">Cadastrar Item no Estoque</h3>
+                        <h3 style="margin-top:0; color: #7aa2a9; font-size: 1.1rem; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 15px;">Cadastrar / Editar Produto</h3>
 
                         <form id="form-estoque">
+                            <!-- CAMPO OCULTO PARA MODO EDIÇÃO -->
+                            <input type="hidden" id="estoque-id-edicao">
+
                             <!-- Busca Inteligente (Prioridade 3) -->
                             <div class="form-group" style="position: relative;">
-                                <label>Buscar Produto (Precificação):</label>
+                                <label>Copiar dados da Precificação (Opcional):</label>
                                 <div class="input-wrapper">
                                     <input type="text" id="busca-produto-estoque" placeholder="Digite para buscar da precificação..." autocomplete="off">
                                     <div id="resultados-busca-estoque" class="hidden" style="position: absolute; width: 100%; background: white; border: 1px solid #ccc; z-index: 10; max-height: 150px; overflow-y: auto;"></div>
@@ -275,39 +281,47 @@
                                 <p class="help-text" style="font-size: 0.8em; color: #777; margin-top: 4px;">*Selecione para preencher custos automaticamente.</p>
                             </div>
 
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label>Nome do Produto (Exibição):</label>
-                                    <input type="text" id="estoque-produto">
-                                </div>
-                                <div class="form-group">
-                                    <label>Quantidade:</label>
-                                    <input type="number" id="estoque-qtd" value="1" min="1">
-                                </div>
+                            <div class="form-group">
+                                <label>Nome do Produto (Exibição):</label>
+                                <input type="text" id="estoque-produto">
                             </div>
                             
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label>Preço Venda (R$):</label>
-                                    <input type="text" id="estoque-valor" oninput="formatarEntradaMoeda(this)">
-                                </div>
-                                <!-- Campos de Custos (Prioridade 2 - Financeiro) -->
-                                <div class="form-group">
-                                    <label title="Usado para o Relatório Financeiro">Custo Total (R$):</label>
-                                    <input type="text" id="estoque-custo" placeholder="0,00" oninput="formatarEntradaMoeda(this)">
-                                </div>
-                                 <div class="form-group">
-                                    <label title="Usado para o Relatório Financeiro">Mão de Obra (R$):</label>
-                                    <input type="text" id="estoque-mao-obra" placeholder="0,00" oninput="formatarEntradaMoeda(this)">
-                                </div>
-                            </div>
+                            <!-- REMOVIDO: Campo Quantidade -->
 
                             <div class="form-group">
                                 <label>Detalhes / Variação:</label>
                                 <textarea id="estoque-detalhes" rows="2" placeholder="Cor, tamanho, tema..."></textarea>
                             </div>
 
-                            <button type="button" id="btn-add-estoque">Adicionar ao Estoque</button>
+                            <!-- Campos de Custos Financeiros (Prioridade 1, 2 e 3) -->
+                            <div style="background-color: #f9f9f9; padding: 15px; border-radius: 8px; margin-top: 15px; border: 1px dashed #ccc;">
+                                <h4 style="margin: 0 0 10px 0; font-size: 0.9em; color: #555; text-transform: uppercase;">Composição do Preço (Para Relatórios)</h4>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label style="color: #e53935; font-weight: 500;" title="Usado para o Relatório Financeiro">Gastos (R$):</label>
+                                        <input type="text" id="estoque-custo" placeholder="0,00" oninput="formatarEntradaMoeda(this)">
+                                    </div>
+                                     <div class="form-group">
+                                        <label style="color: #2196F3; font-weight: 500;" title="Usado para o Relatório Financeiro">Meu Salário (R$):</label>
+                                        <input type="text" id="estoque-mao-obra" placeholder="0,00" oninput="formatarEntradaMoeda(this)">
+                                    </div>
+                                    <div class="form-group">
+                                        <label style="color: #4CAF50; font-weight: 500;" title="Caixa da Empresa">Caixa (Lucro) (R$):</label>
+                                        <input type="text" id="estoque-margem" placeholder="0,00" oninput="formatarEntradaMoeda(this)">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Preço de Venda em Destaque -->
+                            <div class="form-group" style="margin-top: 15px; text-align: center; background: #f0f7f7; padding: 15px; border-radius: 8px; border: 1px solid #b2d8d8;">
+                                <label style="font-size: 1.1em; color: #006064; font-weight: bold;">Preço Final de Venda (R$):</label>
+                                <input type="text" id="estoque-valor" oninput="formatarEntradaMoeda(this)" style="font-size: 1.3em; text-align: center; font-weight: bold; width: 50%; margin: 5px auto; display: block;">
+                            </div>
+
+                            <div style="display: flex; gap: 10px; margin-top: 15px;">
+                                <button type="button" id="btn-add-estoque" style="flex: 1;">Salvar Produto</button>
+                                <button type="button" id="btn-cancelar-edicao-estoque" style="display: none; background-color: #90a4ae; width: auto;">Cancelar</button>
+                            </div>
                         </form>
                     </div>
 
@@ -315,7 +329,7 @@
 
                     <!-- Lista de Itens -->
                     <div class="search-container">
-                        <input type="text" id="busca-lista-estoque" placeholder="🔍 Buscar item no estoque..." class="search-input">
+                        <input type="text" id="busca-lista-estoque" placeholder="🔍 Buscar item no catálogo..." class="search-input">
                     </div>
 
                     <div class="table-responsive">
@@ -323,7 +337,7 @@
                             <thead>
                                 <tr>
                                     <th>Produto</th>
-                                    <th>Qtd</th>
+                                    <!-- REMOVIDO: Coluna Qtd -->
                                     <th>Valor Unit.</th>
                                     <th>Ações</th>
                                 </tr>
