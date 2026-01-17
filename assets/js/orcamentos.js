@@ -8,8 +8,8 @@ import { setupPedidos, adicionarPedidoNaLista } from './pedidos.js';
 
 // Referências
 const orcamentosPedidosRef = collection(db, "Orcamento-Pedido");
-const estoqueRef = collection(db, "estoque"); // Nova referência para Pronta Entrega
-const precificacoesRef = collection(db, "precificacoes-geradas"); // Referência para integração (Prioridade 3)
+const estoqueRef = collection(db, "estoque"); // Agora funciona como Catálogo de Pronta Entrega
+const precificacoesRef = collection(db, "precificacoes-geradas");
 
 // Variáveis de Estado (Dados)
 let numeroOrcamento = 1;
@@ -17,8 +17,8 @@ let numeroPedido = 1;
 const anoAtual = new Date().getFullYear();
 let orcamentoEditando = null;
 let orcamentos = [];
-let itensEstoque = []; // Estado local do estoque
-let precificacoesCache = []; // Cache para busca rápida
+let itensEstoque = []; // Estado local do catálogo
+let precificacoesCache = []; 
 let moduleInitialized = false;
 
 // Variáveis de Estado (Paginação e Busca)
@@ -59,7 +59,7 @@ window.formatarEntradaMoeda = (input) => {
 // 2. INICIALIZAÇÃO E CARREGAMENTO
 // ==========================================================================
 export async function initOrcamentos() {
-    console.log("Inicializando Módulo Orçamentos (Controlador Principal)...");
+    console.log("Inicializando Módulo Orçamentos e Pronta Entrega...");
     
     // EXPOR FUNÇÕES DE ORÇAMENTO PARA O HTML
     window.excluirProduto = excluirProduto;
@@ -69,11 +69,13 @@ export async function initOrcamentos() {
     window.gerarOrcamento = gerarOrcamento;
     window.atualizarOrcamento = atualizarOrcamento;
 
-    // EXPOR FUNÇÕES DE ESTOQUE (NOVO)
+    // EXPOR FUNÇÕES DE PRONTA ENTREGA (NOVO CRUD + VENDA INFINITA)
     window.cadastrarItemEstoque = cadastrarItemEstoque;
     window.venderItemEstoque = venderItemEstoque;
     window.excluirItemEstoque = excluirItemEstoque;
-    window.selecionarSugestaoEstoque = selecionarSugestaoEstoque; // Integração
+    window.editarItemEstoque = editarItemEstoque; // Novo
+    window.cancelarEdicaoEstoque = cancelarEdicaoEstoque; // Novo
+    window.selecionarSugestaoEstoque = selecionarSugestaoEstoque;
 
     // Carregar dados do banco e distribuir para os módulos
     await carregarDados();
@@ -125,10 +127,10 @@ async function carregarDados() {
             }
         });
         
-        // Carregar Estoque (NOVO)
+        // Carregar Catálogo Pronta Entrega
         await carregarEstoque();
 
-        // Carregar Precificações para Cache de Sugestão (Prioridade 3)
+        // Carregar Precificações para Cache de Sugestão
         const qPrec = query(precificacoesRef, orderBy("data", "desc"));
         const snapPrec = await getDocs(qPrec);
         precificacoesCache = [];
@@ -136,7 +138,7 @@ async function carregarDados() {
             precificacoesCache.push({ id: doc.id, ...doc.data() });
         });
         
-        console.log(`Carregado: ${orcamentos.length} Orçamentos, ${pedidosTemp.length} Pedidos, ${itensEstoque.length} Itens Estoque`);
+        console.log(`Carregado: ${orcamentos.length} Orçamentos, ${pedidosTemp.length} Pedidos, ${itensEstoque.length} Itens Catálogo`);
         
         // 1. Renderiza Orçamentos
         mostrarOrcamentosGerados();
@@ -153,7 +155,7 @@ async function carregarDados() {
     }
 }
 
-// Carregamento Específico de Estoque
+// Carregamento Específico de Estoque/Catálogo
 async function carregarEstoque() {
     itensEstoque = [];
     const snapshot = await getDocs(estoqueRef);
@@ -209,8 +211,28 @@ function setupEventListeners() {
     bindClick('#btnGerarOrcamento', gerarOrcamento);
     bindClick('#btnAtualizarOrcamento', atualizarOrcamento);
 
-    // Botão Adicionar ao Estoque (NOVO)
+    // --- LOGICA PRONTA ENTREGA (ATUALIZADA) ---
     bindClick('#btn-add-estoque', cadastrarItemEstoque);
+    
+    // Botão Cancelar Edição (Novo)
+    const btnCancelarEstoque = document.getElementById('btn-cancelar-edicao-estoque');
+    if(btnCancelarEstoque) {
+        btnCancelarEstoque.addEventListener('click', cancelarEdicaoEstoque);
+    }
+
+    // PRIORIDADE 3: Cálculo Automático do Preço de Venda
+    // Ao digitar Custo, Salário ou Margem, atualiza o Total
+    const inputsFinanceiros = ['estoque-custo', 'estoque-mao-obra', 'estoque-margem'];
+    inputsFinanceiros.forEach(id => {
+        const el = document.getElementById(id);
+        if(el) {
+            el.addEventListener('input', () => {
+                window.formatarEntradaMoeda(el);
+                atualizarPrecoVendaAutomatico();
+            });
+        }
+    });
+    // --- FIM LOGICA PRONTA ENTREGA ---
 
     // Busca de Orçamentos
     const inputBuscaOrc = document.getElementById('busca-orcamentos');
@@ -222,8 +244,8 @@ function setupEventListeners() {
         }));
     }
 
-    // Busca/Filtro de Estoque (NOVO)
-    const inputBuscaEstoque = document.getElementById('busca-estoque');
+    // Busca/Filtro de Estoque
+    const inputBuscaEstoque = document.getElementById('busca-lista-estoque');
     if(inputBuscaEstoque) {
         inputBuscaEstoque.addEventListener('input', (e) => {
             const termo = e.target.value.toLowerCase();
@@ -231,17 +253,16 @@ function setupEventListeners() {
         });
     }
 
-    // Autocomplete do Produto no Estoque (Integração - Prioridade 3)
-    const inputProdEstoque = document.getElementById('estoque-produto');
+    // Autocomplete do Produto no Estoque
+    const inputProdEstoque = document.getElementById('busca-produto-estoque');
     if (inputProdEstoque) {
         inputProdEstoque.addEventListener('input', (e) => {
             buscarSugestoesEstoque(e.target.value);
         });
-        // Fechar sugestões ao clicar fora
         document.addEventListener('click', (e) => {
-            if (e.target.id !== 'estoque-produto') {
-                const lista = document.getElementById('sugestoes-estoque');
-                if(lista) lista.style.display = 'none';
+            if (e.target.id !== 'busca-produto-estoque') {
+                const lista = document.getElementById('resultados-busca-estoque');
+                if(lista) lista.classList.add('hidden');
             }
         });
     }
@@ -516,40 +537,21 @@ function visualizarImpressao(orcamento) {
             <style>
                 * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
                 body { font-family: 'Roboto', sans-serif; color: #555; margin: 0; padding: 40px; background: #fff; font-size: 14px; }
-                
-                /* HEADER */
                 .header-container { text-align: center; border-bottom: 3px solid #7aa2a9; padding-bottom: 20px; margin-bottom: 20px; }
                 .logo-box { margin: 0 auto 10px auto; width: 120px; }
                 .logo-box img { max-width: 100%; height: auto; }
-                /* Fonte Padronizada */
                 .company-info h1 { font-family: 'Roboto', sans-serif; font-weight: 700; color: #7aa2a9; font-size: 2.2em; margin: 0;}
                 .company-info p { margin: 2px 0; font-size: 0.9em; color: #888; }
-                
-                /* Barra de Datas (Reposicionada e sem número interno) */
                 .date-bar { display: flex; justify-content: space-between; background-color: #f0f7f7; padding: 10px 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #b2d8d8; }
-                .date-item { font-size: 0.95em; color: #555; }
-                .date-item strong { color: #7aa2a9; text-transform: uppercase; margin-right: 5px; }
-
                 .client-box { background-color: #fff; border: 1px solid #eee; padding: 20px; margin-bottom: 30px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
                 .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-                .info-item strong { color: #dfb6b0; text-transform: uppercase; font-size: 0.8em; display: block; margin-bottom: 2px; font-weight: 700; }
-
                 table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
                 th { background-color: #7aa2a9; color: #fff; font-weight: 500; text-transform: uppercase; font-size: 0.85em; padding: 12px; text-align: left; }
                 td { padding: 12px; border-bottom: 1px solid #eee; color: #444; }
-                tr:nth-child(even) { background-color: #fcfcfc; }
                 .col-money { text-align: right; font-family: 'Roboto', monospace; font-weight: 500; }
-
-                .totals-section { display: flex; justify-content: flex-end; }
-                .totals-box { width: 280px; background: #fff9f8; border: 1px solid #efebe9; padding: 20px; border-radius: 8px; }
+                .totals-box { width: 280px; background: #fff9f8; border: 1px solid #efebe9; padding: 20px; border-radius: 8px; margin-left: auto; }
                 .total-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.95em; }
                 .total-row.final { border-top: 2px solid #dfb6b0; padding-top: 10px; margin-top: 10px; font-size: 1.2em; font-weight: bold; color: #7aa2a9; }
-
-                .terms-box { margin-top: 40px; padding: 20px; background-color: #fcfcfc; border: 1px solid #eee; border-radius: 8px; }
-                .terms-box h4 { margin: 0 0 10px 0; color: #7aa2a9; font-size: 0.9em; text-transform: uppercase; border-bottom: 1px solid #7aa2a9; display: inline-block; padding-bottom: 2px; }
-                .terms-list { padding-left: 20px; margin: 0; font-size: 0.85em; color: #555; line-height: 1.6; }
-                .terms-list li { margin-bottom: 5px; }
-                
                 @media print { .no-print { display: none; } body { padding: 0; } }
             </style>
         </head>
@@ -596,24 +598,10 @@ function visualizarImpressao(orcamento) {
                 </tbody>
             </table>
 
-            <div class="totals-section">
-                <div class="totals-box">
-                    <div class="total-row"><span>Frete:</span> <span>${helpers.formatarMoeda(orcamento.valorFrete)}</span></div>
-                    <div class="total-row final"><span>Total:</span> <span>${helpers.formatarMoeda(orcamento.total)}</span></div>
-                    <div style="margin-top:10px; font-size:0.8em; color:#888; text-align:right;">Forma Pagto: ${pagamento}</div>
-                </div>
-            </div>
-
-            <div class="terms-box">
-                <h4>Observações e Termos:</h4>
-                <ol class="terms-list">
-                    <li>Trabalhamos com enxoval personalizado com bordado computadorizado.</li>
-                    <li>Após a confirmação do pagamento, enviaremos a arte. Em caso de desistência, não haverá reembolso.</li>
-                    <li>Serão enviadas 3 opções de imagens para escolher, e em seguida a arte final com o nome será enviada para aprovação.</li>
-                    <li>Aceitamos Pix, débito, e crédito (juros por conta do cliente).</li>
-                    <li>Entregamos com taxa.</li>
-                </ol>
-                ${orcamento.observacoes ? `<p style="margin-top:10px; font-style:italic; font-size:0.9em; border-top: 1px dotted #ccc; padding-top: 5px;"><strong>Nota Adicional:</strong> ${orcamento.observacoes.replace(/\n/g, '<br>')}</p>` : ''}
+            <div class="totals-box">
+                <div class="total-row"><span>Frete:</span> <span>${helpers.formatarMoeda(orcamento.valorFrete)}</span></div>
+                <div class="total-row final"><span>Total:</span> <span>${helpers.formatarMoeda(orcamento.total)}</span></div>
+                <div style="margin-top:10px; font-size:0.8em; color:#888; text-align:right;">Forma Pagto: ${pagamento}</div>
             </div>
 
             <div class="no-print" style="text-align:center; margin-top:40px;">
@@ -700,30 +688,23 @@ async function gerarPedido(orcamentoId) {
 
     await salvarDados(pedido, 'pedido');
     numeroPedido++;
-    // Nota: O novo pedido é adicionado à lista local do módulo de pedidos 
-    // através da função exportada abaixo, para não precisar recarregar tudo.
-
     orc.pedidoGerado = true;
     orc.numeroPedido = pedido.numero;
     await salvarDados(orc, 'orcamento');
 
-    // Notifica o módulo de Pedidos sobre o novo item
     adicionarPedidoNaLista(pedido);
 
     alert(`Pedido ${pedido.numero} gerado!`);
-    
-    // Atualiza a tabela de orçamentos para mostrar que já foi gerado
     mostrarOrcamentosGerados();
-    
-    // Redireciona para a aba de pedidos
     document.querySelector('a[data-pagina="lista-pedidos"]').click();
 }
 
 // ==========================================================================
-// 6. MÓDULO DE PRONTA ENTREGA (NOVO - PRIORIDADES 1, 2 e 3)
+// 6. MÓDULO DE PRONTA ENTREGA (CATÁLOGO)
+// PRIORIDADE 1: CRUD e Venda Infinita
 // ==========================================================================
 
-// Renderiza a tabela de estoque
+// Renderiza a tabela de catálogo
 function renderizarTabelaEstoque(termo = "") {
     const tbody = document.querySelector("#tabela-estoque tbody");
     if (!tbody) return;
@@ -735,7 +716,7 @@ function renderizarTabelaEstoque(termo = "") {
     );
 
     if (filtrados.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Nenhum item em estoque.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;">Nenhum item no catálogo.</td></tr>';
         return;
     }
 
@@ -746,30 +727,78 @@ function renderizarTabelaEstoque(termo = "") {
                 <strong>${item.produto}</strong><br>
                 <small style="color:#666;">${item.detalhes || ''}</small>
             </td>
-            <td style="text-align:center;">${item.quantidade}</td>
+            <!-- Coluna Qtd removida conforme Prioridade 1 -->
             <td>${helpers.formatarMoeda(item.valorVenda)}</td>
             <td>
-                <button class="btn-vender" onclick="venderItemEstoque('${item.id}')" style="margin-right:5px; background-color:#4CAF50;">Vender</button>
+                <button class="btn-vender" onclick="venderItemEstoque('${item.id}')" style="background-color:#4CAF50; margin-right:5px;" title="Registrar Venda sem alterar estoque">Vender</button>
+                <button onclick="editarItemEstoque('${item.id}')" style="background-color:#FF9800; margin-right:5px;">Editar</button>
                 <button onclick="excluirItemEstoque('${item.id}')" style="background-color:#e53935;">Excluir</button>
             </td>
         `;
     });
 }
 
-// INTEGRAÇÃO (Prioridade 3): Busca inteligente de precificação
+// PRIORIDADE 3: Cálculo Automático (Helper)
+function atualizarPrecoVendaAutomatico() {
+    const custo = helpers.converterMoedaParaNumero(document.getElementById('estoque-custo').value);
+    const mo = helpers.converterMoedaParaNumero(document.getElementById('estoque-mao-obra').value);
+    const margem = helpers.converterMoedaParaNumero(document.getElementById('estoque-margem').value);
+    
+    // Soma total
+    const total = custo + mo + margem;
+    
+    // Atualiza o campo de valor final
+    const inputTotal = document.getElementById('estoque-valor');
+    inputTotal.value = helpers.formatarMoeda(total);
+}
+
+// Prepara UI para Edição
+function editarItemEstoque(id) {
+    const item = itensEstoque.find(i => i.id === id);
+    if (!item) return;
+
+    // Popula campos
+    document.getElementById('estoque-id-edicao').value = item.id;
+    document.getElementById('estoque-produto').value = item.produto;
+    document.getElementById('estoque-detalhes').value = item.detalhes || '';
+    document.getElementById('estoque-valor').value = helpers.formatarMoeda(item.valorVenda);
+    
+    // PRIORIDADE 2: Fallback para Legacy Data (Itens antigos sem 'financeiro')
+    const fin = item.financeiro || {};
+    document.getElementById('estoque-custo').value = helpers.formatarMoeda(fin.custoProducao || 0);
+    document.getElementById('estoque-mao-obra').value = helpers.formatarMoeda(fin.maoDeObra || 0);
+    document.getElementById('estoque-margem').value = helpers.formatarMoeda(fin.margemLucro || 0);
+
+    // Altera Estado da UI
+    document.getElementById('btn-add-estoque').textContent = "Atualizar Produto";
+    const btnCancel = document.getElementById('btn-cancelar-edicao-estoque');
+    if(btnCancel) btnCancel.style.display = 'inline-block';
+    
+    // Scroll
+    document.getElementById('form-estoque').scrollIntoView({ behavior: 'smooth' });
+}
+
+function cancelarEdicaoEstoque() {
+    document.getElementById('form-estoque').reset();
+    document.getElementById('estoque-id-edicao').value = "";
+    document.getElementById('btn-add-estoque').textContent = "Salvar Produto";
+    const btnCancel = document.getElementById('btn-cancelar-edicao-estoque');
+    if(btnCancel) btnCancel.style.display = 'none';
+}
+
 function buscarSugestoesEstoque(termo) {
-    const lista = document.getElementById('sugestoes-estoque') || criarListaSugestoes();
+    const lista = document.getElementById('resultados-busca-estoque') || criarListaSugestoes();
     lista.innerHTML = '';
     
     if (termo.length < 2) {
-        lista.style.display = 'none';
+        lista.classList.add('hidden');
         return;
     }
 
     const sugestoes = precificacoesCache.filter(p => p.produto.toLowerCase().includes(termo.toLowerCase()));
     
     if (sugestoes.length === 0) {
-        lista.style.display = 'none';
+        lista.classList.add('hidden');
         return;
     }
 
@@ -779,7 +808,6 @@ function buscarSugestoesEstoque(termo) {
         div.style.padding = '8px';
         div.style.cursor = 'pointer';
         div.style.borderBottom = '1px solid #eee';
-        div.style.backgroundColor = '#fff';
         div.innerHTML = `<strong>${sug.produto}</strong> - ${helpers.formatarMoeda(sug.precoVendaSugerido)}`;
         
         div.onclick = () => selecionarSugestaoEstoque(sug);
@@ -789,13 +817,14 @@ function buscarSugestoesEstoque(termo) {
         lista.appendChild(div);
     });
     
-    lista.style.display = 'block';
+    lista.classList.remove('hidden');
 }
 
 function criarListaSugestoes() {
-    const input = document.getElementById('estoque-produto');
+    // Fallback caso o HTML não tenha a div pronta
+    const input = document.getElementById('busca-produto-estoque');
     const div = document.createElement('div');
-    div.id = 'sugestoes-estoque';
+    div.id = 'resultados-busca-estoque';
     div.style.position = 'absolute';
     div.style.zIndex = '1000';
     div.style.width = input.offsetWidth + 'px';
@@ -803,80 +832,91 @@ function criarListaSugestoes() {
     div.style.maxHeight = '150px';
     div.style.overflowY = 'auto';
     div.style.background = '#fff';
-    div.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
-    input.parentNode.insertBefore(div, input.nextSibling);
+    input.parentNode.appendChild(div);
     return div;
 }
 
 function selecionarSugestaoEstoque(precificacao) {
     document.getElementById('estoque-produto').value = precificacao.produto;
-    document.getElementById('estoque-valor').value = helpers.formatarMoeda(precificacao.precoVendaSugerido);
-    document.getElementById('estoque-custo').value = helpers.formatarMoeda(precificacao.custosTotais || 0);
     
-    // Armazena dados invisíveis (meta-dados) no formulário para uso no cadastro
-    const form = document.getElementById('form-estoque');
-    form.dataset.maoDeObra = precificacao.maoDeObraTotal || 0;
-    form.dataset.margemLucro = precificacao.margemLucroValor || 0;
-    form.dataset.custoProducao = precificacao.custosTotais || 0;
+    // Preenche campos financeiros automaticamente da precificação
+    document.getElementById('estoque-custo').value = helpers.formatarMoeda(precificacao.custosTotais || 0);
+    document.getElementById('estoque-mao-obra').value = helpers.formatarMoeda(precificacao.maoDeObraTotal || 0);
+    document.getElementById('estoque-margem').value = helpers.formatarMoeda(precificacao.margemLucroValor || 0);
+    
+    // Atualiza o total
+    atualizarPrecoVendaAutomatico();
 
-    document.getElementById('sugestoes-estoque').style.display = 'none';
+    document.getElementById('resultados-busca-estoque').classList.add('hidden');
 }
 
-// Cadastro de Estoque (Prioridade 1 + 2)
+// Cadastro de Estoque (CREATE / UPDATE)
 async function cadastrarItemEstoque() {
+    const idEdicao = document.getElementById('estoque-id-edicao').value;
     const produto = document.getElementById('estoque-produto').value;
-    const valor = helpers.converterMoedaParaNumero(document.getElementById('estoque-valor').value);
     
-    if(!produto || valor <= 0) return alert("Preencha produto e valor.");
-
-    const form = document.getElementById('form-estoque');
-    const custoManual = helpers.converterMoedaParaNumero(document.getElementById('estoque-custo').value);
+    // Captura valores financeiros para salvar (Prioridade 1)
+    const custoProducao = helpers.converterMoedaParaNumero(document.getElementById('estoque-custo').value);
+    const maoDeObra = helpers.converterMoedaParaNumero(document.getElementById('estoque-mao-obra').value);
+    const margemLucro = helpers.converterMoedaParaNumero(document.getElementById('estoque-margem').value);
+    const valorVenda = helpers.converterMoedaParaNumero(document.getElementById('estoque-valor').value);
     
-    // Tenta pegar os dados detalhados da integração, senão usa manual/zero
-    const maoDeObra = parseFloat(form.dataset.maoDeObra) || 0;
-    const margemLucro = parseFloat(form.dataset.margemLucro) || (valor - custoManual); // Estimativa se não houver dado
-    const custoProducao = parseFloat(form.dataset.custoProducao) || custoManual;
+    if(!produto || valorVenda <= 0) return alert("Preencha o nome do produto e valores financeiros.");
 
     const item = {
         produto,
-        quantidade: parseInt(document.getElementById('estoque-qtd').value) || 1,
-        valorVenda: valor,
         detalhes: document.getElementById('estoque-detalhes').value,
-        dataCadastro: new Date().toISOString(),
-        // Dados Financeiros para Relatórios (Prioridade 2)
+        valorVenda,
+        // Objeto Financeiro Robusto para o Relatório
         financeiro: {
             custoProducao,
             maoDeObra,
             margemLucro
-        }
+        },
+        dataAtualizacao: new Date().toISOString()
     };
 
     try {
-        const docRef = await addDoc(estoqueRef, item);
-        item.id = docRef.id;
-        itensEstoque.push(item);
-        
-        alert("Item adicionado ao estoque!");
-        document.getElementById('form-estoque').reset();
-        // Limpa dataset
-        delete form.dataset.maoDeObra;
-        delete form.dataset.margemLucro;
-        delete form.dataset.custoProducao;
-        
+        if (idEdicao) {
+            // MODO EDIÇÃO (UPDATE)
+            await updateDoc(doc(estoqueRef, idEdicao), item);
+            
+            // Atualiza array local
+            const index = itensEstoque.findIndex(i => i.id === idEdicao);
+            if (index !== -1) itensEstoque[index] = { id: idEdicao, ...item };
+            
+            alert("Produto atualizado!");
+            cancelarEdicaoEstoque();
+        } else {
+            // MODO CRIAÇÃO (CREATE)
+            const docRef = await addDoc(estoqueRef, item);
+            item.id = docRef.id;
+            itensEstoque.push(item);
+            
+            alert("Produto cadastrado no catálogo!");
+            document.getElementById('form-estoque').reset();
+        }
         renderizarTabelaEstoque();
     } catch (e) {
         console.error(e);
-        alert("Erro ao cadastrar item.");
+        alert("Erro ao salvar produto.");
     }
 }
 
-// Venda Rápida (Prioridade 1 + 2)
+// Venda Rápida (Venda Infinita - Não deleta item)
 async function venderItemEstoque(id) {
     const item = itensEstoque.find(i => i.id === id);
     if(!item) return;
 
-    const confirmacao = confirm(`Confirmar venda de 1 unidade de "${item.produto}"?`);
+    const confirmacao = confirm(`Registrar venda de 1x "${item.produto}"?\nValor: ${helpers.formatarMoeda(item.valorVenda)}`);
     if(!confirmacao) return;
+
+    // PRIORIDADE 2: Fallback para Legacy Data (Se não tiver objeto financeiro)
+    const fin = item.financeiro || {};
+    const custoProd = fin.custoProducao || 0;
+    const maoObra = fin.maoDeObra || 0;
+    // Se não tiver lucro salvo, estima (Venda - Custos) para não poluir relatório com zero
+    const lucro = fin.margemLucro || (item.valorVenda - custoProd - maoObra);
 
     // 1. GERA O PEDIDO AUTOMATICAMENTE
     const novoPedido = {
@@ -884,23 +924,23 @@ async function venderItemEstoque(id) {
         tipo: 'pedido',
         dataPedido: new Date().toISOString().split('T')[0],
         dataEntrega: new Date().toISOString().split('T')[0], // Entrega imediata
-        cliente: "Venda Pronta Entrega", // Cliente genérico
-        endereco: "Retirada no local",
+        cliente: "Venda Pronta Entrega", 
+        endereco: "Feira / Balcão",
         telefone: "",
         tema: "Pronta Entrega",
-        cores: item.detalhes || "N/A",
+        cores: item.detalhes || "Padrão",
         
-        // Dados Financeiros (Prioridade 2 - Relatório)
+        // Totais da Venda
         total: item.valorVenda,
-        entrada: item.valorVenda, // Considera pago integralmente
+        entrada: item.valorVenda, 
         restante: 0,
         valorFrete: 0,
         valorOrcamento: item.valorVenda,
         
-        // Populando dados gerenciais
-        custosTotais: item.financeiro ? item.financeiro.custoProducao : (item.custoProducao || 0),
-        margemLucro: item.financeiro ? item.financeiro.margemLucro : (item.valorVenda), 
-        custoMaoDeObra: item.financeiro ? item.financeiro.maoDeObra : 0,
+        // DADOS FINANCEIROS PRESERVADOS PARA RELATÓRIO
+        custosTotais: custoProd,
+        custoMaoDeObra: maoObra,
+        margemLucro: lucro, 
 
         produtos: [{
             descricao: item.produto,
@@ -908,26 +948,16 @@ async function venderItemEstoque(id) {
             valorUnit: item.valorVenda,
             valorTotal: item.valorVenda
         }],
-        observacoes: "Venda realizada via módulo Pronta Entrega."
+        observacoes: "Venda rápida registrada via Catálogo."
     };
 
     try {
-        // Salva o pedido
         await salvarDados(novoPedido, 'pedido');
         numeroPedido++; 
 
-        // 2. ATUALIZA O ESTOQUE
-        if(item.quantidade > 1) {
-            await updateDoc(doc(estoqueRef, id), { quantidade: item.quantidade - 1 });
-            item.quantidade--;
-        } else {
-            await deleteDoc(doc(estoqueRef, id));
-            itensEstoque = itensEstoque.filter(i => i.id !== id);
-        }
+        // NOTA: Não deletamos mais o item do estoque (Lógica de Catálogo)
 
-        // 3. FEEDBACK E ATUALIZAÇÃO
-        alert("Venda registrada! Pedido gerado e financeiro atualizado.");
-        renderizarTabelaEstoque();
+        alert("Venda registrada com sucesso!");
         
         // Adiciona o pedido à lista global para aparecer no relatório sem refresh
         adicionarPedidoNaLista(novoPedido); 
@@ -939,7 +969,7 @@ async function venderItemEstoque(id) {
 }
 
 async function excluirItemEstoque(id) {
-    if(!confirm("Tem certeza que deseja remover este item do estoque?")) return;
+    if(!confirm("Tem certeza que deseja remover este item do catálogo?")) return;
     try {
         await deleteDoc(doc(estoqueRef, id));
         itensEstoque = itensEstoque.filter(i => i.id !== id);
