@@ -6,6 +6,16 @@
  */
 const changeLogData = [
     {
+        version: "1.1.8",
+        date: "08/01/2026",
+        changes: [
+            "🛍️ **De Estoque para Catálogo:** O módulo 'Pronta Entrega' foi reinventado! Agora os produtos funcionam como um catálogo fixo (ex: para Feiras). Ao vender um item, ele permanece na lista para futuras vendas, eliminando a necessidade de recadastrar toda vez.",
+            "💰 **Inteligência Financeira:** O cadastro de Pronta Entrega agora separa explicitamente Custos, Salário e Caixa da Empresa. Isso garante que as vendas rápidas alimentem seu Relatório Financeiro com precisão, acabando com as vendas sem dados de lucro.",
+            "✏️ **Edição de Produtos:** Adicionado o botão 'Editar' no catálogo. Agora é possível ajustar preços, custos ou nomes de um produto existente sem precisar excluí-lo e criar outro do zero.",
+            "🤖 **Cálculo Automático:** Ao preencher os custos e a margem de lucro no formulário de Pronta Entrega, o sistema agora soma os valores automaticamente para sugerir o Preço Final de Venda, evitando erros de cálculo."
+        ]
+    },
+    {
         version: "1.1.7",
         date: "06/01/2026",
         changes: [
