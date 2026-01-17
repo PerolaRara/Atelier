@@ -146,7 +146,8 @@
                         <li><a href="#" data-pagina="form-orcamento">Novo Orçamento</a></li>
                         <li><a href="#" data-pagina="orcamentos-gerados">Orçamentos Gerados</a></li>
                         <li><a href="#" data-pagina="lista-pedidos">Pedidos Realizados</a></li>
-                        <li><a href="#" data-pagina="pronta-entrega">Pronta Entrega</a></li> <!-- NOVO MENU -->
+                        <li><a href="#" data-pagina="pronta-entrega">Venda Pronta Entrega</a></li> <!-- Renomeado -->
+                        <li><a href="#" data-pagina="estoque">Estoque</a></li> <!-- NOVO MENU -->
                         <li><a href="#" data-pagina="relatorio">Relatório</a></li>
                     </ul>
                  </nav>
@@ -257,21 +258,55 @@
                 </section>
                 
                 <!-- 
-                    SEÇÃO REFATORADA: PRONTA ENTREGA -> CATÁLOGO DE VENDAS 
-                    Prioridades 1, 2 e 3 atendidas
+                    SEÇÃO REFATORADA: VENDA PRONTA ENTREGA (LIMPA)
+                    Apenas busca e venda, sem formulário de cadastro.
                 -->
                 <section id="pronta-entrega" class="pagina" style="display: none;">
-                    <h2 class="section-title-lined">Catálogo de Pronta Entrega</h2>
+                    <h2 class="section-title-lined">Venda Pronta Entrega</h2>
                     
-                    <!-- Card de Cadastro / Edição -->
-                    <div class="input-card" style="background: #fff; padding: 20px; border-radius: 12px; border: 1px solid #eee; margin-bottom: 20px;">
-                        <h3 style="margin-top:0; color: #7aa2a9; font-size: 1.1rem; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 15px;">Cadastrar / Editar Produto</h3>
+                    <!-- Busca Padronizada -->
+                    <div class="search-container">
+                        <input type="text" id="busca-vendas-estoque" placeholder="🔍 Buscar item para vender..." class="search-input">
+                    </div>
 
-                        <form id="form-estoque">
+                    <!-- Tabela de Vendas -->
+                    <div class="table-responsive">
+                        <table id="tabela-vendas-estoque">
+                            <thead>
+                                <tr>
+                                    <th>Produto</th>
+                                    <th style="text-align: center;">Em Estoque</th>
+                                    <th>Valor Unit.</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+
+                    <!-- Paginação -->
+                    <div class="pagination-controls">
+                        <button id="btn-ant-venda-est" class="btn-paginacao">❮ Anterior</button>
+                        <span id="info-pag-venda-est">Página 1</span>
+                        <button id="btn-prox-venda-est" class="btn-paginacao">Próximo ❯</button>
+                    </div>
+                </section>
+
+                <!-- 
+                    NOVA SEÇÃO: ESTOQUE (CADASTRO E GESTÃO)
+                -->
+                <section id="estoque" class="pagina" style="display: none;">
+                    <h2 class="section-title-lined">Controle de Estoque</h2>
+
+                    <!-- Formulário de Cadastro (Movido para cá e ajustado) -->
+                    <div class="input-card" style="background: #fff; padding: 20px; border-radius: 12px; border: 1px solid #eee; margin-bottom: 20px;">
+                        <h3 style="margin-top:0; color: #7aa2a9; font-size: 1.1rem; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 15px;">Cadastrar / Editar Estoque</h3>
+
+                        <form id="form-estoque-gerencial">
                             <!-- CAMPO OCULTO PARA MODO EDIÇÃO -->
                             <input type="hidden" id="estoque-id-edicao">
 
-                            <!-- Busca Inteligente (Prioridade 3) -->
+                            <!-- Busca Inteligente (Opcional, mas mantida para facilitar cadastro) -->
                             <div class="form-group" style="position: relative;">
                                 <label>Copiar dados da Precificação (Opcional):</label>
                                 <div class="input-wrapper">
@@ -282,18 +317,22 @@
                             </div>
 
                             <div class="form-group">
-                                <label>Nome do Produto (Exibição):</label>
+                                <label>Nome do Produto:</label>
                                 <input type="text" id="estoque-produto">
                             </div>
                             
-                            <!-- REMOVIDO: Campo Quantidade -->
+                            <!-- NOVO CAMPO QUANTIDADE -->
+                            <div class="form-group">
+                                <label>Quantidade em Estoque:</label>
+                                <input type="number" id="estoque-quantidade" value="1" style="font-weight: bold; background-color: #cae6e7; color: #333; padding: 10px; border-radius: 5px; border: 1px solid #ccc;">
+                            </div>
 
                             <div class="form-group">
                                 <label>Detalhes / Variação:</label>
                                 <textarea id="estoque-detalhes" rows="2" placeholder="Cor, tamanho, tema..."></textarea>
                             </div>
 
-                            <!-- Campos de Custos Financeiros (Prioridade 1, 2 e 3) -->
+                            <!-- Campos de Custos Financeiros -->
                             <div style="background-color: #f9f9f9; padding: 15px; border-radius: 8px; margin-top: 15px; border: 1px dashed #ccc;">
                                 <h4 style="margin: 0 0 10px 0; font-size: 0.9em; color: #555; text-transform: uppercase;">Composição do Preço (Para Relatórios)</h4>
                                 <div class="form-row">
@@ -319,31 +358,39 @@
                             </div>
 
                             <div style="display: flex; gap: 10px; margin-top: 15px;">
-                                <button type="button" id="btn-add-estoque" style="flex: 1;">Salvar Produto</button>
-                                <button type="button" id="btn-cancelar-edicao-estoque" style="display: none; background-color: #90a4ae; width: auto;">Cancelar</button>
+                                <button type="button" id="btn-salvar-estoque" style="flex: 1;">Salvar no Estoque</button>
+                                <button type="button" id="btn-cancelar-estoque" style="display: none; background-color: #90a4ae; width: auto;">Cancelar</button>
                             </div>
                         </form>
                     </div>
 
                     <hr class="menu">
 
-                    <!-- Lista de Itens -->
+                    <!-- Busca Estoque -->
                     <div class="search-container">
-                        <input type="text" id="busca-lista-estoque" placeholder="🔍 Buscar item no catálogo..." class="search-input">
+                        <input type="text" id="busca-lista-estoque-adm" placeholder="🔍 Buscar no estoque..." class="search-input">
                     </div>
 
+                    <!-- Tabela Estoque (Com Editar/Excluir) -->
                     <div class="table-responsive">
-                        <table id="tabela-estoque">
+                        <table id="tabela-estoque-adm">
                             <thead>
                                 <tr>
                                     <th>Produto</th>
-                                    <!-- REMOVIDO: Coluna Qtd -->
-                                    <th>Valor Unit.</th>
+                                    <th style="text-align: center;">Qtd</th>
+                                    <th>Valor</th>
                                     <th>Ações</th>
                                 </tr>
                             </thead>
                             <tbody></tbody>
                         </table>
+                    </div>
+
+                    <!-- Paginação Estoque -->
+                    <div class="pagination-controls">
+                        <button id="btn-ant-est-adm" class="btn-paginacao">❮ Anterior</button>
+                        <span id="info-pag-est-adm">Página 1</span>
+                        <button id="btn-prox-est-adm" class="btn-paginacao">Próximo ❯</button>
                     </div>
                 </section>
 
