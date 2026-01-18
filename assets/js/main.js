@@ -7,6 +7,8 @@ import { initOrcamentos } from './orcamentos.js';
 import { initPrecificacao } from './precificacao.js';
 // Importação do módulo de Changelog
 import { initChangelog } from './changelog.js';
+// Importação do novo módulo de Estoque
+import { initEstoque } from './estoque.js';
 
 // 2. REFERÊNCIAS AOS ELEMENTOS DO DOM (Telas)
 const screens = {
@@ -70,6 +72,7 @@ onAuthStateChanged(auth, (user) => {
         // Inicializa os módulos em segundo plano (carrega dados)
         initOrcamentos();
         initPrecificacao();
+        initEstoque(); // Inicializa o novo módulo de estoque
 
         // LÓGICA DE TRANSIÇÃO (Splash como Boas-vindas)
         if (splash) {
