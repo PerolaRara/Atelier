@@ -6,6 +6,16 @@
  */
 const changeLogData = [
     {
+        version: "1.1.9",
+        date: "14/01/2026",
+        changes: [
+            "📦 **Novo Módulo de Estoque:** Separação estratégica entre a gestão (Cadastro) e a operação (Venda). Agora existe um menu exclusivo para 'Controle de Estoque' onde você define quantidades e preços.",
+            "🔢 **Controle Quantitativo Real:** Adeus ao cadastro unitário! Agora você informa que tem '5 unidades' de um produto. O sistema gerencia esse número automaticamente a cada venda.",
+            "🛍️ **Balcão de Vendas (Pronta Entrega):** A tela de Pronta Entrega foi transformada em um 'Ponto de Venda' (POS) simplificado. Ela exibe visualmente o status do estoque (Verde/Laranja/Vermelho) e permite vender múltiplas unidades com um clique.",
+            "📉 **Baixa Automática:** Registrar uma venda não apaga mais o produto do catálogo. O sistema apenas desconta a quantidade vendida. Mesmo que o estoque zere (ou fique negativo), o cadastro permanece salvo para futuras reposições."
+        ]
+    },
+    {
         version: "1.1.8",
         date: "08/01/2026",
         changes: [
@@ -116,86 +126,6 @@ const changeLogData = [
             "🧠 Semântica Financeira: O 'Subtotal de Custos' agora é exibido inteiramente em vermelho (Rótulo e Valor), facilitando a distinção imediata entre Saídas (Custos) e Entradas (Lucro).",
             "🧹 Limpeza de Interface: Remoção de redundâncias no painel de inputs e reagrupamento estratégico dos detalhes (Materiais e Custos Indiretos) no cartão de resultado.",
             "📝 Clareza Textual: Renomeação do módulo para 'Cálculo da Precificação', tornando a função da tela mais objetiva."
-        ]
-    },
-    {
-        version: "1.0.7",
-        date: "09/12/2025",
-        changes: [
-            "🎨 Redesign Total da Precificação: A antiga calculadora evoluiu para um 'Painel de Controle Financeiro' (Dashboard).",
-            "📊 Cartão de Resultado Inteligente: Nova visualização que 'explode' o preço final, separando claramente o que é Custo, o que é seu Salário (Mão de Obra) e o que é Lucro da Empresa.",
-            "🧠 Clareza Financeira: Destaque visual com cores específicas para diferenciar o dinheiro da artesã (Azul) do dinheiro de crescimento do negócio (Verde).",
-            "📱 Layout Responsivo Otimizado: Estrutura de colunas que se adapta perfeitamente: lado a lado no computador e empilhado verticalmente no celular.",
-            "🔧 Organização de Inputs: Controles de Margem e Taxas agrupados logicamente para facilitar o preenchimento."
-        ]
-    },
-    {
-        version: "1.0.6",
-        date: "08/12/2025",
-        changes: [
-            "🏗️ Refatoração Arquitetural: Divisão estratégica do módulo de Precificação em dois núcleos ('Insumos' e 'Produtos') para maior estabilidade.",
-            "⚡ Performance: Implementação de carregamento paralelo (Promise.all) para Materiais, Mão de Obra e Custos Indiretos.",
-            "🔧 Manutenibilidade: Criação do arquivo 'precificacao-insumos.js' centralizando a lógica de custos base, facilitando futuras inovações.",
-            "🔗 Integridade: Sistema de callbacks implementado para garantir que atualizações de materiais recalculem automaticamente os custos dos produtos ('Efeito Dominó')."
-        ]
-    },
-    {
-        version: "1.0.5",
-        date: "07/12/2025",
-        changes: [
-            "🧠 Mudança de Paradigma: O módulo de Precificação agora é 100% focado no Produto, removendo o campo 'Cliente' para maior consistência dos dados.",
-            "🔢 Numeração Inteligente: Implementado sistema de 'preenchimento de lacunas'. Ao excluir uma precificação (ex: Nº 2), o próximo registro assumirá este número automaticamente.",
-            "👀 Feedback Visual em Tempo Real: Adicionado um 'Badge' de alerta ao selecionar um produto, informando instantaneamente se ele já possui preço salvo.",
-            "🛡️ Proteção de Dados: Nova lógica de salvamento que detecta duplicidade e permite atualizar o registro existente em vez de criar cópias desnecessárias.",
-            "🏷️ Interface: Renomeação do menu 'Calculadora' para 'Precificação' e limpeza visual do formulário."
-        ]
-    },
-    {
-        version: "1.0.4",
-        date: "06/12/2025",
-        changes: [
-            "🚀 Power UX: Navegação profissional por teclado na busca de produtos (Setas ↑/↓ e Enter).",
-            "⏳ Feedback Visual: Adicionado indicador de carregamento (spinner) no campo de busca.",
-            "💎 Refinamento de Interface: Destaque visual claro para o item selecionado na lista de sugestões."
-        ]
-    },
-    {
-        version: "1.0.3",
-        date: "05/12/2025",
-        changes: [
-            "⚡ Otimização (Debounce): A busca de produtos agora aguarda você parar de digitar, tornando o sistema mais rápido em celulares.",
-            "🖱️ UX Melhorada: A lista de sugestões fecha automaticamente ao clicar fora dela, limpando a tela.",
-            "🎨 Correção Visual: Alinhamento dos botões de seleção (Materiais e Encargos) corrigido."
-        ]
-    },
-    {
-        version: "1.0.2",
-        date: "05/12/2025",
-        changes: [
-            "🐛 Correção Crítica: O campo de busca de produtos na Calculadora de Precificação agora exibe a lista de sugestões corretamente.",
-            "🎨 Melhoria UI: A lista de resultados da busca recebeu sombreamento e melhor posicionamento para não quebrar o layout.",
-            "🔧 Ajuste Técnico: Refinamento na lógica de exibição/ocultação (classe .hidden) dos resultados de pesquisa."
-        ]
-    },
-    {
-        version: "1.0.1",
-        date: "03/12/2025",
-        changes: [
-            "🖨️ Restauração da funcionalidade 'Imprimir Orçamento' com layout otimizado.",
-            "💰 Inclusão de campos gerenciais ('Margem de Lucro' e 'Custo Mão de Obra') na edição de pedidos.",
-            "🎨 Implementação de regras CSS de impressão para relatórios mais limpos.",
-            "🔧 Ajustes na persistência de dados financeiros no Firebase."
-        ]
-    },
-    {
-        version: "1.0.0",
-        date: "01/12/2025",
-        changes: [
-            "✨ Refinamento visual da Splash Screen (Tema Rosé).",
-            "🎨 Melhoria nos cards do Hub com efeitos de interatividade.",
-            "📐 Reposicionamento estratégico do slogan da marca.",
-            "👤 Novo design para identificação de usuário logado.",
-            "🚀 Implementação do módulo de Changelog (Histórico de Mudanças)."
         ]
     }
 ];
