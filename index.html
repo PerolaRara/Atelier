@@ -306,15 +306,7 @@
                             <!-- CAMPO OCULTO PARA MODO EDIÇÃO -->
                             <input type="hidden" id="estoque-id-edicao">
 
-                            <!-- Busca Inteligente (Opcional, mas mantida para facilitar cadastro) -->
-                            <div class="form-group" style="position: relative;">
-                                <label>Copiar dados da Precificação (Opcional):</label>
-                                <div class="input-wrapper">
-                                    <input type="text" id="busca-produto-estoque" placeholder="Digite para buscar da precificação..." autocomplete="off">
-                                    <div id="resultados-busca-estoque" class="hidden" style="position: absolute; width: 100%; background: white; border: 1px solid #ccc; z-index: 10; max-height: 150px; overflow-y: auto;"></div>
-                                </div>
-                                <p class="help-text" style="font-size: 0.8em; color: #777; margin-top: 4px;">*Selecione para preencher custos automaticamente.</p>
-                            </div>
+                            <!-- REMOVIDO: Campo de busca/copiar dados da precificação conforme solicitado -->
 
                             <div class="form-group">
                                 <label>Nome do Produto:</label>
@@ -362,6 +354,40 @@
                                 <button type="button" id="btn-cancelar-estoque" style="display: none; background-color: #90a4ae; width: auto;">Cancelar</button>
                             </div>
                         </form>
+                    </div>
+
+                    <!-- NOVO PAINEL DE RELATÓRIO DE SAÍDAS -->
+                    <div class="stock-report-card" style="background: #f0f7f7; padding: 15px; border-radius: 12px; border: 1px solid #b2d8d8; margin-bottom: 20px;">
+                        <h3 style="margin-top:0; color: #006064; font-size: 1.1rem; border-bottom: 1px solid #b2d8d8; padding-bottom: 10px; margin-bottom: 15px;">📊 Relatório de Saídas (Ranking de Vendas)</h3>
+                        
+                        <div class="form-row" style="align-items: flex-end; gap: 10px;">
+                            <div class="form-group" style="flex: 1;">
+                                <label>Início:</label>
+                                <input type="date" id="rel-estoque-inicio">
+                            </div>
+                            <div class="form-group" style="flex: 1;">
+                                <label>Fim:</label>
+                                <input type="date" id="rel-estoque-fim">
+                            </div>
+                            <div class="form-group">
+                                <button type="button" id="btn-gerar-relatorio-saida" style="margin:0; background-color: #006064; color: white;">Gerar Ranking</button>
+                            </div>
+                        </div>
+
+                        <div id="resultado-relatorio-estoque" style="display: none; margin-top: 15px;">
+                            <div class="table-responsive">
+                                <table id="tabela-ranking-saidas">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 50px;">#</th>
+                                            <th>Produto</th>
+                                            <th style="text-align: center;">Qtd. Vendida</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
 
                     <hr class="menu">
