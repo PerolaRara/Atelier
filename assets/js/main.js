@@ -5,7 +5,7 @@ import { auth } from './firebase-config.js'; // Nossa configuração central
 import { onAuthStateChanged, signOut, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 import { initOrcamentos } from './orcamentos.js';
 import { initPrecificacao } from './precificacao.js';
-// NOVO: Importação do módulo de Changelog
+// Importação do módulo de Changelog
 import { initChangelog } from './changelog.js';
 
 // 2. REFERÊNCIAS AOS ELEMENTOS DO DOM (Telas)
@@ -13,7 +13,8 @@ const screens = {
     auth: document.getElementById('auth-screen'),
     hub: document.getElementById('hub-screen'),
     orcamentos: document.getElementById('module-orcamentos'),
-    precificacao: document.getElementById('module-precificacao')
+    precificacao: document.getElementById('module-precificacao'),
+    estoque: document.getElementById('estoque') // Nova referência para o módulo de Estoque
 };
 
 // Referências aos Botões e Inputs
@@ -26,7 +27,7 @@ const authMessage = document.getElementById('auth-message');
 
 // 3. FUNÇÃO DE NAVEGAÇÃO (ROTEAMENTO)
 function navigateTo(screenName) {
-    // Esconde todas as telas
+    // Esconde todas as telas registradas
     Object.values(screens).forEach(el => {
         if(el) el.style.display = 'none';
     });
@@ -39,15 +40,14 @@ function navigateTo(screenName) {
     }
 }
 
-// 4. INICIALIZAÇÃO (LÓGICA CORRIGIDA)
+// 4. INICIALIZAÇÃO
 document.addEventListener('DOMContentLoaded', () => {
     
     // Inicializar widget de versão
     initChangelog();
 
     // Controle Inicial da Splash Screen
-    // Diferente da versão anterior, garantimos que ela comece OCULTA
-    // para não bloquear a tela de login. Ela será ativada apenas após a autenticação.
+    // Garantimos que ela comece OCULTA para não bloquear a tela de login.
     const splash = document.getElementById('splash-screen');
     if(splash) {
         splash.style.display = 'none';
