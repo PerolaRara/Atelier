@@ -81,7 +81,7 @@ export async function initOrcamentos() {
     window.excluirItemEstoque = excluirItemEstoque;
     window.editarItemEstoque = editarItemEstoque;
     window.cancelarEdicaoEstoque = cancelarEdicaoEstoque;
-    window.selecionarSugestaoEstoque = selecionarSugestaoEstoque;
+    // window.selecionarSugestaoEstoque removido (Feature desativada)
 
     // Carregar dados do banco e distribuir para os módulos
     await carregarDados();
@@ -100,10 +100,29 @@ export async function initOrcamentos() {
                 selectAno.appendChild(opt);
             }
         }
+        
+        // PRIORIDADE 2: Pré-selecionar datas do mês atual no relatório de saídas (UX)
+        configurarDatasRelatorioPadrao();
+
         moduleInitialized = true;
     }
     
     mostrarPagina('form-orcamento');
+}
+
+// Helper para definir datas padrão
+function configurarDatasRelatorioPadrao() {
+    const hoje = new Date();
+    // Primeiro dia do mês atual
+    const primeiroDia = new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString().split('T')[0];
+    // Último dia do mês atual
+    const ultimoDia = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0).toISOString().split('T')[0];
+
+    const inputInicio = document.getElementById('rel-estoque-inicio');
+    const inputFim = document.getElementById('rel-estoque-fim');
+
+    if(inputInicio) inputInicio.value = primeiroDia;
+    if(inputFim) inputFim.value = ultimoDia;
 }
 
 async function carregarDados() {
@@ -136,7 +155,7 @@ async function carregarDados() {
         // Carregar Catálogo/Estoque
         await carregarEstoque();
 
-        // Carregar Precificações para Cache de Sugestão
+        // Carregar Precificações para Cache (Mantido caso seja usado em outro lugar, mas removido da busca de estoque)
         const qPrec = query(precificacoesRef, orderBy("data", "desc"));
         const snapPrec = await getDocs(qPrec);
         precificacoesCache = [];
@@ -223,11 +242,14 @@ function setupEventListeners() {
     
     // Cadastro/Edição no Menu Estoque
     bindClick('#btn-salvar-estoque', cadastrarItemEstoque);
-    bindClick('#btn-cancelar-estoque', cancelarEdicaoEstoque); // Se existir (botão cancelar agora é novo)
+    bindClick('#btn-cancelar-estoque', cancelarEdicaoEstoque); 
     
-    // Fallback para IDs antigos caso o HTML não tenha sido atualizado completamente
+    // Fallback para IDs antigos
     bindClick('#btn-add-estoque', cadastrarItemEstoque);
     bindClick('#btn-cancelar-edicao-estoque', cancelarEdicaoEstoque);
+
+    // PRIORIDADE 1: Listener do Relatório de Saídas (Novo)
+    bindClick('#btn-gerar-relatorio-saida', gerarRelatorioRanking);
 
     // Paginação: Tabela de Vendas (Pronta Entrega)
     bindClick('#btn-ant-venda-est', () => { 
@@ -288,19 +310,7 @@ function setupEventListeners() {
         }));
     }
 
-    // Autocomplete (Pode estar em qualquer formulário de estoque dependendo da versão do HTML)
-    const inputProdEstoque = document.getElementById('busca-produto-estoque'); // Se mantivermos a busca inteligente
-    if (inputProdEstoque) {
-        inputProdEstoque.addEventListener('input', (e) => {
-            buscarSugestoesEstoque(e.target.value);
-        });
-        document.addEventListener('click', (e) => {
-            if (e.target.id !== 'busca-produto-estoque') {
-                const lista = document.getElementById('resultados-busca-estoque');
-                if(lista) lista.classList.add('hidden');
-            }
-        });
-    }
+    // PRIORIDADE 1: REMOVIDOS LISTENERS DE BUSCA INTELIGENTE DE ESTOQUE (inputProdEstoque)
     
     // Paginação de Orçamentos
     bindClick('#btn-ant-orc', () => { 
@@ -907,71 +917,6 @@ function cancelarEdicaoEstoque() {
     if(btnCancel) btnCancel.style.display = 'none';
 }
 
-function buscarSugestoesEstoque(termo) {
-    const lista = document.getElementById('resultados-busca-estoque') || criarListaSugestoes();
-    lista.innerHTML = '';
-    
-    if (termo.length < 2) {
-        lista.classList.add('hidden');
-        return;
-    }
-
-    const sugestoes = precificacoesCache.filter(p => p.produto.toLowerCase().includes(termo.toLowerCase()));
-    
-    if (sugestoes.length === 0) {
-        lista.classList.add('hidden');
-        return;
-    }
-
-    sugestoes.forEach(sug => {
-        const div = document.createElement('div');
-        div.className = 'sugestao-item';
-        div.style.padding = '8px';
-        div.style.cursor = 'pointer';
-        div.style.borderBottom = '1px solid #eee';
-        div.innerHTML = `<strong>${sug.produto}</strong> - ${helpers.formatarMoeda(sug.precoVendaSugerido)}`;
-        
-        div.onclick = () => selecionarSugestaoEstoque(sug);
-        div.onmouseover = () => div.style.backgroundColor = '#f0f7f7';
-        div.onmouseout = () => div.style.backgroundColor = '#fff';
-        
-        lista.appendChild(div);
-    });
-    
-    lista.classList.remove('hidden');
-}
-
-function criarListaSugestoes() {
-    const input = document.getElementById('busca-produto-estoque');
-    if(!input) return document.createElement('div'); // Fallback
-    
-    const div = document.createElement('div');
-    div.id = 'resultados-busca-estoque';
-    div.style.position = 'absolute';
-    div.style.zIndex = '1000';
-    div.style.width = input.offsetWidth + 'px';
-    div.style.border = '1px solid #ccc';
-    div.style.maxHeight = '150px';
-    div.style.overflowY = 'auto';
-    div.style.background = '#fff';
-    input.parentNode.appendChild(div);
-    return div;
-}
-
-function selecionarSugestaoEstoque(precificacao) {
-    document.getElementById('estoque-produto').value = precificacao.produto;
-    
-    // Preenche campos financeiros automaticamente da precificação
-    document.getElementById('estoque-custo').value = helpers.formatarMoeda(precificacao.custosTotais || 0);
-    document.getElementById('estoque-mao-obra').value = helpers.formatarMoeda(precificacao.maoDeObraTotal || 0);
-    document.getElementById('estoque-margem').value = helpers.formatarMoeda(precificacao.margemLucroValor || 0);
-    
-    // Atualiza o total
-    atualizarPrecoVendaAutomatico();
-
-    document.getElementById('resultados-busca-estoque').classList.add('hidden');
-}
-
 // Cadastro de Estoque (CREATE / UPDATE)
 async function cadastrarItemEstoque() {
     const idEdicao = document.getElementById('estoque-id-edicao').value;
@@ -1128,5 +1073,82 @@ async function excluirItemEstoque(id) {
         renderizarTabelaProntaEntrega();
     } catch (e) {
         alert("Erro ao excluir.");
+    }
+}
+
+// ==========================================================================
+// 7. LÓGICA DE RELATÓRIO DE SAÍDAS (RANKING) - PRIORIDADE 1
+// ==========================================================================
+
+async function gerarRelatorioRanking() {
+    const dtInicio = document.getElementById('rel-estoque-inicio').value;
+    const dtFim = document.getElementById('rel-estoque-fim').value;
+
+    if (!dtInicio || !dtFim) return alert("Selecione a data de início e fim.");
+
+    const tbody = document.querySelector("#tabela-ranking-saidas tbody");
+    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center">Carregando dados...</td></tr>';
+    document.getElementById('resultado-relatorio-estoque').style.display = 'block';
+
+    try {
+        // 1. Buscar todos os pedidos (tipo 'pedido')
+        // Nota: Filtramos no client-side para manter consistência com o restante da aplicação
+        const q = query(collection(db, "Orcamento-Pedido"), where("tipo", "==", "pedido"));
+        const snapshot = await getDocs(q);
+        
+        const mapaVendas = {};
+
+        // 2. Processar e Filtrar
+        snapshot.forEach(doc => {
+            const p = doc.data();
+            // Verifica intervalo de datas
+            if (p.dataPedido >= dtInicio && p.dataPedido <= dtFim) {
+                if (p.produtos && Array.isArray(p.produtos)) {
+                    p.produtos.forEach(prod => {
+                        const nome = prod.descricao || "Item sem nome";
+                        const qtd = parseFloat(prod.quantidade) || 0;
+
+                        if (!mapaVendas[nome]) {
+                            mapaVendas[nome] = 0;
+                        }
+                        mapaVendas[nome] += qtd;
+                    });
+                }
+            }
+        });
+
+        // 3. Transformar em Array e Ordenar
+        const ranking = Object.entries(mapaVendas)
+            .map(([produto, qtd]) => ({ produto, qtd }))
+            .sort((a, b) => b.qtd - a.qtd); // Maior para menor
+
+        // 4. Renderizar
+        tbody.innerHTML = "";
+        
+        if (ranking.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center">Nenhuma saída registrada neste período.</td></tr>';
+            return;
+        }
+
+        ranking.forEach((item, index) => {
+            const posicao = index + 1;
+            let classeRank = "";
+            if(posicao === 1) classeRank = "rank-1";
+            if(posicao === 2) classeRank = "rank-2";
+            if(posicao === 3) classeRank = "rank-3";
+
+            const row = tbody.insertRow();
+            row.className = classeRank;
+            row.innerHTML = `
+                <td style="text-align: center; font-weight: bold;">${posicao}º</td>
+                <td>${item.produto}</td>
+                <td style="text-align: center; font-weight: bold;">${item.qtd}</td>
+            `;
+        });
+
+    } catch (error) {
+        console.error("Erro ao gerar relatório:", error);
+        alert("Erro ao processar dados de vendas.");
+        tbody.innerHTML = "";
     }
 }
