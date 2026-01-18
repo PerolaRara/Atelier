@@ -6,6 +6,16 @@
  */
 const changeLogData = [
     {
+        version: "1.2.0",
+        date: "20/01/2026",
+        changes: [
+            "🛡️ **Venda Blindada (Transações):** Implementamos um protocolo de segurança nível bancário nas vendas de Pronta Entrega. Agora, a atualização do estoque, a criação do pedido e a numeração ocorrem simultaneamente. Se a internet cair no meio do processo, o sistema cancela tudo para evitar furos no estoque.",
+            "🔢 **Contador Centralizado Inteligente:** O sistema parou de 'adivinhar' o próximo número de pedido contando listas antigas. Agora ele consulta um registro oficial no banco de dados. Isso torna o sistema muito mais rápido e previne erros de numeração duplicada.",
+            "🚫 **Detector de Duplicidade:** No cadastro de estoque, o sistema agora alerta em tempo real se você tentar cadastrar um produto com um nome que já existe, evitando bagunça no catálogo.",
+            "🧰 **Arquitetura Unificada (Utils):** Criamos uma 'caixa de ferramentas' central (`utils.js`). Todas as formatações de moeda (R$) e datas agora vêm de um único lugar, garantindo que o sistema inteiro fale a mesma língua."
+        ]
+    },
+    {
         version: "1.1.9",
         date: "14/01/2026",
         changes: [
