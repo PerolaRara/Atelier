@@ -8,7 +8,7 @@ import { setupPedidos, adicionarPedidoNaLista } from './pedidos.js';
 
 // Referências
 const orcamentosPedidosRef = collection(db, "Orcamento-Pedido");
-const estoqueRef = collection(db, "estoque"); // Catálogo de Pronta Entrega / Estoque
+// Removida a referência ao estoqueRef pois foi extraída para módulo próprio
 const precificacoesRef = collection(db, "precificacoes-geradas");
 
 // Variáveis de Estado (Dados)
@@ -17,7 +17,7 @@ let numeroPedido = 1;
 const anoAtual = new Date().getFullYear();
 let orcamentoEditando = null;
 let orcamentos = [];
-let itensEstoque = []; // Estado local do catálogo
+// Removida variável itensEstoque
 let precificacoesCache = []; 
 let moduleInitialized = false;
 
@@ -26,11 +26,7 @@ const ITENS_POR_PAGINA = 10;
 let pagAtualOrc = 1;
 let termoBuscaOrc = "";
 
-// Variáveis de Estado (Paginação e Busca - Estoque e Vendas)
-let pagAtualEstoqueAdm = 1;
-let pagAtualVendaEstoque = 1;
-let termoBuscaEstoqueAdm = "";
-let termoBuscaVendaEstoque = "";
+// Removidas variáveis de paginação de Estoque e Vendas
 
 // ==========================================================================
 // 1. HELPERS E FORMATAÇÃO
@@ -65,7 +61,7 @@ window.formatarEntradaMoeda = (input) => {
 // 2. INICIALIZAÇÃO E CARREGAMENTO
 // ==========================================================================
 export async function initOrcamentos() {
-    console.log("Inicializando Módulo Orçamentos e Estoque...");
+    console.log("Inicializando Módulo Orçamentos (Vendas)...");
     
     // EXPOR FUNÇÕES DE ORÇAMENTO PARA O HTML
     window.excluirProduto = excluirProduto;
@@ -75,13 +71,7 @@ export async function initOrcamentos() {
     window.gerarOrcamento = gerarOrcamento;
     window.atualizarOrcamento = atualizarOrcamento;
 
-    // EXPOR FUNÇÕES DE ESTOQUE (NOVO FLUXO)
-    window.cadastrarItemEstoque = cadastrarItemEstoque;
-    window.iniciarVenda = iniciarVenda; // Substitui venderItemEstoque
-    window.excluirItemEstoque = excluirItemEstoque;
-    window.editarItemEstoque = editarItemEstoque;
-    window.cancelarEdicaoEstoque = cancelarEdicaoEstoque;
-    // window.selecionarSugestaoEstoque removido (Feature desativada)
+    // Removidas exportações de funções de Estoque (cadastrarItemEstoque, iniciarVenda, etc.)
 
     // Carregar dados do banco e distribuir para os módulos
     await carregarDados();
@@ -101,28 +91,10 @@ export async function initOrcamentos() {
             }
         }
         
-        // PRIORIDADE 2: Pré-selecionar datas do mês atual no relatório de saídas (UX)
-        configurarDatasRelatorioPadrao();
-
         moduleInitialized = true;
     }
     
     mostrarPagina('form-orcamento');
-}
-
-// Helper para definir datas padrão
-function configurarDatasRelatorioPadrao() {
-    const hoje = new Date();
-    // Primeiro dia do mês atual
-    const primeiroDia = new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString().split('T')[0];
-    // Último dia do mês atual
-    const ultimoDia = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0).toISOString().split('T')[0];
-
-    const inputInicio = document.getElementById('rel-estoque-inicio');
-    const inputFim = document.getElementById('rel-estoque-fim');
-
-    if(inputInicio) inputInicio.value = primeiroDia;
-    if(inputFim) inputFim.value = ultimoDia;
 }
 
 async function carregarDados() {
@@ -152,10 +124,9 @@ async function carregarDados() {
             }
         });
         
-        // Carregar Catálogo/Estoque
-        await carregarEstoque();
+        // Removida chamada carregarEstoque()
 
-        // Carregar Precificações para Cache (Mantido caso seja usado em outro lugar, mas removido da busca de estoque)
+        // Carregar Precificações para Cache
         const qPrec = query(precificacoesRef, orderBy("data", "desc"));
         const snapPrec = await getDocs(qPrec);
         precificacoesCache = [];
@@ -163,7 +134,7 @@ async function carregarDados() {
             precificacoesCache.push({ id: doc.id, ...doc.data() });
         });
         
-        console.log(`Carregado: ${orcamentos.length} Orçamentos, ${pedidosTemp.length} Pedidos, ${itensEstoque.length} Itens Estoque`);
+        console.log(`Carregado: ${orcamentos.length} Orçamentos, ${pedidosTemp.length} Pedidos.`);
         
         // 1. Renderiza Orçamentos
         mostrarOrcamentosGerados();
@@ -180,17 +151,7 @@ async function carregarDados() {
     }
 }
 
-// Carregamento Específico de Estoque
-async function carregarEstoque() {
-    itensEstoque = [];
-    const snapshot = await getDocs(estoqueRef);
-    snapshot.forEach(doc => {
-        itensEstoque.push({ id: doc.id, ...doc.data() });
-    });
-    // Renderiza as duas visões (Venda e Gestão)
-    renderizarTabelaProntaEntrega();
-    renderizarTabelaEstoqueAdm();
-}
+// Removida função carregarEstoque()
 
 // Função de Salvamento Genérica
 async function salvarDados(dados, tipo) {
@@ -238,67 +199,7 @@ function setupEventListeners() {
     bindClick('#btnGerarOrcamento', gerarOrcamento);
     bindClick('#btnAtualizarOrcamento', atualizarOrcamento);
 
-    // --- LOGICA ESTOQUE E VENDAS (NOVOS IDs) ---
-    
-    // Cadastro/Edição no Menu Estoque
-    bindClick('#btn-salvar-estoque', cadastrarItemEstoque);
-    bindClick('#btn-cancelar-estoque', cancelarEdicaoEstoque); 
-    
-    // Fallback para IDs antigos
-    bindClick('#btn-add-estoque', cadastrarItemEstoque);
-    bindClick('#btn-cancelar-edicao-estoque', cancelarEdicaoEstoque);
-
-    // PRIORIDADE 1: Listener do Relatório de Saídas (Novo)
-    bindClick('#btn-gerar-relatorio-saida', gerarRelatorioRanking);
-
-    // Paginação: Tabela de Vendas (Pronta Entrega)
-    bindClick('#btn-ant-venda-est', () => { 
-        if(pagAtualVendaEstoque > 1) { pagAtualVendaEstoque--; renderizarTabelaProntaEntrega(); } 
-    });
-    bindClick('#btn-prox-venda-est', () => { 
-        pagAtualVendaEstoque++; renderizarTabelaProntaEntrega(); 
-    });
-
-    // Paginação: Tabela de Gestão (Estoque ADM)
-    bindClick('#btn-ant-est-adm', () => { 
-        if(pagAtualEstoqueAdm > 1) { pagAtualEstoqueAdm--; renderizarTabelaEstoqueAdm(); } 
-    });
-    bindClick('#btn-prox-est-adm', () => { 
-        pagAtualEstoqueAdm++; renderizarTabelaEstoqueAdm(); 
-    });
-
-    // Busca com Debounce: Vendas
-    const inputBuscaVenda = document.getElementById('busca-vendas-estoque');
-    if(inputBuscaVenda) {
-        inputBuscaVenda.addEventListener('input', debounce((e) => {
-            termoBuscaVendaEstoque = e.target.value.toLowerCase();
-            pagAtualVendaEstoque = 1; 
-            renderizarTabelaProntaEntrega();
-        }));
-    }
-
-    // Busca com Debounce: Gestão
-    const inputBuscaAdm = document.getElementById('busca-lista-estoque-adm');
-    if(inputBuscaAdm) {
-        inputBuscaAdm.addEventListener('input', debounce((e) => {
-            termoBuscaEstoqueAdm = e.target.value.toLowerCase();
-            pagAtualEstoqueAdm = 1; 
-            renderizarTabelaEstoqueAdm();
-        }));
-    }
-
-    // PRIORIDADE 3: Cálculo Automático do Preço de Venda
-    const inputsFinanceiros = ['estoque-custo', 'estoque-mao-obra', 'estoque-margem'];
-    inputsFinanceiros.forEach(id => {
-        const el = document.getElementById(id);
-        if(el) {
-            el.addEventListener('input', () => {
-                window.formatarEntradaMoeda(el);
-                atualizarPrecoVendaAutomatico();
-            });
-        }
-    });
-    // --- FIM LOGICA ESTOQUE ---
+    // Removidos Listeners de Estoque (btn-salvar-estoque, paginação estoque, etc.)
 
     // Busca de Orçamentos
     const inputBuscaOrc = document.getElementById('busca-orcamentos');
@@ -310,8 +211,6 @@ function setupEventListeners() {
         }));
     }
 
-    // PRIORIDADE 1: REMOVIDOS LISTENERS DE BUSCA INTELIGENTE DE ESTOQUE (inputProdEstoque)
-    
     // Paginação de Orçamentos
     bindClick('#btn-ant-orc', () => { 
         if(pagAtualOrc > 1) { pagAtualOrc--; mostrarOrcamentosGerados(); } 
@@ -346,8 +245,7 @@ function mostrarPagina(idPagina) {
     if(target) {
         target.style.display = 'block';
         if(idPagina === 'orcamentos-gerados') mostrarOrcamentosGerados();
-        if(idPagina === 'estoque') renderizarTabelaEstoqueAdm();
-        if(idPagina === 'pronta-entrega') renderizarTabelaProntaEntrega();
+        // Removidas chamadas de renderização de estoque
     }
 }
 
@@ -599,6 +497,13 @@ function visualizarImpressao(orcamento) {
                 .totals-box { width: 280px; background: #fff9f8; border: 1px solid #efebe9; padding: 20px; border-radius: 8px; margin-left: auto; }
                 .total-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.95em; }
                 .total-row.final { border-top: 2px solid #dfb6b0; padding-top: 10px; margin-top: 10px; font-size: 1.2em; font-weight: bold; color: #7aa2a9; }
+                
+                /* ESTILOS PARA AS OBSERVAÇÕES */
+                .conditions { margin-top: 40px; font-size: 0.9em; color: #555; border-top: 1px solid #eee; padding-top: 20px; }
+                .conditions p { margin: 5px 0; font-weight: bold; color: #7aa2a9; }
+                .conditions ol { padding-left: 20px; margin: 5px 0; }
+                .conditions li { margin-bottom: 5px; }
+
                 @media print { .no-print { display: none; } body { padding: 0; } }
             </style>
         </head>
@@ -649,6 +554,18 @@ function visualizarImpressao(orcamento) {
                 <div class="total-row"><span>Frete:</span> <span>${helpers.formatarMoeda(orcamento.valorFrete)}</span></div>
                 <div class="total-row final"><span>Total:</span> <span>${helpers.formatarMoeda(orcamento.total)}</span></div>
                 <div style="margin-top:10px; font-size:0.8em; color:#888; text-align:right;">Forma Pagto: ${pagamento}</div>
+            </div>
+
+            <div class="conditions">
+                <p>Observações:</p>
+                <ol>
+                    <li>Trabalhamos com enxoval personalizado com bordado computadorizado.</li>
+                    <li>Após a confirmação do pagamento, enviaremos a arte. Em caso de desistência, não haverá reembolso.</li>
+                    <li>Serão enviadas 3 opções de imagens para escolher, e em seguida a arte final com o nome será enviada para aprovação.</li>
+                    <li>Aceitamos Pix, débito, e crédito (juros por conta do cliente).</li>
+                    <li>Entregamos com taxa.</li>
+                </ol>
+                ${orcamento.observacoes ? `<p style="margin-top:15px; border-top:1px dashed #ccc; padding-top:10px;">Nota adicional do orçamento: ${orcamento.observacoes}</p>` : ''}
             </div>
 
             <div class="no-print" style="text-align:center; margin-top:40px;">
@@ -746,409 +663,4 @@ async function gerarPedido(orcamentoId) {
     document.querySelector('a[data-pagina="lista-pedidos"]').click();
 }
 
-// ==========================================================================
-// 6. MÓDULO DE ESTOQUE E PRONTA ENTREGA
-// ==========================================================================
-
-// --- TABELA 1: GESTÃO DO ESTOQUE (ADM) ---
-function renderizarTabelaEstoqueAdm() {
-    const tbody = document.querySelector("#tabela-estoque-adm tbody");
-    if (!tbody) return;
-    tbody.innerHTML = "";
-
-    const filtrados = itensEstoque.filter(item => 
-        item.produto.toLowerCase().includes(termoBuscaEstoqueAdm.toLowerCase()) || 
-        (item.detalhes && item.detalhes.toLowerCase().includes(termoBuscaEstoqueAdm.toLowerCase()))
-    );
-
-    // Paginação ADM
-    const totalItens = filtrados.length;
-    const totalPaginas = Math.ceil(totalItens / ITENS_POR_PAGINA) || 1;
-
-    if (pagAtualEstoqueAdm > totalPaginas) pagAtualEstoqueAdm = totalPaginas;
-    if (pagAtualEstoqueAdm < 1) pagAtualEstoqueAdm = 1;
-
-    const inicio = (pagAtualEstoqueAdm - 1) * ITENS_POR_PAGINA;
-    const fim = inicio + ITENS_POR_PAGINA;
-    const itensPagina = filtrados.slice(inicio, fim);
-
-    if (itensPagina.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Nenhum item no estoque.</td></tr>';
-    } else {
-        itensPagina.forEach(item => {
-            const row = tbody.insertRow();
-            row.innerHTML = `
-                <td>
-                    <strong>${item.produto}</strong><br>
-                    <small style="color:#666;">${item.detalhes || ''}</small>
-                </td>
-                <td style="text-align: center; font-weight: bold; font-size: 1.1em;">${item.quantidade || 0}</td>
-                <td>${helpers.formatarMoeda(item.valorVenda)}</td>
-                <td>
-                    <button onclick="editarItemEstoque('${item.id}')" style="background-color:#FF9800; margin-right:5px;">Editar</button>
-                    <button onclick="excluirItemEstoque('${item.id}')" style="background-color:#e53935;">Excluir</button>
-                </td>
-            `;
-        });
-    }
-
-    // Atualiza controles de paginação
-    const infoPag = document.getElementById("info-pag-est-adm");
-    const btnAnt = document.getElementById("btn-ant-est-adm");
-    const btnProx = document.getElementById("btn-prox-est-adm");
-    
-    if (infoPag) infoPag.textContent = `Página ${pagAtualEstoqueAdm} de ${totalPaginas}`;
-    if (btnAnt) btnAnt.disabled = (pagAtualEstoqueAdm === 1);
-    if (btnProx) btnProx.disabled = (pagAtualEstoqueAdm === totalPaginas);
-}
-
-// --- TABELA 2: VENDAS (PRONTA ENTREGA) ---
-function renderizarTabelaProntaEntrega() {
-    const tbody = document.querySelector("#tabela-vendas-estoque tbody");
-    if (!tbody) return;
-    tbody.innerHTML = "";
-
-    const filtrados = itensEstoque.filter(item => 
-        item.produto.toLowerCase().includes(termoBuscaVendaEstoque.toLowerCase())
-    );
-
-    // Paginação Vendas
-    const totalItens = filtrados.length;
-    const totalPaginas = Math.ceil(totalItens / ITENS_POR_PAGINA) || 1;
-
-    if (pagAtualVendaEstoque > totalPaginas) pagAtualVendaEstoque = totalPaginas;
-    if (pagAtualVendaEstoque < 1) pagAtualVendaEstoque = 1;
-
-    const inicio = (pagAtualVendaEstoque - 1) * ITENS_POR_PAGINA;
-    const fim = inicio + ITENS_POR_PAGINA;
-    const itensPagina = filtrados.slice(inicio, fim);
-
-    if (itensPagina.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Nenhum item encontrado.</td></tr>';
-    } else {
-        itensPagina.forEach(item => {
-            const qtd = item.quantidade || 0;
-            // Indicador Visual de Estoque (Prioridade UX)
-            const corQtd = qtd <= 0 ? '#e53935' : (qtd < 3 ? '#ff9800' : '#4CAF50'); // Vermelho se <=0, Laranja se baixo
-
-            const row = tbody.insertRow();
-            row.innerHTML = `
-                <td>
-                    <strong>${item.produto}</strong><br>
-                    <small style="color:#666;">${item.detalhes || ''}</small>
-                </td>
-                <td style="text-align: center; font-weight: bold; color: ${corQtd}; font-size: 1.1em;">
-                    ${qtd}
-                </td>
-                <td>${helpers.formatarMoeda(item.valorVenda)}</td>
-                <td>
-                    <button class="btn-vender" onclick="iniciarVenda('${item.id}')" style="background-color:#4CAF50;">Vender</button>
-                </td>
-            `;
-        });
-    }
-
-    // Atualiza controles de paginação
-    const infoPag = document.getElementById("info-pag-venda-est");
-    const btnAnt = document.getElementById("btn-ant-venda-est");
-    const btnProx = document.getElementById("btn-prox-venda-est");
-    
-    if (infoPag) infoPag.textContent = `Página ${pagAtualVendaEstoque} de ${totalPaginas}`;
-    if (btnAnt) btnAnt.disabled = (pagAtualVendaEstoque === 1);
-    if (btnProx) btnProx.disabled = (pagAtualVendaEstoque === totalPaginas);
-}
-
-// PRIORIDADE 3: Cálculo Automático (Helper)
-function atualizarPrecoVendaAutomatico() {
-    const custo = helpers.converterMoedaParaNumero(document.getElementById('estoque-custo').value);
-    const mo = helpers.converterMoedaParaNumero(document.getElementById('estoque-mao-obra').value);
-    const margem = helpers.converterMoedaParaNumero(document.getElementById('estoque-margem').value);
-    
-    // Soma total
-    const total = custo + mo + margem;
-    
-    // Atualiza o campo de valor final
-    const inputTotal = document.getElementById('estoque-valor');
-    inputTotal.value = helpers.formatarMoeda(total);
-}
-
-// Prepara UI para Edição (Menu Estoque)
-function editarItemEstoque(id) {
-    const item = itensEstoque.find(i => i.id === id);
-    if (!item) return;
-
-    // Popula campos (IDs baseados no HTML novo)
-    document.getElementById('estoque-id-edicao').value = item.id;
-    document.getElementById('estoque-produto').value = item.produto;
-    // NOVO: Popula quantidade
-    document.getElementById('estoque-quantidade').value = item.quantidade || 0;
-    
-    document.getElementById('estoque-detalhes').value = item.detalhes || '';
-    document.getElementById('estoque-valor').value = helpers.formatarMoeda(item.valorVenda);
-    
-    // Fallback para dados financeiros
-    const fin = item.financeiro || {};
-    document.getElementById('estoque-custo').value = helpers.formatarMoeda(fin.custoProducao || 0);
-    document.getElementById('estoque-mao-obra').value = helpers.formatarMoeda(fin.maoDeObra || 0);
-    document.getElementById('estoque-margem').value = helpers.formatarMoeda(fin.margemLucro || 0);
-
-    // Altera Estado da UI
-    const btnSalvar = document.getElementById('btn-salvar-estoque') || document.getElementById('btn-add-estoque');
-    if(btnSalvar) btnSalvar.textContent = "Atualizar Estoque";
-    
-    const btnCancel = document.getElementById('btn-cancelar-estoque') || document.getElementById('btn-cancelar-edicao-estoque');
-    if(btnCancel) btnCancel.style.display = 'inline-block';
-    
-    // Scroll (tenta focar no formulário onde quer que esteja)
-    const form = document.getElementById('form-estoque-gerencial') || document.getElementById('form-estoque');
-    if(form) form.scrollIntoView({ behavior: 'smooth' });
-}
-
-function cancelarEdicaoEstoque() {
-    const form = document.getElementById('form-estoque-gerencial') || document.getElementById('form-estoque');
-    if(form) form.reset();
-    
-    document.getElementById('estoque-id-edicao').value = "";
-    
-    const btnSalvar = document.getElementById('btn-salvar-estoque') || document.getElementById('btn-add-estoque');
-    if(btnSalvar) btnSalvar.textContent = "Salvar no Estoque";
-    
-    const btnCancel = document.getElementById('btn-cancelar-estoque') || document.getElementById('btn-cancelar-edicao-estoque');
-    if(btnCancel) btnCancel.style.display = 'none';
-}
-
-// Cadastro de Estoque (CREATE / UPDATE)
-async function cadastrarItemEstoque() {
-    const idEdicao = document.getElementById('estoque-id-edicao').value;
-    const produto = document.getElementById('estoque-produto').value;
-    const quantidade = parseInt(document.getElementById('estoque-quantidade').value) || 0; // NOVO: Captura Qtd
-    
-    // Captura valores financeiros
-    const custoProducao = helpers.converterMoedaParaNumero(document.getElementById('estoque-custo').value);
-    const maoDeObra = helpers.converterMoedaParaNumero(document.getElementById('estoque-mao-obra').value);
-    const margemLucro = helpers.converterMoedaParaNumero(document.getElementById('estoque-margem').value);
-    const valorVenda = helpers.converterMoedaParaNumero(document.getElementById('estoque-valor').value);
-    
-    if(!produto || valorVenda <= 0) return alert("Preencha o nome do produto e valores financeiros.");
-
-    const item = {
-        produto,
-        quantidade, // Salva Qtd
-        detalhes: document.getElementById('estoque-detalhes').value,
-        valorVenda,
-        financeiro: {
-            custoProducao,
-            maoDeObra,
-            margemLucro
-        },
-        dataAtualizacao: new Date().toISOString()
-    };
-
-    try {
-        if (idEdicao) {
-            // MODO EDIÇÃO (UPDATE)
-            await updateDoc(doc(estoqueRef, idEdicao), item);
-            
-            // Atualiza array local
-            const index = itensEstoque.findIndex(i => i.id === idEdicao);
-            if (index !== -1) itensEstoque[index] = { id: idEdicao, ...item };
-            
-            alert("Estoque atualizado!");
-            cancelarEdicaoEstoque();
-        } else {
-            // MODO CRIAÇÃO (CREATE)
-            const docRef = await addDoc(estoqueRef, item);
-            item.id = docRef.id;
-            itensEstoque.push(item);
-            
-            alert("Produto cadastrado no estoque!");
-            
-            // Limpa form
-            const form = document.getElementById('form-estoque-gerencial') || document.getElementById('form-estoque');
-            if(form) form.reset();
-        }
-        // Renderiza ambas as tabelas para garantir sincronia
-        renderizarTabelaEstoqueAdm();
-        renderizarTabelaProntaEntrega();
-    } catch (e) {
-        console.error(e);
-        alert("Erro ao salvar produto.");
-    }
-}
-
-// Venda Inteligente (Abatimento de Quantidade)
-async function iniciarVenda(id) {
-    const item = itensEstoque.find(i => i.id === id);
-    if(!item) return;
-
-    // 1. Pergunta a Quantidade
-    const inputQtd = prompt(`Vender "${item.produto}"\nEstoque atual: ${item.quantidade || 0}\n\nQuantas unidades?`, "1");
-    if(inputQtd === null) return; // Cancelou
-    
-    const qtdVenda = parseInt(inputQtd);
-    if(!qtdVenda || qtdVenda <= 0) return alert("Quantidade inválida.");
-
-    // 2. Calcula novo Estoque (Permite negativo lógico)
-    let novoEstoque = (item.quantidade || 0) - qtdVenda;
-    
-    let aviso = "";
-    if (novoEstoque < 0) {
-        aviso = `\n\n⚠️ ATENÇÃO: O estoque ficará NEGATIVO (${novoEstoque}).\nVerifique se há produtos físicos disponíveis.`;
-    }
-
-    const confirmacao = confirm(`Confirmar venda de ${qtdVenda}x "${item.produto}"?${aviso}\nValor Total: ${helpers.formatarMoeda(item.valorVenda * qtdVenda)}`);
-    if(!confirmacao) return;
-
-    // Fallback Financeiro
-    const fin = item.financeiro || {};
-    const custoProd = fin.custoProducao || 0;
-    const maoObra = fin.maoDeObra || 0;
-    const lucro = fin.margemLucro || (item.valorVenda - custoProd - maoObra);
-
-    try {
-        // 3. Atualiza Estoque no Firebase (NÃO EXCLUIR, APENAS ATUALIZAR QTD)
-        const docRef = doc(estoqueRef, item.id);
-        await updateDoc(docRef, { quantidade: novoEstoque });
-        
-        // Atualiza localmente
-        item.quantidade = novoEstoque;
-
-        // 4. GERA O PEDIDO (Financeiro)
-        const novoPedido = {
-            numero: gerarNumeroFormatado(numeroPedido), 
-            tipo: 'pedido',
-            dataPedido: new Date().toISOString().split('T')[0],
-            dataEntrega: new Date().toISOString().split('T')[0], // Entrega imediata
-            cliente: "Venda Pronta Entrega", 
-            endereco: "Feira / Balcão",
-            telefone: "",
-            tema: "Pronta Entrega",
-            cores: item.detalhes || "Padrão",
-            
-            // Totais da Venda (Multiplicados pela Qtd)
-            total: item.valorVenda * qtdVenda,
-            entrada: item.valorVenda * qtdVenda, 
-            restante: 0,
-            valorFrete: 0,
-            valorOrcamento: item.valorVenda * qtdVenda,
-            
-            // DADOS FINANCEIROS PRESERVADOS PARA RELATÓRIO
-            custosTotais: custoProd * qtdVenda,
-            custoMaoDeObra: maoObra * qtdVenda,
-            margemLucro: lucro * qtdVenda, 
-
-            produtos: [{
-                descricao: item.produto,
-                quantidade: qtdVenda,
-                valorUnit: item.valorVenda,
-                valorTotal: item.valorVenda * qtdVenda
-            }],
-            observacoes: `Venda rápida registrada via Estoque. Qtd: ${qtdVenda}.`
-        };
-
-        await salvarDados(novoPedido, 'pedido');
-        numeroPedido++; 
-
-        alert("Venda realizada e estoque atualizado!");
-        
-        // Atualiza as tabelas visualmente
-        renderizarTabelaProntaEntrega();
-        renderizarTabelaEstoqueAdm();
-        
-        // Adiciona o pedido à lista global para relatório
-        adicionarPedidoNaLista(novoPedido); 
-        
-    } catch (e) {
-        console.error(e);
-        alert("Erro ao processar venda.");
-    }
-}
-
-async function excluirItemEstoque(id) {
-    if(!confirm("Tem certeza que deseja remover este item do catálogo de estoque?")) return;
-    try {
-        await deleteDoc(doc(estoqueRef, id));
-        itensEstoque = itensEstoque.filter(i => i.id !== id);
-        renderizarTabelaEstoqueAdm();
-        renderizarTabelaProntaEntrega();
-    } catch (e) {
-        alert("Erro ao excluir.");
-    }
-}
-
-// ==========================================================================
-// 7. LÓGICA DE RELATÓRIO DE SAÍDAS (RANKING) - PRIORIDADE 1
-// ==========================================================================
-
-async function gerarRelatorioRanking() {
-    const dtInicio = document.getElementById('rel-estoque-inicio').value;
-    const dtFim = document.getElementById('rel-estoque-fim').value;
-
-    if (!dtInicio || !dtFim) return alert("Selecione a data de início e fim.");
-
-    const tbody = document.querySelector("#tabela-ranking-saidas tbody");
-    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center">Carregando dados...</td></tr>';
-    document.getElementById('resultado-relatorio-estoque').style.display = 'block';
-
-    try {
-        // 1. Buscar todos os pedidos (tipo 'pedido')
-        // Nota: Filtramos no client-side para manter consistência com o restante da aplicação
-        const q = query(collection(db, "Orcamento-Pedido"), where("tipo", "==", "pedido"));
-        const snapshot = await getDocs(q);
-        
-        const mapaVendas = {};
-
-        // 2. Processar e Filtrar
-        snapshot.forEach(doc => {
-            const p = doc.data();
-            // Verifica intervalo de datas
-            if (p.dataPedido >= dtInicio && p.dataPedido <= dtFim) {
-                if (p.produtos && Array.isArray(p.produtos)) {
-                    p.produtos.forEach(prod => {
-                        const nome = prod.descricao || "Item sem nome";
-                        const qtd = parseFloat(prod.quantidade) || 0;
-
-                        if (!mapaVendas[nome]) {
-                            mapaVendas[nome] = 0;
-                        }
-                        mapaVendas[nome] += qtd;
-                    });
-                }
-            }
-        });
-
-        // 3. Transformar em Array e Ordenar
-        const ranking = Object.entries(mapaVendas)
-            .map(([produto, qtd]) => ({ produto, qtd }))
-            .sort((a, b) => b.qtd - a.qtd); // Maior para menor
-
-        // 4. Renderizar
-        tbody.innerHTML = "";
-        
-        if (ranking.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center">Nenhuma saída registrada neste período.</td></tr>';
-            return;
-        }
-
-        ranking.forEach((item, index) => {
-            const posicao = index + 1;
-            let classeRank = "";
-            if(posicao === 1) classeRank = "rank-1";
-            if(posicao === 2) classeRank = "rank-2";
-            if(posicao === 3) classeRank = "rank-3";
-
-            const row = tbody.insertRow();
-            row.className = classeRank;
-            row.innerHTML = `
-                <td style="text-align: center; font-weight: bold;">${posicao}º</td>
-                <td>${item.produto}</td>
-                <td style="text-align: center; font-weight: bold;">${item.qtd}</td>
-            `;
-        });
-
-    } catch (error) {
-        console.error("Erro ao gerar relatório:", error);
-        alert("Erro ao processar dados de vendas.");
-        tbody.innerHTML = "";
-    }
-}
+// MÓDULO DE ESTOQUE E PRONTA ENTREGA REMOVIDO PARA assets/js/estoque.js
