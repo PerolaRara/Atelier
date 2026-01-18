@@ -1,11 +1,12 @@
 // assets/js/pedidos.js
 
+import { utils } from './utils.js'; // Prioridade 1: Importação da Caixa de Ferramentas
+
 // ==========================================================================
 // ESTADO LOCAL DO MÓDULO DE PEDIDOS
 // ==========================================================================
 let pedidos = [];
 let salvarDadosFn = null; // Função injetada (Injeção de Dependência)
-let helpers = {};       // Utilitários injetados (formatarMoeda, converterMoeda, etc)
 
 // Variáveis de Estado (Paginação e Busca)
 const ITENS_POR_PAGINA = 10;
@@ -19,7 +20,7 @@ let pedidoEditando = null;
 
 /**
  * Configura o módulo de pedidos com dados e dependências vindos do controlador principal.
- * @param {Object} config - Objeto contendo { listaPedidos, salvarDadosFn, helpers }
+ * @param {Object} config - Objeto contendo { listaPedidos, salvarDadosFn }
  */
 export function setupPedidos(config) {
     console.log("Inicializando Módulo Pedidos...");
@@ -27,7 +28,6 @@ export function setupPedidos(config) {
     // 1. Injeção de Dependências
     pedidos = config.listaPedidos || [];
     salvarDadosFn = config.salvarDadosFn;
-    helpers = config.helpers;
 
     // 2. Expor funções para o HTML (window) para os botões onclick
     window.editarPedido = editarPedido;
@@ -136,7 +136,7 @@ function mostrarPedidosRealizados() {
     const termo = termoBuscaPed.trim();
     const filtrados = pedidos.filter(ped => {
         if (!termo) return true;
-        const dataFormatada = ped.dataPedido ? ped.dataPedido.split('-').reverse().join('/') : '';
+        const dataFormatada = utils.formatarDataBR(ped.dataPedido);
         const matchCliente = ped.cliente.toLowerCase().includes(termo);
         const matchNumero = ped.numero.toLowerCase().includes(termo);
         const matchData = dataFormatada.includes(termo);
@@ -165,9 +165,9 @@ function mostrarPedidosRealizados() {
             const row = tbody.insertRow();
             row.innerHTML = `
                 <td>${p.numero}</td>
-                <td>${p.dataPedido ? p.dataPedido.split('-').reverse().join('/') : '-'}</td>
+                <td>${utils.formatarDataBR(p.dataPedido)}</td>
                 <td>${p.cliente}</td>
-                <td>${helpers.formatarMoeda(p.total)}</td>
+                <td>${utils.formatarMoeda(p.total)}</td>
                 <td>
                     <button class="btn-editar-pedido" onclick="editarPedido('${p.id}')">Editar</button>
                     <button class="btn-checklist" style="background:#687f82; margin-left:5px;" onclick="imprimirChecklist('${p.id}')">Checklist</button>
@@ -202,7 +202,7 @@ function editarPedido(id) {
     setVal("contatoEdicao", pedido.telefone);
     setVal("coresEdicao", pedido.cores);
     
-    // Valores Monetários
+    // Valores Monetários (Formatados com Utils)
     setValMoeda("valorFreteEdicao", pedido.valorFrete);
     setValMoeda("valorPedidoEdicao", pedido.valorOrcamento || 0);
     setValMoeda("totalEdicao", pedido.total);
@@ -215,17 +215,12 @@ function editarPedido(id) {
     setValMoeda("maoDeObraPedido", pedido.custoMaoDeObra || 0);
     setValMoeda("lucroPedido", pedido.margemLucro || 0);
     
-    // Compatibilidade Legado (Caso o HTML ainda use estes IDs antigos)
-    setValMoeda("custoMaoDeObraEdicao", pedido.custoMaoDeObra || 0);
-    setValMoeda("margemLucroEdicao", pedido.margemLucro || 0);
-
     // Produtos
     const tbody = document.querySelector("#tabelaProdutosEdicao tbody");
     tbody.innerHTML = '';
     if(pedido.produtos && pedido.produtos.length > 0) {
         pedido.produtos.forEach(p => adicionarRowProdutoEdicao(tbody, p));
     } else {
-        // Se não houver produtos, adiciona uma linha vazia para começar
         adicionarRowProdutoEdicao(tbody, { quantidade: 1, descricao: '', valorUnit: 0, valorTotal: 0 });
     }
 
@@ -236,7 +231,7 @@ async function atualizarPedido() {
     if (!pedidoEditando) return;
     const index = pedidos.findIndex(p => p.id === pedidoEditando);
     
-    // Captura valores financeiros
+    // Captura valores financeiros usando Utils
     const custosTotais = getValMoeda("custoTotalPedido");
     const custoMO = getValMoeda("maoDeObraPedido");
     const margem = getValMoeda("lucroPedido");
@@ -275,12 +270,12 @@ function setVal(id, val) {
 
 function setValMoeda(id, val) {
     const el = document.getElementById(id);
-    if(el) el.value = helpers.formatarMoeda(val || 0);
+    if(el) el.value = utils.formatarMoeda(val || 0);
 }
 
 function getValMoeda(id) {
     const el = document.getElementById(id);
-    return el ? helpers.converterMoedaParaNumero(el.value) : 0;
+    return el ? utils.converterMoedaParaNumero(el.value) : 0;
 }
 
 function mostrarPagina(idPagina) {
@@ -303,8 +298,8 @@ function adicionarRowProdutoEdicao(tbody, p) {
     row.innerHTML = `
         <td><input type="number" class="produto-quantidade" value="${p.quantidade}" min="1" onchange="atualizarTotaisEdicao()"></td>
         <td><input type="text" class="produto-descricao" value="${p.descricao}"></td>
-        <td><input type="text" class="produto-valor-unit" value="${helpers.formatarMoeda(p.valorUnit)}" oninput="formatarEntradaMoeda(this)" onblur="atualizarTotaisEdicao()"></td>
-        <td>${helpers.formatarMoeda(p.valorTotal)}</td>
+        <td><input type="text" class="produto-valor-unit" value="${utils.formatarMoeda(p.valorUnit)}" oninput="formatarEntradaMoeda(this)" onblur="atualizarTotaisEdicao()"></td>
+        <td>${utils.formatarMoeda(p.valorTotal)}</td>
         <td><button type="button" onclick="excluirProdutoEdicao(this)">Excluir</button></td>
     `;
 }
@@ -315,8 +310,8 @@ function lerProdutosDaTabela() {
         lista.push({
             quantidade: parseFloat(row.querySelector(".produto-quantidade").value),
             descricao: row.querySelector(".produto-descricao").value,
-            valorUnit: helpers.converterMoedaParaNumero(row.querySelector(".produto-valor-unit").value),
-            valorTotal: helpers.converterMoedaParaNumero(row.cells[3].textContent)
+            valorUnit: utils.converterMoedaParaNumero(row.querySelector(".produto-valor-unit").value),
+            valorTotal: utils.converterMoedaParaNumero(row.cells[3].textContent)
         });
     });
     return lista;
@@ -331,35 +326,34 @@ function atualizarTotaisEdicao() {
     let total = 0;
     document.querySelectorAll("#tabelaProdutosEdicao tbody tr").forEach(row => {
         const qtd = parseFloat(row.querySelector(".produto-quantidade").value) || 0;
-        const unit = helpers.converterMoedaParaNumero(row.querySelector(".produto-valor-unit").value);
+        const unit = utils.converterMoedaParaNumero(row.querySelector(".produto-valor-unit").value);
         const sub = qtd * unit;
-        row.cells[3].textContent = helpers.formatarMoeda(sub);
+        row.cells[3].textContent = utils.formatarMoeda(sub);
         total += sub;
     });
     
     const frete = getValMoeda("valorFreteEdicao");
     const totalFinal = total + frete;
-    document.getElementById("valorPedidoEdicao").value = helpers.formatarMoeda(total);
-    document.getElementById("totalEdicao").value = helpers.formatarMoeda(totalFinal);
+    document.getElementById("valorPedidoEdicao").value = utils.formatarMoeda(total);
+    document.getElementById("totalEdicao").value = utils.formatarMoeda(totalFinal);
     atualizarRestanteEdicao();
 }
 
 function atualizarRestanteEdicao() {
     const total = getValMoeda("totalEdicao");
     const entrada = getValMoeda("entradaEdicao");
-    document.getElementById("restanteEdicao").value = helpers.formatarMoeda(total - entrada);
+    document.getElementById("restanteEdicao").value = utils.formatarMoeda(total - entrada);
 }
 
 // ==========================================================================
-// 6. RELATÓRIOS E CHECKLIST (MODIFICADOS)
+// 6. RELATÓRIOS E CHECKLIST (MODIFICADOS PARA USAR UTILS)
 // ==========================================================================
 
 function imprimirChecklist(id) {
     const p = pedidos.find(o => o.id === id);
     if (!p) return;
     const janela = window.open('', '_blank');
-    const dtEnt = p.dataEntrega ? p.dataEntrega.split('-').reverse().join('/') : '-';
-    // Logo para impressão
+    const dtEnt = utils.formatarDataBR(p.dataEntrega);
     const logoSrc = window.location.href.substring(0, window.location.href.lastIndexOf('/')) + '/assets/images/logo_perola_rara.png';
 
     const html = `
@@ -371,48 +365,23 @@ function imprimirChecklist(id) {
             <style>
                 * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
                 body { font-family: 'Roboto', sans-serif; color: #444; margin: 0; padding: 40px; background: #fff; font-size: 14px; }
-                
-                /* Cabeçalho Estilizado (Igual Nota de Pedido) */
                 .header-container { text-align: center; border-bottom: 3px solid #7aa2a9; padding-bottom: 20px; margin-bottom: 25px; }
                 .logo-box { margin: 0 auto 5px auto; width: 100px; }
                 .logo-box img { max-width: 100%; height: auto; }
-                
-                /* Título Principal */
                 .doc-title { text-align: center; margin-bottom: 20px; }
                 .doc-title h2 { background-color: #7aa2a9; color: #fff; display: inline-block; padding: 8px 30px; border-radius: 50px; text-transform: uppercase; font-size: 1.2em; margin: 0; }
-                
-                /* Data de Entrega (Destaque) */
-                .delivery-highlight { 
-                    text-align: center; 
-                    margin: 15px 0 30px 0; 
-                    font-size: 1.1em; 
-                    color: #e53935; /* Vermelho para atenção na data */
-                    font-weight: bold; 
-                    border: 2px dashed #dfb6b0;
-                    padding: 10px;
-                    border-radius: 8px;
-                    background: #fff9f8;
-                    display: inline-block;
-                }
-
-                /* Box de Informações (Cores da Marca) */
+                .delivery-highlight { text-align: center; margin: 15px 0 30px 0; font-size: 1.1em; color: #e53935; font-weight: bold; border: 2px dashed #dfb6b0; padding: 10px; border-radius: 8px; background: #fff9f8; display: inline-block; }
                 .production-box { border-top: 5px solid #dfb6b0; padding: 20px; margin-bottom: 20px; background: #f8f9fa; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
                 .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
                 .info-item { font-size: 1.1em; }
                 .info-item strong { display: block; font-size: 0.8em; text-transform: uppercase; color: #7aa2a9; margin-bottom: 4px; font-weight: 700; }
-
-                /* Tabela de Checklist Colorida */
                 table { width: 100%; border-collapse: collapse; margin-top: 10px; }
                 th { background-color: #dfb6b0; color: #fff; font-weight: bold; text-transform: uppercase; font-size: 0.85em; padding: 10px; text-align: left; }
                 td { padding: 12px; border-bottom: 1px solid #eee; vertical-align: middle; color: #333; }
                 tr:nth-child(even) { background-color: #fcfcfc; }
-                
-                /* Checkbox Estilizado */
                 .check-box { width: 24px; height: 24px; border: 2px solid #7aa2a9; display: block; margin: 0 auto; background: #fff; border-radius: 4px; }
-                
                 .footer-area { margin-top: 30px; border: 1px solid #b2d8d8; background-color: #f0f7f7; padding: 15px; min-height: 100px; border-radius: 8px; }
                 .footer-area strong { color: #5a8289; display: block; margin-bottom: 5px; }
-                
                 @media print { .no-print { display: none; } body { padding: 0; } }
             </style>
         </head>
@@ -422,10 +391,7 @@ function imprimirChecklist(id) {
             </div>
 
             <div style="text-align: center;">
-                <div class="doc-title">
-                    <h2>Checklist de Produção</h2>
-                </div>
-                <!-- Exibe apenas a Data de Entrega, sem Número/Ano -->
+                <div class="doc-title"><h2>Checklist de Produção</h2></div>
                 <div class="delivery-highlight">Entrega: ${dtEnt}</div>
             </div>
 
@@ -475,10 +441,9 @@ function imprimirNotaPedido(id) {
     const p = pedidos.find(o => o.id === id);
     if (!p) return;
     const janela = window.open('', '_blank');
-    const dtPed = p.dataPedido ? p.dataPedido.split('-').reverse().join('/') : '-';
+    const dtPed = utils.formatarDataBR(p.dataPedido);
     const logoSrc = window.location.href.substring(0, window.location.href.lastIndexOf('/')) + '/assets/images/logo_perola_rara.png';
 
-    // HTML gerado para a Nota de Pedido
     const html = `
         <!DOCTYPE html>
         <html>
@@ -488,60 +453,38 @@ function imprimirNotaPedido(id) {
             <style>
                 * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
                 body { font-family: 'Roboto', sans-serif; color: #555; margin: 0; padding: 40px; background: #fff; font-size: 14px; }
-                
                 .header-container { text-align: center; border-bottom: 3px solid #7aa2a9; padding-bottom: 20px; margin-bottom: 30px; }
                 .logo-box { margin: 0 auto 10px auto; width: 120px; }
                 .logo-box img { max-width: 100%; height: auto; }
-                
-                /* FONTE ALTERADA PARA ROBOTO (SANS-SERIF) CONFORME SOLICITADO */
-                .company-info h1 { 
-                    font-family: 'Roboto', sans-serif; 
-                    font-weight: 700;
-                    color: #7aa2a9; 
-                    font-size: 2.5em; 
-                    margin: 0; 
-                    line-height: 1.2;                    
-                }
+                .company-info h1 { font-family: 'Roboto', sans-serif; font-weight: 700; color: #7aa2a9; font-size: 2.5em; margin: 0; line-height: 1.2; }
                 .company-info p { margin: 2px 0; font-size: 0.9em; color: #888; }
-                
                 .doc-title { text-align: center; margin-bottom: 30px; }
                 .doc-title h2 { background-color: #7aa2a9; color: #fff; display: inline-block; padding: 8px 30px; border-radius: 50px; text-transform: uppercase; font-size: 1.1em; letter-spacing: 1px; margin: 0; }
                 .doc-meta { font-size: 0.9em; margin-top: 5px; color: #999; }
-
-                /* Box Cliente: Removido Tema/Cores */
                 .client-box { background-color: #f8f9fa; border-top: 5px solid #dfb6b0; padding: 20px; margin-bottom: 30px; border-radius: 8px; }
                 .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
                 .info-item strong { color: #7aa2a9; text-transform: uppercase; font-size: 0.8em; display: block; margin-bottom: 2px; }
-
                 table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
                 th { background-color: #dfb6b0; color: #fff; font-weight: 500; text-transform: uppercase; font-size: 0.85em; padding: 12px; text-align: left; }
                 td { padding: 12px; border-bottom: 1px solid #eee; color: #444; }
                 tr:nth-child(even) { background-color: #fcfcfc; }
                 .col-money { text-align: right; font-family: 'Roboto', monospace; font-weight: 500; }
-
                 .totals-section { display: flex; justify-content: flex-end; }
                 .totals-box { width: 280px; background: #fff9f8; border: 1px solid #efebe9; padding: 20px; border-radius: 8px; }
                 .total-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.95em; }
                 .total-row.final { border-top: 2px solid #dfb6b0; padding-top: 10px; margin-top: 10px; font-size: 1.2em; font-weight: bold; color: #7aa2a9; }
-                
-                /* Estilos do Demonstrativo Financeiro Interno */
                 .finance-breakdown-container { margin-top: 30px; border-top: 2px dashed #ccc; padding-top: 20px; page-break-inside: avoid; }
                 .finance-breakdown-container h3 { text-align: center; font-size: 1em; color: #555; text-transform: uppercase; margin-bottom: 15px; }
                 .cards-wrapper { display: flex; justify-content: space-between; gap: 10px; }
                 .card { flex: 1; padding: 10px; border-radius: 6px; text-align: center; border: 1px solid; }
                 .card-label { display: block; font-size: 0.8em; font-weight: bold; margin-bottom: 4px; }
                 .card-value { display: block; font-size: 1.1em; color: #333; font-weight: bold; }
-                
-                /* Cores dos Cards */
                 .card-costs { background: #ffebee; border-color: #ef5350; }
                 .card-costs .card-label { color: #c62828; }
-                
                 .card-salary { background: #e3f2fd; border-color: #42a5f5; }
                 .card-salary .card-label { color: #1565c0; }
-                
                 .card-profit { background: #e8f5e9; border-color: #66bb6a; }
                 .card-profit .card-label { color: #2e7d32; }
-
                 .footer-notes { margin-top: 40px; padding-top: 20px; border-top: 1px dashed #ccc; font-size: 0.85em; color: #777; }
                 @media print { .no-print { display: none; } body { padding: 0; } }
             </style>
@@ -557,7 +500,7 @@ function imprimirNotaPedido(id) {
 
             <div class="doc-title">
                 <h2>Nota de Pedido Nº ${p.numero}</h2>
-                <div class="doc-meta">Data Pedido: ${dtPed} • Entrega: ${p.dataEntrega ? p.dataEntrega.split('-').reverse().join('/') : '-'}</div>
+                <div class="doc-meta">Data Pedido: ${dtPed} • Entrega: ${utils.formatarDataBR(p.dataEntrega)}</div>
             </div>
 
             <div class="client-box">
@@ -565,7 +508,6 @@ function imprimirNotaPedido(id) {
                     <div class="info-item"><strong>Cliente</strong> ${p.cliente || '-'}</div>
                     <div class="info-item"><strong>Contato</strong> ${p.telefone || '-'}</div>
                     <div class="info-item" style="grid-column: span 2;"><strong>Endereço</strong> ${p.endereco || '-'}</div>
-                    <!-- Campo Tema/Cores removido conforme solicitado -->
                 </div>
             </div>
 
@@ -583,8 +525,8 @@ function imprimirNotaPedido(id) {
                         <tr>
                             <td>${prod.quantidade}</td>
                             <td>${prod.descricao}</td>
-                            <td class="col-money">${helpers.formatarMoeda(prod.valorUnit)}</td>
-                            <td class="col-money">${helpers.formatarMoeda(prod.valorTotal)}</td>
+                            <td class="col-money">${utils.formatarMoeda(prod.valorUnit)}</td>
+                            <td class="col-money">${utils.formatarMoeda(prod.valorTotal)}</td>
                         </tr>
                     `).join('')}
                 </tbody>
@@ -592,34 +534,30 @@ function imprimirNotaPedido(id) {
 
             <div class="totals-section">
                 <div class="totals-box">
-                    <div class="total-row"><span>Subtotal:</span> <span>${helpers.formatarMoeda(p.valorOrcamento)}</span></div>
-                    <div class="total-row"><span>Frete:</span> <span>${helpers.formatarMoeda(p.valorFrete)}</span></div>
-                    <div class="total-row final"><span>Total Geral:</span> <span>${helpers.formatarMoeda(p.total)}</span></div>
+                    <div class="total-row"><span>Subtotal:</span> <span>${utils.formatarMoeda(p.valorOrcamento)}</span></div>
+                    <div class="total-row"><span>Frete:</span> <span>${utils.formatarMoeda(p.valorFrete)}</span></div>
+                    <div class="total-row final"><span>Total Geral:</span> <span>${utils.formatarMoeda(p.total)}</span></div>
                     <div style="margin-top:15px; border-top:1px dotted #ccc; padding-top:10px;">
-                        <div class="total-row" style="color:#4CAF50;"><span>Entrada:</span> <span>${helpers.formatarMoeda(p.entrada)}</span></div>
-                        <div class="total-row" style="color:#e53935; font-weight:bold;"><span>Restante:</span> <span>${helpers.formatarMoeda(p.restante)}</span></div>
+                        <div class="total-row" style="color:#4CAF50;"><span>Entrada:</span> <span>${utils.formatarMoeda(p.entrada)}</span></div>
+                        <div class="total-row" style="color:#e53935; font-weight:bold;"><span>Restante:</span> <span>${utils.formatarMoeda(p.restante)}</span></div>
                     </div>
                 </div>
             </div>
             
-            <!-- Inclusão do Painel Financeiro Colorido -->
             <div class="finance-breakdown-container">
                 <h3>Demonstrativo Financeiro (Controle Interno)</h3>
                 <div class="cards-wrapper">
-                    <!-- Card Custos (Vermelho) -->
                     <div class="card card-costs">
                         <span class="card-label">CUSTOS TOTAIS</span>
-                        <span class="card-value">${helpers.formatarMoeda(p.custosTotais || 0)}</span>
+                        <span class="card-value">${utils.formatarMoeda(p.custosTotais || 0)}</span>
                     </div>
-                    <!-- Card Salário (Azul) - Renomeado para 'Meu Salário' -->
                     <div class="card card-salary">
                         <span class="card-label">MEU SALÁRIO</span>
-                        <span class="card-value">${helpers.formatarMoeda(p.custoMaoDeObra || 0)}</span>
+                        <span class="card-value">${utils.formatarMoeda(p.custoMaoDeObra || 0)}</span>
                     </div>
-                    <!-- Card Lucro (Verde) - Renomeado para 'Caixa Empresa' -->
                     <div class="card card-profit">
                         <span class="card-label">CAIXA EMPRESA</span>
-                        <span class="card-value">${helpers.formatarMoeda(p.margemLucro || 0)}</span>
+                        <span class="card-value">${utils.formatarMoeda(p.margemLucro || 0)}</span>
                     </div>
                 </div>
             </div>
@@ -665,13 +603,13 @@ function gerarRelatorioFinanceiro() {
         const nomeCliente = p.cliente.length > 15 ? p.cliente.substring(0, 15) + '...' : p.cliente;
 
         row.innerHTML = `
-            <td>${p.dataPedido.split('-').reverse().join('/').substring(0, 5)}</td>
+            <td>${utils.formatarDataBR(p.dataPedido).substring(0, 5)}</td>
             <td class="col-oculta-mobile">${p.numero}</td>
             <td><span title="${p.cliente}">${nomeCliente}</span></td>
-            <td style="color:#2196F3; font-weight:bold;">${helpers.formatarMoeda(p.custoMaoDeObra)}</td>
-            <td style="color:#4CAF50; font-weight:bold;">${helpers.formatarMoeda(p.margemLucro)}</td>
-            <td style="color:#e53935; font-weight:bold;">${helpers.formatarMoeda(p.custosTotais)}</td>
-            <td style="color:#ff9800; font-weight:bold;">${helpers.formatarMoeda(p.total)}</td>
+            <td style="color:#2196F3; font-weight:bold;">${utils.formatarMoeda(p.custoMaoDeObra)}</td>
+            <td style="color:#4CAF50; font-weight:bold;">${utils.formatarMoeda(p.margemLucro)}</td>
+            <td style="color:#e53935; font-weight:bold;">${utils.formatarMoeda(p.custosTotais)}</td>
+            <td style="color:#ff9800; font-weight:bold;">${utils.formatarMoeda(p.total)}</td>
         `;
     });
 
@@ -721,7 +659,7 @@ function gerarRelatorioXLSX() {
 
 function updateElementText(id, value, isMoney = true) {
     const el = document.getElementById(id);
-    if(el) el.textContent = isMoney ? helpers.formatarMoeda(value) : value;
+    if(el) el.textContent = isMoney ? utils.formatarMoeda(value) : value;
 }
 function setBarWidth(id, pct) {
     const el = document.getElementById(id);
