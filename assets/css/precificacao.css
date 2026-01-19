@@ -393,6 +393,31 @@ td {
     width: 100px;
 }
 
+/* ========================================================= */
+/*  ESTILOS PARA MATERIAIS DESCONTINUADOS/ARQUIVADOS       */
+/* ========================================================= */
+
+.row-arquivado {
+    background-color: #ffebee !important; /* Vermelho muito suave para destaque */
+    border-left: 4px solid #ef5350 !important; /* Borda lateral para ênfase */
+}
+
+.row-arquivado:hover {
+    background-color: #ffcdd2 !important; /* Destaque maior no hover */
+}
+
+.aviso-material-inativo {
+    display: block;
+    font-size: 0.75rem;
+    color: #c62828; /* Vermelho escuro para texto */
+    font-weight: bold;
+    margin-top: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* ========================================================= */
+
 .dimensoes-input {
     width: 60px !important;
     margin-right: 5px !important;
