@@ -192,7 +192,7 @@
                         <button type="button" id="btnAddProdutoOrcamento">Adicionar Produto</button>
 
                         <div class="form-row valores-pedido" style="margin-top: 20px;">
-                            <div class="form-group"><label>Frete:</label><input type="text" id="valorFrete" placeholder="R$ 0,00"></div>
+                            <div class="form-group"><label>Frete:</label><input type="text" id="valorFrete" placeholder="R$ 0,00" inputmode="numeric"></div>
                             <div class="form-group"><label>Subtotal:</label><input type="text" id="valorOrcamento" readonly></div>
                             <div class="form-group"><label>Total Final:</label><input type="text" id="total" readonly></div>
                         </div>
@@ -330,15 +330,15 @@
                                 <div class="form-row">
                                     <div class="form-group">
                                         <label style="color: #e53935; font-weight: 500;" title="Usado para o Relatório Financeiro">Gastos (R$):</label>
-                                        <input type="text" id="estoque-custo" placeholder="0,00" oninput="formatarEntradaMoeda(this)">
+                                        <input type="text" id="estoque-custo" placeholder="0,00" oninput="formatarEntradaMoeda(this)" inputmode="numeric">
                                     </div>
                                      <div class="form-group">
                                         <label style="color: #2196F3; font-weight: 500;" title="Usado para o Relatório Financeiro">Meu Salário (R$):</label>
-                                        <input type="text" id="estoque-mao-obra" placeholder="0,00" oninput="formatarEntradaMoeda(this)">
+                                        <input type="text" id="estoque-mao-obra" placeholder="0,00" oninput="formatarEntradaMoeda(this)" inputmode="numeric">
                                     </div>
                                     <div class="form-group">
                                         <label style="color: #4CAF50; font-weight: 500;" title="Caixa da Empresa">Caixa (Lucro) (R$):</label>
-                                        <input type="text" id="estoque-margem" placeholder="0,00" oninput="formatarEntradaMoeda(this)">
+                                        <input type="text" id="estoque-margem" placeholder="0,00" oninput="formatarEntradaMoeda(this)" inputmode="numeric">
                                     </div>
                                 </div>
                             </div>
@@ -346,7 +346,7 @@
                             <!-- Preço de Venda em Destaque -->
                             <div class="form-group" style="margin-top: 15px; text-align: center; background: #f0f7f7; padding: 15px; border-radius: 8px; border: 1px solid #b2d8d8;">
                                 <label style="font-size: 1.1em; color: #006064; font-weight: bold;">Preço Final de Venda (R$):</label>
-                                <input type="text" id="estoque-valor" oninput="formatarEntradaMoeda(this)" style="font-size: 1.3em; text-align: center; font-weight: bold; width: 50%; margin: 5px auto; display: block;">
+                                <input type="text" id="estoque-valor" oninput="formatarEntradaMoeda(this)" style="font-size: 1.3em; text-align: center; font-weight: bold; width: 50%; margin: 5px auto; display: block;" inputmode="numeric">
                             </div>
 
                             <div style="display: flex; gap: 10px; margin-top: 15px;">
@@ -454,11 +454,11 @@
                     <div class="form-row valores-pedido" style="margin-top: 20px;">
                         <div class="form-group">
                             <label>Frete (R$):</label>
-                            <input type="text" id="valorFreteEdicao" placeholder="R$ 0,00" oninput="formatarEntradaMoeda(this)" onblur="atualizarTotaisEdicao()">
+                            <input type="text" id="valorFreteEdicao" placeholder="R$ 0,00" oninput="formatarEntradaMoeda(this)" onblur="atualizarTotaisEdicao()" inputmode="numeric">
                         </div>
                         <div class="form-group">
                             <label>Subtotal Produtos (R$):</label>
-                            <input type="text" id="valorPedidoEdicao" placeholder="R$ 0,00" oninput="formatarEntradaMoeda(this)" onblur="atualizarTotaisEdicao()">
+                            <input type="text" id="valorPedidoEdicao" placeholder="R$ 0,00" oninput="formatarEntradaMoeda(this)" onblur="atualizarTotaisEdicao()" inputmode="numeric">
                         </div>
                     </div>
 
@@ -468,17 +468,17 @@
                         
                         <div class="form-group">
                             <label title="Soma de Materiais + Custos Indiretos">Custos Totais (R$):</label>
-                            <input type="text" id="custoTotalPedido" placeholder="R$ 0,00" oninput="formatarEntradaMoeda(this)">
+                            <input type="text" id="custoTotalPedido" placeholder="R$ 0,00" oninput="formatarEntradaMoeda(this)" inputmode="numeric">
                         </div>
                         
                         <div class="form-group">
                             <label style="color: #2196F3;">Meu Salário (R$):</label>
-                            <input type="text" id="maoDeObraPedido" placeholder="R$ 0,00" oninput="formatarEntradaMoeda(this)">
+                            <input type="text" id="maoDeObraPedido" placeholder="R$ 0,00" oninput="formatarEntradaMoeda(this)" inputmode="numeric">
                         </div>
                         
                         <div class="form-group">
                             <label style="color: #4CAF50;">Margem de Lucro (R$):</label>
-                            <input type="text" id="lucroPedido" placeholder="R$ 0,00" oninput="formatarEntradaMoeda(this)">
+                            <input type="text" id="lucroPedido" placeholder="R$ 0,00" oninput="formatarEntradaMoeda(this)" inputmode="numeric">
                         </div>
                     </div>
 
@@ -490,7 +490,7 @@
                         </div>
                         <div class="form-group">
                             <label>Entrada (R$):</label>
-                            <input type="text" id="entradaEdicao" placeholder="R$ 0,00" oninput="formatarEntradaMoeda(this)" onblur="atualizarRestanteEdicao()">
+                            <input type="text" id="entradaEdicao" placeholder="R$ 0,00" oninput="formatarEntradaMoeda(this)" onblur="atualizarRestanteEdicao()" inputmode="numeric">
                         </div>
                     </div>
                     
