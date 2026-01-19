@@ -34,6 +34,9 @@ import {
     atualizarCustosProdutosPorMaterial // Callback
 } from './precificacao-produtos.js';
 
+// NOVA IMPORTAÇÃO: Ponte para Sincronização com Estoque
+import { verificarAtualizacaoEstoque } from './estoque.js';
+
 // 3. VARIÁVEIS DE ESTADO LOCAIS (Dashboard e Histórico)
 let precificacoesGeradas = [];
 let taxaCredito = { percentual: 6, incluir: false };
@@ -522,6 +525,25 @@ async function gerarNotaPrecificacao() {
             precificacoesGeradas.push(nota);
             alert(`Precificação Nº ${nota.numero} salva para "${prodNome}"!`);
         }
+
+        // --- INÍCIO DA SINCRONIZAÇÃO COM ESTOQUE (PRIORIDADE 1) ---
+        // Coleta os dados financeiros mais recentes da tela para enviar ao estoque
+        const dadosFinanceirosAtualizados = {
+            valorVenda: totalFinal, // Preço Final de Venda Sugerido
+            financeiro: {
+                // Soma Custos Diretos e Indiretos
+                custoProducao: converterMoeda(document.getElementById('custo-produto').textContent) + 
+                               converterMoeda(document.getElementById('custo-indireto').textContent),
+                
+                maoDeObra: converterMoeda(document.getElementById('total-mao-de-obra').textContent),
+                margemLucro: converterMoeda(document.getElementById('margem-lucro-valor').textContent)
+            }
+        };
+
+        // Chama a função exportada do estoque.js para verificar duplicidades e atualizar
+        // Passamos 'prodNome' que é o identificador comum neste estágio
+        await verificarAtualizacaoEstoque(prodNome, dadosFinanceirosAtualizados);
+        // --- FIM DA SINCRONIZAÇÃO COM ESTOQUE ---
         
         atualizarTabelaPrecificacoesGeradas();
         verificarPrecoExistente(prodNome);
