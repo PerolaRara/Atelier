@@ -163,11 +163,21 @@ function mostrarPedidosRealizados() {
     } else {
         itensPagina.forEach(p => {
             const row = tbody.insertRow();
+            
+            // PRIORIDADE 3: ALERTA DE DADOS INCOMPLETOS
+            // Verifica se os campos financeiros cruciais estão zerados
+            const dadosZerados = (!p.custoMaoDeObra && !p.margemLucro && !p.custosTotais);
+            
+            // Cria o ícone de alerta se necessário
+            const alertaHtml = dadosZerados 
+                ? `<span style="margin-left:8px; cursor:help; font-size:1.1em;" title="⚠️ Atenção: Dados financeiros (Custos/Lucro) zerados. Edite este pedido para corrigir o relatório.">⚠️</span>` 
+                : '';
+
             row.innerHTML = `
                 <td>${p.numero}</td>
                 <td>${utils.formatarDataBR(p.dataPedido)}</td>
                 <td>${p.cliente}</td>
-                <td>${utils.formatarMoeda(p.total)}</td>
+                <td>${utils.formatarMoeda(p.total)} ${alertaHtml}</td>
                 <td>
                     <button class="btn-editar-pedido" onclick="editarPedido('${p.id}')">Editar</button>
                     <button class="btn-checklist" style="background:#687f82; margin-left:5px;" onclick="imprimirChecklist('${p.id}')">Checklist</button>
