@@ -96,13 +96,6 @@ export async function atualizarCustosProdutosPorMaterial(material) {
     
     if (produtosAfetados.length > 0) {
         atualizarTabelaProdutosCadastrados();
-        
-        // Tenta atualizar a tela de cálculo se houver produto selecionado
-        const inputPesquisa = document.getElementById('produto-pesquisa');
-        if (inputPesquisa && inputPesquisa.value) {
-            // Dispara um evento customizado ou acessa função global se necessário
-            // O módulo principal (precificacao.js) cuidará de re-selecionar se necessário
-        }
     }
 }
 
@@ -160,8 +153,6 @@ function verificarDuplicidadeTempoReal(e) {
 
     if (!nomeDigitado) {
         avisoEl.style.display = 'none';
-        input.style.borderColor = '#ccc'; // Borda padrão (ajuste se seu CSS usar outra cor)
-        // Se usar main.css com borda rosa, pode remover essa linha ou setar vazio
         input.style.borderColor = ''; 
         return;
     }
@@ -189,7 +180,9 @@ function buscarMateriaisAutocomplete() {
     if(!termo) { div.style.display = 'none'; return; }
     
     // Usa a lista de materiais exportada pelo módulo de insumos
-    const results = materiais.filter(m => m.nome.toLowerCase().includes(termo));
+    // Filtra apenas materiais ATIVOS para novas adições
+    const results = materiais.filter(m => m.ativo !== false && m.nome.toLowerCase().includes(termo));
+    
     results.forEach(m => {
         const item = document.createElement('div');
         item.textContent = m.nome;
@@ -203,10 +196,20 @@ function buscarMateriaisAutocomplete() {
     div.style.display = results.length ? 'block' : 'none';
 }
 
-function adicionarMaterialNaTabelaProduto(mat, dadosSalvos = null) {
+function adicionarMaterialNaTabelaProduto(mat, dadosSalvos = null, statusInativo = false) {
     const tbody = document.querySelector('#tabela-materiais-produto tbody');
     const row = tbody.insertRow();
     
+    // Configuração Visual para Itens Inativos/Excluídos
+    let nomeDisplay = mat.nome;
+    let classeBotao = "";
+    
+    if (statusInativo) {
+        row.classList.add('row-arquivado'); // Classe definida no CSS para fundo vermelho suave
+        nomeDisplay = `⚠️ ${mat.nome} <span class="aviso-material-inativo">(Descontinuado)</span>`;
+        classeBotao = "btn-alerta-remocao"; // Sugestão visual para o botão remover
+    }
+
     let inputDimensao = '';
     let valDimensao = 0;
 
@@ -229,15 +232,18 @@ function adicionarMaterialNaTabelaProduto(mat, dadosSalvos = null) {
     }
 
     const qtd = dadosSalvos ? dadosSalvos.quantidade : 1;
+    
+    // Salva o nome original puro em dataset para recuperação segura no cadastro
+    const nomePuro = mat.nome || "(Sem nome)";
 
     row.innerHTML = `
-        <td data-id="${mat.id}">${mat.nome}</td>
+        <td data-id="${mat.id}" data-nome-original="${nomePuro}">${nomeDisplay}</td>
         <td>${mat.tipo}</td>
         <td>${formatarMoeda(mat.custoUnitario)}</td>
         <td class="cell-dimensao">${inputDimensao}</td>
         <td><input type="number" class="qtd-input" value="${qtd}" style="width:50px"></td>
         <td class="custo-total-item">R$ 0,00</td>
-        <td><button type="button" onclick="this.closest('tr').remove()">X</button></td>
+        <td><button type="button" class="${classeBotao}" onclick="this.closest('tr').remove()">X</button></td>
     `;
 
     // Listeners para recálculo na linha
@@ -300,6 +306,23 @@ async function cadastrarProduto() {
         return;
     }
 
+    // === TRAVA DE SEGURANÇA: Verificação de Itens Fantasmas/Arquivados ===
+    const itensArquivados = document.querySelectorAll('.row-arquivado');
+    let possuiDadosDefasados = false;
+
+    if (itensArquivados.length > 0) {
+        const confirmar = confirm(
+            `⚠️ ATENÇÃO: Este produto contém ${itensArquivados.length} material(is) descontinuado(s) ou excluído(s).\n\n` +
+            `Manter esses itens pode gerar cálculos de custo incorretos.\n\n` +
+            `Recomendamos remover as linhas vermelhas e adicionar os materiais substitutos ativos.\n\n` +
+            `Deseja SALVAR mesmo assim, mantendo os dados antigos?`
+        );
+        
+        if (!confirmar) return; // Cancela o salvamento
+        possuiDadosDefasados = true; // Marca flag para auditoria
+    }
+    // ======================================================================
+
     const materiaisList = [];
     let custoTotal = 0;
 
@@ -309,10 +332,10 @@ async function cadastrarProduto() {
         // Busca material original para garantir dados frescos
         const matOriginal = materiais.find(m => m.id === matId);
         
-        // Se material foi arquivado ou não existe mais, tenta usar dados da linha (fallback arriscado, mas necessário)
-        // Idealmente bloqueia, mas aqui vamos assumir que existe pois está na tabela visual
-        const nomeMat = matOriginal ? matOriginal.nome : row.cells[0].innerText;
-        const custoUnit = matOriginal ? matOriginal.custoUnitario : 0;
+        // Se material foi arquivado ou não existe mais, usa o dado salvo no dataset (fallback seguro)
+        // para evitar salvar HTML de alerta (emojis) no nome.
+        const nomeMat = matOriginal ? matOriginal.nome : (row.cells[0].dataset.nomeOriginal || row.cells[0].innerText);
+        const custoUnit = matOriginal ? matOriginal.custoUnitario : 0; // Se não existir, custo unitário 0 ou mantido antigo se lógica permitisse
 
         const tipo = row.cells[1].innerText;
         const qtd = parseFloat(row.querySelector('.qtd-input').value);
@@ -342,7 +365,14 @@ async function cadastrarProduto() {
         custoTotal += custoItem;
     });
 
-    const prodData = { nome: nomeNormalizado, materiais: materiaisList, custoTotal };
+    // Adiciona flag de auditoria se houver dados defasados
+    const prodData = { 
+        nome: nomeNormalizado, 
+        materiais: materiaisList, 
+        custoTotal,
+        dadosDefasados: possuiDadosDefasados,
+        ultimaAtualizacao: new Date().toISOString()
+    };
 
     try {
         if(produtoEmEdicao) {
@@ -400,8 +430,12 @@ export function atualizarTabelaProdutosCadastrados() {
     } else {
         itensPagina.forEach(p => {
             const row = tbody.insertRow();
+            
+            // Indicador visual na lista se o produto estiver marcado como defasado
+            const alertaDefasado = p.dadosDefasados ? '<span title="Contém insumos descontinuados" style="color:#d32f2f; cursor:help;">⚠️</span> ' : '';
+
             row.innerHTML = `
-                <td>${p.nome}</td>
+                <td>${alertaDefasado}${p.nome}</td>
                 <td><ul>${p.materiais.map(m => `<li>${m.material.nome} (${m.quantidade})</li>`).join('')}</ul></td>
                 <td>-</td>
                 <td>${formatarMoeda(p.custoTotal)}</td>
@@ -438,31 +472,45 @@ export function editarProduto(id) {
         // Tenta encontrar o material na lista atual para garantir consistência
         const matReal = materiais.find(m => m.id === item.materialId);
         
+        let materialParaRenderizar = null;
+        let isInativo = false;
+
         if(matReal) {
-            // Se o material existe, usa ele (garante preço atualizado se for re-salvar)
-            adicionarMaterialNaTabelaProduto(matReal, item);
+            // Caso 1: Material existe no cadastro
+            if (matReal.ativo === false) {
+                // Existe, mas foi arquivado/desativado
+                isInativo = true;
+                materialParaRenderizar = matReal;
+            } else {
+                // Existe e está ativo (Cenário Ideal)
+                isInativo = false;
+                materialParaRenderizar = matReal;
+            }
         } else {
-            // Se o material foi excluído, teríamos que recriar um objeto mock ou avisar
-            // Por simplicidade, tentamos usar os dados do item se tiverem estrutura suficiente,
-            // ou criamos um objeto temporário compatível
-            console.warn("Material original não encontrado (pode ter sido arquivado):", item.materialId);
+            // Caso 2: Material foi excluído permanentemente (Hard Delete) do banco de insumos
+            console.warn("Material original não encontrado (pode ter sido excluído):", item.materialId);
+            isInativo = true;
             
-            // Mock para visualização usando dados históricos do item
-            const matHistorico = {
+            // Cria objeto Mock com dados históricos salvos dentro do item do produto
+            // Isso previne que a tabela quebre ou mostre campos vazios
+            materialParaRenderizar = {
                 id: item.materialId,
-                nome: item.material.nome,
-                custoUnitario: item.material.custoUnitario,
+                nome: item.material ? item.material.nome : "(Nome Indisponível)",
+                custoUnitario: item.material ? item.material.custoUnitario : 0,
                 tipo: item.tipo,
-                // Preenche medidas com dados do item para não quebrar a UI
+                // Preenche medidas com dados do item para manter a renderização dos inputs correta
                 comprimentoCm: item.comprimento || 0,
                 volumeMl: item.volume || 0,
                 pesoG: item.peso || 0,
                 larguraCm: item.largura || 0,
                 alturaCm: item.altura || 0,
-                quantidadeMaterial: item.quantidadeMaterial || 0
+                quantidadeMaterial: item.quantidadeMaterial || 0,
+                ativo: false // Marca explicita
             };
-            adicionarMaterialNaTabelaProduto(matHistorico, item);
         }
+
+        // Renderiza com a flag de inativo se necessário
+        adicionarMaterialNaTabelaProduto(materialParaRenderizar, item, isInativo);
     });
     
     document.querySelector('#cadastrar-produto-btn').textContent = "Salvar Alterações";
