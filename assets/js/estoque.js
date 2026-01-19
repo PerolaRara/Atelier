@@ -12,7 +12,8 @@ import {
     query, 
     where, 
     runTransaction, // Importação para venda segura
-    setDoc          // Necessário para criar documentos com ID específico ou na transação
+    setDoc,          // Necessário para criar documentos com ID específico ou na transação
+    writeBatch       // [NOVO] Importação para atualização em massa (Sincronização)
 } from './firebase-config.js';
 
 import { adicionarPedidoNaLista } from './pedidos.js'; 
@@ -276,8 +277,6 @@ async function iniciarVenda(id) {
                 proximoNumero = (contadorDoc.data().ultimoPedido || 0) + 1;
             } else {
                 // Se não existir contador (primeiro uso), assume 1. 
-                // Nota: Idealmente, pode-se rodar um script de migração antes, 
-                // mas isso garante que funcione mesmo sem migração.
                 proximoNumero = 1;
             }
 
@@ -426,6 +425,66 @@ async function gerarRelatorioRanking() {
     ranking.forEach((r, i) => {
         tbody.insertRow().innerHTML = `<td>${i+1}º</td><td>${r.produto}</td><td>${r.qtd}</td>`;
     });
+}
+
+// --- NOVO: FUNÇÃO DE SINCRONIZAÇÃO (INTEGRAÇÃO COM PRECIFICAÇÃO) ---
+/**
+ * Busca itens no estoque pelo nome e oferece atualização em massa.
+ * Chamada pelo módulo de Precificação (precificacao.js).
+ */
+export async function verificarAtualizacaoEstoque(nomeProduto, novosDados) {
+    // Busca por nome exato (Prioridade 1 - Action Plan)
+    const q = query(estoqueRef, where("produto", "==", nomeProduto));
+    const snapshot = await getDocs(q);
+
+    if (snapshot.empty) return false; // Nenhum item encontrado, segue fluxo normal
+
+    // UX: Mensagem de confirmação detalhada (Prioridade 2)
+    const qtdItens = snapshot.size;
+    const novoValorFmt = helpers.formatarMoeda(novosDados.valorVenda);
+    const msg = `⚠️ ATENÇÃO - ESTOQUE DETECTADO\n\n` +
+                `Encontrei ${qtdItens} unidade(s) de "${nomeProduto}" no estoque de Pronta Entrega.\n` +
+                `Deseja atualizar o preço de venda para ${novoValorFmt} e ajustar os custos internos (salário/margem)?\n\n` +
+                `Esta ação evita prejuízo na reposição de itens antigos.`;
+
+    if (confirm(msg)) {
+        try {
+            // WriteBatch para operação atômica (Prioridade 1)
+            const batch = writeBatch(db);
+            const dataHoje = new Date().toLocaleDateString('pt-BR');
+            
+            snapshot.forEach(docSnap => {
+                const ref = doc(db, "estoque", docSnap.id);
+                const dadosAtuais = docSnap.data();
+
+                // Lógica de Histórico/Auditoria (Prioridade 3 - Arquitetura)
+                // Adiciona uma nota ao campo detalhes sem apagar o existente
+                let detalhesAtualizados = dadosAtuais.detalhes || "";
+                detalhesAtualizados += `\n[${dataHoje}: Preço atualizado via Precificação para ${novoValorFmt}]`;
+
+                batch.update(ref, {
+                    valorVenda: novosDados.valorVenda,
+                    financeiro: novosDados.financeiro,
+                    dataAtualizacao: new Date().toISOString(),
+                    detalhes: detalhesAtualizados
+                });
+            });
+
+            await batch.commit();
+            alert(`Sucesso! ${qtdItens} item(ns) do estoque foram atualizados para a nova realidade de mercado.`);
+            
+            // Se o usuário estiver na tela de estoque ou com ela carregada, atualizamos a lista
+            if (itensEstoque.length > 0) {
+                await carregarDadosEstoque();
+            }
+            return true;
+        } catch (error) {
+            console.error("Erro ao sincronizar estoque em massa:", error);
+            alert("Erro ao atualizar itens do estoque: " + error.message);
+            return false;
+        }
+    }
+    return false;
 }
 
 // Helpers de Paginação
