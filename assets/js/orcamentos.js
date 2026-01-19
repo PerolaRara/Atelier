@@ -35,7 +35,7 @@ export async function initOrcamentos() {
     // EXPOR FUNÇÕES GLOBAIS PARA O HTML (ONCLICK)
     window.excluirProduto = excluirProduto;
     window.visualizarImpressao = visualizarImpressao;
-    window.editarOrcamento = editarOrcamento; // <--- CORRIGIDO: Agora está definido
+    window.editarOrcamento = editarOrcamento;
     window.gerarPedido = gerarPedido; 
     window.gerarOrcamento = gerarOrcamento;
     window.atualizarOrcamento = atualizarOrcamento;
@@ -75,7 +75,7 @@ async function carregarDados() {
         const pedidosTemp = []; 
 
         // Carregar Orçamentos e Pedidos
-        const q = query(orcamentosPedidosRef, orderBy("numero", "desc")); // Traz do mais novo para o mais antigo
+        const q = query(orcamentosPedidosRef, orderBy("numero", "desc")); 
         const snapshot = await getDocs(q);
 
         snapshot.forEach(doc => {
@@ -94,11 +94,11 @@ async function carregarDados() {
         // 1. Renderiza a tabela de Orçamentos
         mostrarOrcamentosGerados();
         
-        // 2. Inicializa o Módulo de Pedidos (Passando utils injetado)
+        // 2. Inicializa o Módulo de Pedidos
         setupPedidos({
             listaPedidos: pedidosTemp,
             salvarDadosFn: salvarDados,
-            helpers: utils // Injeta o novo utils
+            helpers: utils 
         });
 
     } catch (error) {
@@ -110,10 +110,6 @@ async function carregarDados() {
 // 2. LÓGICA DE CONTADORES E SALVAMENTO
 // ==========================================================================
 
-/**
- * Função inteligente para pegar o próximo número.
- * Tenta ler do contador centralizado. Se não existir, calcula baseado no array local (migração).
- */
 async function obterProximoNumero(tipo) {
     const campo = tipo === 'orcamento' ? 'ultimoOrcamento' : 'ultimoPedido';
     let proximo = 1;
@@ -122,15 +118,12 @@ async function obterProximoNumero(tipo) {
         const docSnap = await getDoc(contadoresRef);
         
         if (docSnap.exists()) {
-            // Cenário Ideal: O contador existe
             const data = docSnap.data();
             proximo = (data[campo] || 0) + 1;
         } else {
-            // Cenário Migração: Contador não existe, calcula baseado no que já temos carregado
             console.log("Criando contador centralizado pela primeira vez...");
             let max = 0;
-            const lista = tipo === 'orcamento' ? orcamentos : []; // Pedidos já estão em outro modulo, mas podemos estimar
-            // Nota: Para pedidos, se for a primeira vez, pode começar do 1 ou precisaríamos ler do array de pedidosTemp
+            const lista = tipo === 'orcamento' ? orcamentos : []; 
             
             lista.forEach(item => {
                 const num = parseInt(item.numero.split('/')[0]);
@@ -139,12 +132,10 @@ async function obterProximoNumero(tipo) {
             proximo = max + 1;
         }
 
-        // Atualiza o contador no banco para o novo número
         await setDoc(contadoresRef, { [campo]: proximo }, { merge: true });
         
     } catch (e) {
         console.error("Erro ao obter contador:", e);
-        // Fallback de emergência: usa timestamp para não travar
         proximo = Date.now().toString().slice(-4); 
     }
 
@@ -168,7 +159,7 @@ async function salvarDados(dados, tipo) {
     } catch (error) {
         console.error("Erro ao salvar:", error);
         alert("Erro ao salvar no banco de dados.");
-        throw error; // Propaga erro para parar execução se necessário
+        throw error;
     }
 }
 
@@ -291,7 +282,6 @@ function atualizarTotais() {
 }
 
 async function gerarOrcamento() {
-    // 1. Obter número centralizado
     const novoNumero = await obterProximoNumero('orcamento');
 
     const dados = {
@@ -325,7 +315,7 @@ async function gerarOrcamento() {
     });
 
     await salvarDados(dados, 'orcamento');
-    orcamentos.unshift(dados); // Adiciona no início da lista local
+    orcamentos.unshift(dados); 
     
     document.getElementById("orcamento").reset();
     limparCamposMoeda();
@@ -335,14 +325,12 @@ async function gerarOrcamento() {
     mostrarPagina('orcamentos-gerados');
 }
 
-// === FUNÇÃO REINTEGRADA PARA CORREÇÃO DE ERRO ===
 function editarOrcamento(id) {
     const orc = orcamentos.find(o => o.id === id);
     if (!orc) return;
 
     orcamentoEditando = id;
     
-    // Preenche campos do formulário
     document.getElementById("dataOrcamento").value = orc.dataOrcamento;
     document.getElementById("dataValidade").value = orc.dataValidade;
     document.getElementById("cliente").value = orc.cliente;
@@ -353,19 +341,16 @@ function editarOrcamento(id) {
     document.getElementById("clienteEmail").value = orc.email || "";
     document.getElementById("cores").value = orc.cores;
     
-    // Checkboxes de pagamento
     const pagamentos = Array.isArray(orc.pagamento) ? orc.pagamento : [orc.pagamento];
     document.querySelectorAll('input[name="pagamento"]').forEach(cb => {
         cb.checked = pagamentos.includes(cb.value);
     });
 
-    // Campos monetários com Utils
     document.getElementById("valorFrete").value = utils.formatarMoeda(orc.valorFrete);
     document.getElementById("valorOrcamento").value = utils.formatarMoeda(orc.valorOrcamento);
     document.getElementById("total").value = utils.formatarMoeda(orc.total);
     document.getElementById("observacoes").value = orc.observacoes;
 
-    // Recria tabela de produtos
     const tbody = document.querySelector("#tabelaProdutos tbody");
     tbody.innerHTML = '';
     
@@ -382,12 +367,9 @@ function editarOrcamento(id) {
         });
     }
 
-    // Muda estado da interface
     mostrarPagina('form-orcamento');
     document.getElementById("btnGerarOrcamento").style.display = "none";
     document.getElementById("btnAtualizarOrcamento").style.display = "inline-block";
-    
-    // Rola para o topo
     document.querySelector('.mobile-container').scrollIntoView({ behavior: 'smooth' });
 }
 
@@ -455,10 +437,6 @@ function mostrarOrcamentosGerados() {
                dataFormatada.includes(termo);
     });
 
-    // Ordenação já vem do Firebase, mas garantimos aqui
-    // filtrados.sort((a,b) => b.numero.localeCompare(a.numero)); // Se necessário
-
-    // Paginação
     const totalItens = filtrados.length;
     const totalPaginas = Math.ceil(totalItens / ITENS_POR_PAGINA) || 1;
 
@@ -519,7 +497,7 @@ function mostrarOrcamentosGerados() {
 }
 
 // ==========================================================================
-// 5. PONTE VENDAS -> PRODUÇÃO (GERAR PEDIDO)
+// 5. PONTE VENDAS -> PRODUÇÃO (GERAR PEDIDO COM INTELIGÊNCIA FINANCEIRA)
 // ==========================================================================
 
 async function gerarPedido(orcamentoId) {
@@ -527,6 +505,66 @@ async function gerarPedido(orcamentoId) {
     if (!orc) return;
 
     if(!confirm(`Gerar pedido para o cliente ${orc.cliente}?`)) return;
+
+    // --- BLOCO DE INTELIGÊNCIA FINANCEIRA (PRIORIDADE 1) ---
+    // Variáveis acumuladoras para o relatório financeiro
+    let custosMateriaisComIndiretos = 0;
+    let maoDeObraAcumulada = 0;
+    let produtosSemPrecificacao = 0;
+
+    try {
+        // Carrega todas as precificações para cruzar dados
+        // Nota: Em uma base muito grande, ideal seria query específica, mas para uso atual, carregar tudo é mais performático que N queries.
+        const precSnap = await getDocs(collection(db, "precificacoes-geradas"));
+        const basePrecificacao = [];
+        precSnap.forEach(d => basePrecificacao.push(d.data()));
+
+        // Itera sobre cada produto do orçamento
+        orc.produtos.forEach(itemOrc => {
+            const nomeItem = itemOrc.descricao.trim();
+            // Tenta encontrar a precificação pelo nome exato (case-insensitive seria melhor, mas mantendo padrão do sistema)
+            const infoFinanceira = basePrecificacao.find(p => p.produto === nomeItem);
+
+            if (infoFinanceira) {
+                const qtd = parseFloat(itemOrc.quantidade) || 1;
+                
+                // Custo MO Unitário * Qtd
+                maoDeObraAcumulada += (infoFinanceira.totalMaoDeObra || 0) * qtd;
+                
+                // Custos Totais = (Materiais + Indiretos) * Qtd
+                const mat = infoFinanceira.custoMateriais || 0;
+                const ind = infoFinanceira.custoIndiretoTotal || 0;
+                custosMateriaisComIndiretos += (mat + ind) * qtd;
+            } else {
+                produtosSemPrecificacao++;
+            }
+        });
+
+    } catch (err) {
+        console.error("Erro na inteligência financeira:", err);
+        alert("Aviso: Houve um erro ao calcular os custos automáticos. Os valores financeiros podem estar zerados.");
+    }
+
+    // Cálculo do Lucro Real (Baseado no valor negociado no orçamento)
+    // Lucro = Valor Total dos Produtos (sem frete) - Custos Totais - Mão de Obra
+    const lucroRealCalculado = orc.valorOrcamento - custosMateriaisComIndiretos - maoDeObraAcumulada;
+
+    // --- ALERTA DE UX (PRIORIDADE 2 & 3 - Feedback ao Usuário) ---
+    let mensagemConfirmacao = `Pedido calculado com sucesso!\n\n` +
+        `Resumo Financeiro Estimado:\n` +
+        `💰 Receita Produtos: ${utils.formatarMoeda(orc.valorOrcamento)}\n` +
+        `🔴 Custos (Mat + Fixos): ${utils.formatarMoeda(custosMateriaisComIndiretos)}\n` +
+        `🔵 Seu Salário: ${utils.formatarMoeda(maoDeObraAcumulada)}\n` +
+        `🟢 Lucro Empresa: ${utils.formatarMoeda(lucroRealCalculado)}`;
+
+    if (produtosSemPrecificacao > 0) {
+        mensagemConfirmacao += `\n\n⚠️ ATENÇÃO: ${produtosSemPrecificacao} item(ns) não possuem precificação cadastrada. ` +
+        `O custo deles foi considerado R$ 0,00, o que pode inflar seu lucro no relatório. ` +
+        `Recomendamos editar o pedido depois para ajustar.`;
+    }
+
+    alert(mensagemConfirmacao);
+    // --- FIM BLOCO FINANCEIRO ---
 
     // 1. Obter número centralizado de PEDIDO
     const novoNumeroPedido = await obterProximoNumero('pedido');
@@ -551,10 +589,11 @@ async function gerarPedido(orcamentoId) {
         restante: orc.total,
         produtos: orc.produtos,
         tipo: 'pedido',
-        // Campos financeiros iniciam zerados (editados depois)
-        custoMaoDeObra: 0,
-        margemLucro: 0,
-        custosTotais: 0
+        
+        // CAMPOS PREENCHIDOS PELA INTELIGÊNCIA FINANCEIRA
+        custoMaoDeObra: maoDeObraAcumulada,
+        margemLucro: lucroRealCalculado,
+        custosTotais: custosMateriaisComIndiretos
     };
 
     await salvarDados(pedido, 'pedido');
@@ -566,9 +605,8 @@ async function gerarPedido(orcamentoId) {
 
     // Atualiza UI
     adicionarPedidoNaLista(pedido);
-    alert(`Pedido ${pedido.numero} gerado com sucesso!`);
     
-    mostrarOrcamentosGerados(); // Atualiza botão na tabela
+    mostrarOrcamentosGerados(); 
     
     // Redireciona para aba de Pedidos
     const tabPedidos = document.querySelector('a[data-pagina="lista-pedidos"]');
@@ -581,7 +619,6 @@ function visualizarImpressao(orcamento) {
     const dtVal = utils.formatarDataBR(orcamento.dataValidade);
     const pagamento = Array.isArray(orcamento.pagamento) ? orcamento.pagamento.join(', ') : orcamento.pagamento;
     
-    // Caminho da logo
     const path = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
     const logoSrc = `${window.location.origin}${path}/assets/images/logo_perola_rara.png`;
 
