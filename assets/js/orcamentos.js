@@ -3,7 +3,7 @@
 import { db, auth } from './firebase-config.js';
 import { 
     collection, addDoc, getDocs, doc, setDoc, updateDoc, 
-    query, orderBy, getDoc 
+    query, orderBy, getDoc, runTransaction // <--- Adicionado runTransaction
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 
 // IMPORTAÇÕES DE MÓDULOS E UTILITÁRIOS
@@ -107,42 +107,83 @@ async function carregarDados() {
 }
 
 // ==========================================================================
-// 2. LÓGICA DE CONTADORES E SALVAMENTO
+// 2. LÓGICA DE TRANSAÇÃO SEGURA (BLINDAGEM) & SALVAMENTO
 // ==========================================================================
 
-async function obterProximoNumero(tipo) {
-    const campo = tipo === 'orcamento' ? 'ultimoOrcamento' : 'ultimoPedido';
-    let proximo = 1;
+/**
+ * Cria um documento (Orçamento ou Pedido) garantindo unicidade numérica via Transação Atômica.
+ * @param {string} tipo - 'orcamento' ou 'pedido'
+ * @param {object} dadosBase - Objeto com os dados do formulário
+ * @param {string|null} idOrcamentoOriginal - Se for pedido vindo de orç, o ID para vincular
+ */
+async function criarDocumentoSeguro(tipo, dadosBase, idOrcamentoOriginal = null) {
+    const user = auth.currentUser;
+    if (!user) throw new Error("Sessão expirada.");
+
+    // Cria uma referência de documento nova (apenas para obter o ID gerado automaticamente)
+    const novaDocRef = doc(orcamentosPedidosRef); 
+    const campoContador = tipo === 'orcamento' ? 'ultimoOrcamento' : 'ultimoPedido';
 
     try {
-        const docSnap = await getDoc(contadoresRef);
-        
-        if (docSnap.exists()) {
-            const data = docSnap.data();
-            proximo = (data[campo] || 0) + 1;
-        } else {
-            console.log("Criando contador centralizado pela primeira vez...");
-            let max = 0;
-            const lista = tipo === 'orcamento' ? orcamentos : []; 
+        // Executa tudo ou nada (Atomicidade)
+        await runTransaction(db, async (transaction) => {
+            // 1. LEITURA (Deve vir antes de qualquer escrita)
+            const contadorDoc = await transaction.get(contadoresRef);
             
-            lista.forEach(item => {
-                const num = parseInt(item.numero.split('/')[0]);
-                if(num > max) max = num;
-            });
-            proximo = max + 1;
-        }
+            // 2. CÁLCULO DO NÚMERO
+            let proximoNumero = 1;
+            if (contadorDoc.exists()) {
+                const dataContador = contadorDoc.data();
+                proximoNumero = (dataContador[campoContador] || 0) + 1;
+            }
 
-        await setDoc(contadoresRef, { [campo]: proximo }, { merge: true });
-        
+            const anoAtual = new Date().getFullYear();
+            const numeroFormatado = `${String(proximoNumero).padStart(4, '0')}/${anoAtual}`;
+
+            // 3. PREPARAÇÃO DO OBJETO FINAL
+            const dadosFinais = {
+                ...dadosBase,
+                id: novaDocRef.id,
+                numero: numeroFormatado,
+                tipo: tipo,
+                criadoEm: new Date().toISOString(),
+                criadoPor: user.email
+            };
+
+            // 4. ESCRITAS (Batch)
+            
+            // A. Atualiza contador
+            transaction.set(contadoresRef, { [campoContador]: proximoNumero }, { merge: true });
+            
+            // B. Salva o novo documento
+            transaction.set(novaDocRef, dadosFinais);
+
+            // C. Se for conversão, atualiza o orçamento original
+            if (tipo === 'pedido' && idOrcamentoOriginal) {
+                const orcamentoRef = doc(db, "Orcamento-Pedido", idOrcamentoOriginal);
+                transaction.update(orcamentoRef, { 
+                    pedidoGerado: true, 
+                    numeroPedido: numeroFormatado 
+                });
+            }
+
+            // Atualiza o objeto local (referência) para uso na UI
+            dadosBase.numero = numeroFormatado;
+            dadosBase.id = novaDocRef.id;
+        });
+
+        return dadosBase; // Retorna com o número preenchido
+
     } catch (e) {
-        console.error("Erro ao obter contador:", e);
-        proximo = Date.now().toString().slice(-4); 
+        console.error("Erro na transação:", e);
+        throw e;
     }
-
-    const ano = new Date().getFullYear();
-    return `${String(proximo).padStart(4, '0')}/${ano}`;
 }
 
+/**
+ * Função para ATUALIZAÇÕES (Edição).
+ * Para CRIAÇÃO de novos itens, usar criarDocumentoSeguro.
+ */
 async function salvarDados(dados, tipo) {
     if (!auth.currentUser) {
         alert("Sessão expirada.");
@@ -153,6 +194,7 @@ async function salvarDados(dados, tipo) {
             const docRef = doc(orcamentosPedidosRef, dados.id);
             await setDoc(docRef, dados, { merge: true });
         } else {
+            // Fallback apenas se chamado incorretamente, mas o fluxo principal usa Transação
             const docRef = await addDoc(orcamentosPedidosRef, { ...dados, tipo });
             dados.id = docRef.id;
         }
@@ -281,11 +323,17 @@ function atualizarTotais() {
     document.getElementById("total").value = utils.formatarMoeda(totalProd + frete);
 }
 
+// --- FUNÇÃO ATUALIZADA COM SEGURANÇA E UX ---
 async function gerarOrcamento() {
-    const novoNumero = await obterProximoNumero('orcamento');
+    // 1. Bloqueio de UX
+    const btn = document.getElementById("btnGerarOrcamento");
+    const txtOriginal = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = "Processando...";
+    btn.style.cursor = "wait";
 
     const dados = {
-        numero: novoNumero,
+        // numero: REMOVIDO (Será gerado na transação)
         dataOrcamento: document.getElementById("dataOrcamento").value,
         dataValidade: document.getElementById("dataValidade").value,
         cliente: document.getElementById("cliente").value,
@@ -302,7 +350,7 @@ async function gerarOrcamento() {
         observacoes: document.getElementById("observacoes").value,
         produtos: [],
         pedidoGerado: false,
-        tipo: 'orcamento'
+        // tipo: 'orcamento' (Será injetado na transação)
     };
 
     document.querySelectorAll("#tabelaProdutos tbody tr").forEach(row => {
@@ -314,15 +362,27 @@ async function gerarOrcamento() {
         });
     });
 
-    await salvarDados(dados, 'orcamento');
-    orcamentos.unshift(dados); 
-    
-    document.getElementById("orcamento").reset();
-    limparCamposMoeda();
-    document.querySelector("#tabelaProdutos tbody").innerHTML = "";
-    
-    alert(`Orçamento ${novoNumero} gerado com sucesso!`);
-    mostrarPagina('orcamentos-gerados');
+    try {
+        // 2. Chamada Segura (Transação)
+        const resultado = await criarDocumentoSeguro('orcamento', dados);
+
+        orcamentos.unshift(resultado); 
+        
+        document.getElementById("orcamento").reset();
+        limparCamposMoeda();
+        document.querySelector("#tabelaProdutos tbody").innerHTML = "";
+        
+        alert(`Orçamento ${resultado.numero} gerado com sucesso!`);
+        mostrarPagina('orcamentos-gerados');
+
+    } catch (error) {
+        alert("Erro ao gerar orçamento. Tente novamente.");
+    } finally {
+        // 3. Liberação de UX
+        btn.disabled = false;
+        btn.textContent = txtOriginal;
+        btn.style.cursor = "pointer";
+    }
 }
 
 function editarOrcamento(id) {
@@ -407,6 +467,7 @@ async function atualizarOrcamento() {
         });
     });
 
+    // Usa função simples para update
     await salvarDados(dados, 'orcamento');
     orcamentos[index] = dados;
     
@@ -478,7 +539,7 @@ function mostrarOrcamentosGerados() {
                 
                 const btnGerar = document.createElement('button');
                 btnGerar.textContent = "Gerar Pedido";
-                btnGerar.onclick = () => gerarPedido(orc.id);
+                btnGerar.onclick = () => gerarPedido(orc.id); // Este acionará a função atualizada
                 cellAcoes.appendChild(btnGerar);
             } else {
                 const span = document.createElement('span');
@@ -500,38 +561,35 @@ function mostrarOrcamentosGerados() {
 // 5. PONTE VENDAS -> PRODUÇÃO (GERAR PEDIDO COM INTELIGÊNCIA FINANCEIRA)
 // ==========================================================================
 
+// --- FUNÇÃO ATUALIZADA COM SEGURANÇA E UX ---
 async function gerarPedido(orcamentoId) {
     const orc = orcamentos.find(o => o.id === orcamentoId);
     if (!orc) return;
 
     if(!confirm(`Gerar pedido para o cliente ${orc.cliente}?`)) return;
 
-    // --- BLOCO DE INTELIGÊNCIA FINANCEIRA (PRIORIDADE 1) ---
-    // Variáveis acumuladoras para o relatório financeiro
+    // 1. UX: Bloqueio para evitar clique duplo
+    // Como não há um botão direto no DOM (é criado dinamicamente na tabela), 
+    // a melhor proteção é o confirm() e a transação, mas podemos mudar cursor global
+    document.body.style.cursor = "wait";
+
+    // --- BLOCO DE INTELIGÊNCIA FINANCEIRA (MANTIDO) ---
     let custosMateriaisComIndiretos = 0;
     let maoDeObraAcumulada = 0;
     let produtosSemPrecificacao = 0;
 
     try {
-        // Carrega todas as precificações para cruzar dados
-        // Nota: Em uma base muito grande, ideal seria query específica, mas para uso atual, carregar tudo é mais performático que N queries.
         const precSnap = await getDocs(collection(db, "precificacoes-geradas"));
         const basePrecificacao = [];
         precSnap.forEach(d => basePrecificacao.push(d.data()));
 
-        // Itera sobre cada produto do orçamento
         orc.produtos.forEach(itemOrc => {
             const nomeItem = itemOrc.descricao.trim();
-            // Tenta encontrar a precificação pelo nome exato (case-insensitive seria melhor, mas mantendo padrão do sistema)
             const infoFinanceira = basePrecificacao.find(p => p.produto === nomeItem);
 
             if (infoFinanceira) {
                 const qtd = parseFloat(itemOrc.quantidade) || 1;
-                
-                // Custo MO Unitário * Qtd
                 maoDeObraAcumulada += (infoFinanceira.totalMaoDeObra || 0) * qtd;
-                
-                // Custos Totais = (Materiais + Indiretos) * Qtd
                 const mat = infoFinanceira.custoMateriais || 0;
                 const ind = infoFinanceira.custoIndiretoTotal || 0;
                 custosMateriaisComIndiretos += (mat + ind) * qtd;
@@ -542,14 +600,10 @@ async function gerarPedido(orcamentoId) {
 
     } catch (err) {
         console.error("Erro na inteligência financeira:", err);
-        alert("Aviso: Houve um erro ao calcular os custos automáticos. Os valores financeiros podem estar zerados.");
     }
 
-    // Cálculo do Lucro Real (Baseado no valor negociado no orçamento)
-    // Lucro = Valor Total dos Produtos (sem frete) - Custos Totais - Mão de Obra
     const lucroRealCalculado = orc.valorOrcamento - custosMateriaisComIndiretos - maoDeObraAcumulada;
 
-    // --- ALERTA DE UX (PRIORIDADE 2 & 3 - Feedback ao Usuário) ---
     let mensagemConfirmacao = `Pedido calculado com sucesso!\n\n` +
         `Resumo Financeiro Estimado:\n` +
         `💰 Receita Produtos: ${utils.formatarMoeda(orc.valorOrcamento)}\n` +
@@ -558,19 +612,14 @@ async function gerarPedido(orcamentoId) {
         `🟢 Lucro Empresa: ${utils.formatarMoeda(lucroRealCalculado)}`;
 
     if (produtosSemPrecificacao > 0) {
-        mensagemConfirmacao += `\n\n⚠️ ATENÇÃO: ${produtosSemPrecificacao} item(ns) não possuem precificação cadastrada. ` +
-        `O custo deles foi considerado R$ 0,00, o que pode inflar seu lucro no relatório. ` +
-        `Recomendamos editar o pedido depois para ajustar.`;
+        mensagemConfirmacao += `\n\n⚠️ ATENÇÃO: ${produtosSemPrecificacao} item(ns) não possuem precificação cadastrada.`;
     }
 
     alert(mensagemConfirmacao);
     // --- FIM BLOCO FINANCEIRO ---
 
-    // 1. Obter número centralizado de PEDIDO
-    const novoNumeroPedido = await obterProximoNumero('pedido');
-
     const pedido = {
-        numero: novoNumeroPedido,
+        // numero: REMOVIDO (Transação cuidará disso)
         dataPedido: new Date().toISOString().split('T')[0],
         dataEntrega: orc.dataValidade,
         cliente: orc.cliente,
@@ -588,29 +637,35 @@ async function gerarPedido(orcamentoId) {
         entrada: 0,
         restante: orc.total,
         produtos: orc.produtos,
-        tipo: 'pedido',
+        // tipo: 'pedido' (Injetado na Transação)
         
-        // CAMPOS PREENCHIDOS PELA INTELIGÊNCIA FINANCEIRA
         custoMaoDeObra: maoDeObraAcumulada,
         margemLucro: lucroRealCalculado,
         custosTotais: custosMateriaisComIndiretos
     };
 
-    await salvarDados(pedido, 'pedido');
-    
-    // Atualiza o orçamento para marcar como gerado
-    orc.pedidoGerado = true;
-    orc.numeroPedido = pedido.numero;
-    await salvarDados(orc, 'orcamento');
+    try {
+        // 2. Chamada Segura (Transação) vinculando ao Orçamento Original
+        const resultado = await criarDocumentoSeguro('pedido', pedido, orcamentoId);
 
-    // Atualiza UI
-    adicionarPedidoNaLista(pedido);
-    
-    mostrarOrcamentosGerados(); 
-    
-    // Redireciona para aba de Pedidos
-    const tabPedidos = document.querySelector('a[data-pagina="lista-pedidos"]');
-    if(tabPedidos) tabPedidos.click();
+        // Atualiza orçamento localmente
+        orc.pedidoGerado = true;
+        orc.numeroPedido = resultado.numero;
+
+        adicionarPedidoNaLista(resultado);
+        mostrarOrcamentosGerados(); 
+        
+        const tabPedidos = document.querySelector('a[data-pagina="lista-pedidos"]');
+        if(tabPedidos) tabPedidos.click();
+
+        alert(`Pedido ${resultado.numero} gerado com sucesso!`);
+
+    } catch (error) {
+        alert("Erro ao gerar pedido. Verifique sua conexão.");
+    } finally {
+        // 3. UX: Restaura cursor
+        document.body.style.cursor = "default";
+    }
 }
 
 function visualizarImpressao(orcamento) {
