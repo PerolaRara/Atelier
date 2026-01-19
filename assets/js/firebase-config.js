@@ -18,12 +18,11 @@ import {
     query, 
     where, 
     orderBy,
-    // Novos imports para v1.2.0 (Transações e Manipulação Direta)
     runTransaction, 
     setDoc, 
-    getDoc 
+    getDoc,
+    writeBatch // [CORREÇÃO PRIORIDADE 1] Importação adicionada para uso no Estoque
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
-// import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-analytics.js"; // Opcional
 
 const firebaseConfig = {
   apiKey: "AIzaSyC4xXSGw91MPLbC3ikCsdJ4pkNu1GZTqKQ",
@@ -35,10 +34,20 @@ const firebaseConfig = {
   measurementId: "G-BLJ0S9GZLE"
 };
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-// const analytics = getAnalytics(app);
+// Declaração das variáveis
+let app, auth, db;
+
+// [MELHORIA PRIORIDADE 3] Blindagem de Inicialização com Aviso Visual
+try {
+    app = initializeApp(firebaseConfig);
+    auth = getAuth(app);
+    db = getFirestore(app);
+    console.log("Firebase Core: Inicializado com sucesso."); // Health Check
+} catch (error) {
+    console.error("FATAL: Erro ao inicializar Firebase.", error);
+    // Aviso visual para o usuário não ficar com tela branca eterna em caso de falha grave de config
+    alert("Erro crítico de sistema: Falha na conexão com o banco de dados. Por favor, verifique sua internet e recarregue a página.");
+}
 
 // Exportamos as instâncias e funções utilitárias do Firestore
 export { 
@@ -55,7 +64,8 @@ export {
     query, 
     where, 
     orderBy,
-    runTransaction, // Exportado para uso em estoque.js
-    setDoc,         // Exportado para uso em estoque.js
-    getDoc          // Exportado para uso em estoque.js
+    runTransaction, 
+    setDoc,         
+    getDoc,
+    writeBatch // [CORREÇÃO PRIORIDADE 1] Exportação adicionada para corrigir o SyntaxError
 };
