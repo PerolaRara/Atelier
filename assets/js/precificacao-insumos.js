@@ -691,7 +691,7 @@ export function atualizarTabelaCustosIndiretos() {
         return matchBusca && temValor; 
     });
 
-    // 2. Ordenação (Alfabética)
+    // 2. Ordenação (Alfabética A-Z) - Garantida
     filtrados.sort((a,b) => a.descricao.localeCompare(b.descricao));
 
     // 3. Paginação
