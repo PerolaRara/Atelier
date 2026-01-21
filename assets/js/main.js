@@ -9,6 +9,8 @@ import { initPrecificacao } from './precificacao.js';
 import { initChangelog } from './changelog.js';
 // Importação do novo módulo de Estoque
 import { initEstoque } from './estoque.js';
+// Importação de Utils para setup global da busca
+import { utils } from './utils.js';
 
 // 2. REFERÊNCIAS AOS ELEMENTOS DO DOM (Telas)
 const screens = {
@@ -47,6 +49,18 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Inicializar widget de versão
     initChangelog();
+
+    // --- NOVO: SETUP GLOBAL DE UX PARA BUSCA (Botão Limpar) ---
+    // Monitora todos os inputs de busca do sistema para exibir/ocultar o X
+    const searchInputs = document.querySelectorAll('.search-input');
+    searchInputs.forEach(input => {
+        // Evento ao digitar: atualiza visibilidade do X
+        input.addEventListener('input', () => utils.alternarBotaoLimpar(input));
+        
+        // Checagem inicial: caso o navegador preencha o campo automaticamente
+        utils.alternarBotaoLimpar(input);
+    });
+    // ----------------------------------------------------------
 
     // Controle Inicial da Splash Screen
     // Garantimos que ela comece OCULTA para não bloquear a tela de login.
