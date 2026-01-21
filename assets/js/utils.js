@@ -77,5 +77,54 @@ export const utils = {
         
         // Atualiza o input com o prefixo
         input.value = 'R$ ' + valor;
+    },
+
+    // --- NOVAS FUNÇÕES: UX DE BUSCA E ORDENAÇÃO (v1.2.1) ---
+
+    // 5. LIMPAR BUSCA (Vinculado ao botão X)
+    limparBusca: (idInput) => {
+        const input = document.getElementById(idInput);
+        if (input) {
+            input.value = '';
+            input.focus();
+            
+            // Importante: Dispara manualmente o evento 'input'.
+            // Isso faz com que os listeners "debounce" nos módulos (orcamentos.js, etc.)
+            // percebam a mudança e recarreguem a lista original (sem filtro).
+            input.dispatchEvent(new Event('input'));
+            
+            // Atualiza estado visual do botão (esconde o X)
+            utils.alternarBotaoLimpar(input);
+        }
+    },
+
+    // 6. CONTROLE VISUAL DO BOTÃO "X"
+    alternarBotaoLimpar: (input) => {
+        // Procura o botão dentro do wrapper pai (definido no HTML/CSS)
+        const wrapper = input.parentElement;
+        if (wrapper) {
+            const btn = wrapper.querySelector('.btn-clear-search');
+            if (btn) {
+                // Mostra se tiver texto, esconde se vazio
+                btn.style.display = input.value.trim().length > 0 ? 'flex' : 'none';
+            }
+        }
+    },
+
+    // 7. HELPER GENÉRICO DE ORDENAÇÃO
+    ordenarDados: (array, chave, ordem = 'asc') => {
+        return array.sort((a, b) => {
+            // Proteção e tratamento para strings (Case Insensitive)
+            const valA = (a[chave] !== undefined && a[chave] !== null) ? String(a[chave]).toLowerCase() : '';
+            const valB = (b[chave] !== undefined && b[chave] !== null) ? String(b[chave]).toLowerCase() : '';
+
+            if (valA < valB) return ordem === 'asc' ? -1 : 1;
+            if (valA > valB) return ordem === 'asc' ? 1 : -1;
+            return 0;
+        });
     }
 };
+
+// Expor função de limpar busca para o escopo global (window)
+// Isso é necessário para que o atributo onclick="limparBusca(...)" no HTML funcione.
+window.limparBusca = utils.limparBusca;
