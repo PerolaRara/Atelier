@@ -480,6 +480,21 @@ async function atualizarOrcamento() {
     mostrarPagina('orcamentos-gerados');
 }
 
+// --- VARIÁVEIS DE CONTROLE DE ORDENAÇÃO ---
+let ordemAtualOrc = 'asc'; 
+let colunaOrdenacaoOrc = ''; 
+
+// Função exposta para o HTML chamar no onclick do cabeçalho
+window.ordenarOrcamentos = (coluna) => {
+    if (colunaOrdenacaoOrc === coluna) {
+        ordemAtualOrc = ordemAtualOrc === 'asc' ? 'desc' : 'asc';
+    } else {
+        colunaOrdenacaoOrc = coluna;
+        ordemAtualOrc = 'asc';
+    }
+    mostrarOrcamentosGerados();
+};
+
 function mostrarOrcamentosGerados() {
     const tbody = document.querySelector("#tabela-orcamentos tbody");
     const btnAnt = document.getElementById("btn-ant-orc");
@@ -490,13 +505,27 @@ function mostrarOrcamentosGerados() {
     tbody.innerHTML = '';
 
     const termo = termoBuscaOrc.trim();
-    const filtrados = orcamentos.filter(orc => {
+    let filtrados = orcamentos.filter(orc => {
         if (!termo) return true;
         const dataFormatada = utils.formatarDataBR(orc.dataOrcamento);
         return orc.cliente.toLowerCase().includes(termo) || 
                orc.numero.toLowerCase().includes(termo) || 
                dataFormatada.includes(termo);
     });
+
+    // LÓGICA DE ORDENAÇÃO
+    if (colunaOrdenacaoOrc === 'cliente') {
+        filtrados.sort((a, b) => {
+            const valA = (a.cliente || '').toLowerCase();
+            const valB = (b.cliente || '').toLowerCase();
+            return ordemAtualOrc === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+        });
+        
+        // Remove classes antigas e adiciona a atual para feedback visual (opcional)
+        document.querySelectorAll('th.sortable').forEach(th => th.classList.remove('asc', 'desc'));
+        const thAtual = document.querySelector(`th[onclick*="ordenarOrcamentos('${colunaOrdenacaoOrc}')"]`);
+        if(thAtual) thAtual.classList.add(ordemAtualOrc);
+    }
 
     const totalItens = filtrados.length;
     const totalPaginas = Math.ceil(totalItens / ITENS_POR_PAGINA) || 1;
@@ -539,7 +568,7 @@ function mostrarOrcamentosGerados() {
                 
                 const btnGerar = document.createElement('button');
                 btnGerar.textContent = "Gerar Pedido";
-                btnGerar.onclick = () => gerarPedido(orc.id); // Este acionará a função atualizada
+                btnGerar.onclick = () => gerarPedido(orc.id); 
                 cellAcoes.appendChild(btnGerar);
             } else {
                 const span = document.createElement('span');
@@ -551,6 +580,11 @@ function mostrarOrcamentosGerados() {
             }
         });
     }
+
+    if (infoPag) infoPag.textContent = `Página ${pagAtualOrc} de ${totalPaginas}`;
+    if (btnAnt) btnAnt.disabled = (pagAtualOrc === 1);
+    if (btnProx) btnProx.disabled = (pagAtualOrc === totalPaginas);
+}
 
     if (infoPag) infoPag.textContent = `Página ${pagAtualOrc} de ${totalPaginas}`;
     if (btnAnt) btnAnt.disabled = (pagAtualOrc === 1);
