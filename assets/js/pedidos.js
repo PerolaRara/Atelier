@@ -123,6 +123,21 @@ function initListenersPedidos() {
 // 3. LISTAGEM (UI)
 // ==========================================================================
 
+// --- VARIÁVEIS DE CONTROLE DE ORDENAÇÃO ---
+let ordemAtualPed = 'asc';
+let colunaOrdenacaoPed = '';
+
+// Função exposta para o HTML chamar no onclick do cabeçalho
+window.ordenarPedidos = (coluna) => {
+    if (colunaOrdenacaoPed === coluna) {
+        ordemAtualPed = ordemAtualPed === 'asc' ? 'desc' : 'asc';
+    } else {
+        colunaOrdenacaoPed = coluna;
+        ordemAtualPed = 'asc';
+    }
+    mostrarPedidosRealizados();
+};
+
 function mostrarPedidosRealizados() {
     const tbody = document.querySelector("#tabela-pedidos tbody");
     const btnAnt = document.getElementById("btn-ant-ped");
@@ -134,7 +149,7 @@ function mostrarPedidosRealizados() {
 
     // 1. Filtragem
     const termo = termoBuscaPed.trim();
-    const filtrados = pedidos.filter(ped => {
+    let filtrados = pedidos.filter(ped => {
         if (!termo) return true;
         const dataFormatada = utils.formatarDataBR(ped.dataPedido);
         const matchCliente = ped.cliente.toLowerCase().includes(termo);
@@ -143,8 +158,24 @@ function mostrarPedidosRealizados() {
         return matchCliente || matchNumero || matchData;
     });
 
-    // 2. Ordenação (Decrescente)
-    filtrados.sort((a,b) => b.numero.localeCompare(a.numero));
+    // 2. LÓGICA DE ORDENAÇÃO
+    if (colunaOrdenacaoPed === 'cliente') {
+        // Ordena por cliente alfabeticamente
+        filtrados.sort((a,b) => {
+            const valA = (a.cliente || '').toLowerCase();
+            const valB = (b.cliente || '').toLowerCase();
+            return ordemAtualPed === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+        });
+        
+        // Remove classes antigas e adiciona a atual (feedback visual opcional)
+        document.querySelectorAll('th.sortable').forEach(th => th.classList.remove('asc', 'desc'));
+        const thAtual = document.querySelector(`th[onclick*="ordenarPedidos('${colunaOrdenacaoPed}')"]`);
+        if(thAtual) thAtual.classList.add(ordemAtualPed);
+
+    } else {
+        // Padrão: Ordenação (Decrescente) por Número
+        filtrados.sort((a,b) => b.numero.localeCompare(a.numero));
+    }
 
     // 3. Paginação
     const totalItens = filtrados.length;
@@ -165,10 +196,7 @@ function mostrarPedidosRealizados() {
             const row = tbody.insertRow();
             
             // PRIORIDADE 3: ALERTA DE DADOS INCOMPLETOS
-            // Verifica se os campos financeiros cruciais estão zerados
             const dadosZerados = (!p.custoMaoDeObra && !p.margemLucro && !p.custosTotais);
-            
-            // Cria o ícone de alerta se necessário
             const alertaHtml = dadosZerados 
                 ? `<span style="margin-left:8px; cursor:help; font-size:1.1em;" title="⚠️ Atenção: Dados financeiros (Custos/Lucro) zerados. Edite este pedido para corrigir o relatório.">⚠️</span>` 
                 : '';
