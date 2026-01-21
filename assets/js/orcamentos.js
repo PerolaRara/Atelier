@@ -3,7 +3,7 @@
 import { db, auth } from './firebase-config.js';
 import { 
     collection, addDoc, getDocs, doc, setDoc, updateDoc, 
-    query, orderBy, getDoc, runTransaction // <--- Adicionado runTransaction
+    query, orderBy, getDoc, runTransaction 
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 
 // IMPORTAÇÕES DE MÓDULOS E UTILITÁRIOS
@@ -25,6 +25,10 @@ const ITENS_POR_PAGINA = 10;
 let pagAtualOrc = 1;
 let termoBuscaOrc = "";
 
+// Variáveis de Ordenação (NOVO)
+let colunaOrdenacaoOrc = ""; // Qual coluna está sendo ordenada ('cliente' ou vazio)
+let ordemAtualOrc = "asc";   // Direção: 'asc' (A-Z) ou 'desc' (Z-A)
+
 // ==========================================================================
 // 1. INICIALIZAÇÃO E CARREGAMENTO
 // ==========================================================================
@@ -39,6 +43,9 @@ export async function initOrcamentos() {
     window.gerarPedido = gerarPedido; 
     window.gerarOrcamento = gerarOrcamento;
     window.atualizarOrcamento = atualizarOrcamento;
+    
+    // EXPOR FUNÇÃO DE ORDENAÇÃO (NOVO)
+    window.ordenarTabelaOrcamentos = ordenarTabelaOrcamentos;
     
     // EXPOR A MÁSCARA DE MOEDA DO UTILS PARA O HTML
     window.formatarEntradaMoeda = (input) => utils.aplicarMascaraMoeda(input);
@@ -480,20 +487,25 @@ async function atualizarOrcamento() {
     mostrarPagina('orcamentos-gerados');
 }
 
-// --- VARIÁVEIS DE CONTROLE DE ORDENAÇÃO ---
-let ordemAtualOrc = 'asc'; 
-let colunaOrdenacaoOrc = ''; 
+// ==========================================================================
+// FUNÇÕES DE ORDENAÇÃO (NOVO)
+// ==========================================================================
 
-// Função exposta para o HTML chamar no onclick do cabeçalho
-window.ordenarOrcamentos = (coluna) => {
+/**
+ * Função chamada ao clicar no cabeçalho da tabela (TH)
+ * Alterna entre ascendente e descendente
+ */
+function ordenarTabelaOrcamentos(coluna) {
     if (colunaOrdenacaoOrc === coluna) {
+        // Se clicou na mesma coluna, inverte a ordem
         ordemAtualOrc = ordemAtualOrc === 'asc' ? 'desc' : 'asc';
     } else {
+        // Se é uma coluna nova, reseta para ascendente
         colunaOrdenacaoOrc = coluna;
         ordemAtualOrc = 'asc';
     }
     mostrarOrcamentosGerados();
-};
+}
 
 function mostrarOrcamentosGerados() {
     const tbody = document.querySelector("#tabela-orcamentos tbody");
@@ -505,6 +517,8 @@ function mostrarOrcamentosGerados() {
     tbody.innerHTML = '';
 
     const termo = termoBuscaOrc.trim();
+    
+    // 1. Filtragem
     let filtrados = orcamentos.filter(orc => {
         if (!termo) return true;
         const dataFormatada = utils.formatarDataBR(orc.dataOrcamento);
@@ -513,18 +527,19 @@ function mostrarOrcamentosGerados() {
                dataFormatada.includes(termo);
     });
 
-    // LÓGICA DE ORDENAÇÃO
+    // 2. Ordenação (Lógica Atualizada)
     if (colunaOrdenacaoOrc === 'cliente') {
         filtrados.sort((a, b) => {
             const valA = (a.cliente || '').toLowerCase();
             const valB = (b.cliente || '').toLowerCase();
-            return ordemAtualOrc === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+            
+            if (valA < valB) return ordemAtualOrc === 'asc' ? -1 : 1;
+            if (valA > valB) return ordemAtualOrc === 'asc' ? 1 : -1;
+            return 0;
         });
-        
-        // Remove classes antigas e adiciona a atual para feedback visual (opcional)
-        document.querySelectorAll('th.sortable').forEach(th => th.classList.remove('asc', 'desc'));
-        const thAtual = document.querySelector(`th[onclick*="ordenarOrcamentos('${colunaOrdenacaoOrc}')"]`);
-        if(thAtual) thAtual.classList.add(ordemAtualOrc);
+    } else {
+        // Se não houver ordenação específica, mantém a ordem original (Data/Número Descendente)
+        // Como o array principal já é carregado e mantido nessa ordem, não precisamos de sort extra aqui.
     }
 
     const totalItens = filtrados.length;
@@ -568,7 +583,7 @@ function mostrarOrcamentosGerados() {
                 
                 const btnGerar = document.createElement('button');
                 btnGerar.textContent = "Gerar Pedido";
-                btnGerar.onclick = () => gerarPedido(orc.id); 
+                btnGerar.onclick = () => gerarPedido(orc.id); // Este acionará a função atualizada
                 cellAcoes.appendChild(btnGerar);
             } else {
                 const span = document.createElement('span');
@@ -580,11 +595,6 @@ function mostrarOrcamentosGerados() {
             }
         });
     }
-
-    if (infoPag) infoPag.textContent = `Página ${pagAtualOrc} de ${totalPaginas}`;
-    if (btnAnt) btnAnt.disabled = (pagAtualOrc === 1);
-    if (btnProx) btnProx.disabled = (pagAtualOrc === totalPaginas);
-}
 
     if (infoPag) infoPag.textContent = `Página ${pagAtualOrc} de ${totalPaginas}`;
     if (btnAnt) btnAnt.disabled = (pagAtualOrc === 1);
