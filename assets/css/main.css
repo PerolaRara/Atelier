@@ -546,77 +546,75 @@ button:hover { background-color: #5a8289; }
    7. MELHORIAS UX (BUSCA E ORDENAÇÃO) - NOVO
    ========================================= */
 
-/* Wrapper para posicionar o botão X relativo ao input */
+/* 1. Wrapper para posicionamento relativo do Input + Ícone */
 .search-wrapper {
     position: relative;
     width: 100%;
     max-width: 400px;
-    margin: 0 auto;
+    margin: 0 auto; /* Centraliza no container pai */
 }
 
-/* Ajuste fino no input para que o texto não fique por baixo do X */
+/* Ajuste no input para dar espaço ao ícone na direita */
 .search-wrapper .search-input {
     width: 100% !important;
-    padding-right: 40px !important;
+    padding-right: 40px !important; /* Espaço para o X */
     box-sizing: border-box;
 }
 
-/* Botão de Limpar (X) */
+/* 2. Botão de Limpar (X) - VERSÃO CORRIGIDA DE ALINHAMENTO */
 .btn-clear-search {
     position: absolute;
-    right: 8px;
+    right: 15px; /* Ligeiro ajuste na direita */
+    
+    /* Centralização Vertical Matemática */
     top: 50%;
     transform: translateY(-50%);
-    background: none !important; /* Sobrescreve estilo padrão de botões */
-    border: none !important;
-    padding: 6px !important;
+    
+    /* --- CORREÇÕES CRÍTICAS DE ALINHAMENTO --- */
+    margin: 0;         /* Remove margem padrão que empurra para baixo */
+    padding: 0;        /* Remove preenchimento interno desnecessário */
+    border: none;      /* Remove bordas padrão */
+    background: none;  /* Remove fundo padrão */
+    line-height: 0;    /* Remove altura de linha de texto que afeta ícones */
+    
+    display: none;     /* Oculto por padrão. Vira 'flex' via JS */
     cursor: pointer;
-    display: none; /* Inicia oculto, JS controla */
-    align-items: center;
-    justify-content: center;
-    color: #dfb6b0; /* Cor Rosé inicial */
-    min-width: auto !important;
-    border-radius: 50% !important;
-    transition: color 0.2s, background-color 0.2s;
-    width: 32px;
-    height: 32px;
+    color: #999;
+    transition: color 0.2s;
+    z-index: 10;       /* Garante que fique acima do input */
 }
 
 .btn-clear-search:hover {
-    color: #e53935; /* Vermelho no hover */
-    background-color: rgba(229, 57, 53, 0.1) !important;
+    color: #e53935; /* Vermelho ao passar o mouse */
 }
 
 .btn-clear-search svg {
-    display: block;
-    width: 18px;
+    display: block;    /* Garante comportamento de bloco para o SVG */
+    width: 18px;       /* Tamanho forçado para consistência */
     height: 18px;
-    stroke-width: 2.5;
 }
 
-/* Ordenação de Tabelas */
+/* 3. Ordenação de Tabelas */
 th.sortable {
     cursor: pointer;
     position: relative;
     transition: background-color 0.2s;
-    user-select: none; /* Evita selecionar o texto ao clicar rápido */
+    padding-right: 25px; /* Espaço para ícone de seta se quiser adicionar depois */
 }
 
 th.sortable:hover {
     background-color: #d8a098; /* Um tom um pouco mais escuro que o padrão */
 }
 
-/* Indicador visual de ordenação (Setas) */
+/* Indicador visual simples de ordenação (opcional, via CSS puro) */
 th.sortable::after {
-    content: '↕'; /* Seta dupla padrão */
+    content: '↕';
     position: absolute;
     right: 8px;
-    top: 50%;
-    transform: translateY(-50%);
-    opacity: 0.5;
+    opacity: 0.3;
     font-size: 0.8em;
 }
 
-/* Estados ativos (Classes adicionadas via JS se desejar refinar no futuro) */
 th.sortable.asc::after { content: '↑'; opacity: 1; }
 th.sortable.desc::after { content: '↓'; opacity: 1; }
+
