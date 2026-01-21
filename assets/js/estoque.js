@@ -153,10 +153,14 @@ function renderizarTabelaEstoqueAdm() {
     if (!tbody) return;
     tbody.innerHTML = "";
 
+    // Filtragem
     const filtrados = itensEstoque.filter(item => 
         item.produto.toLowerCase().includes(termoBuscaEstoqueAdm) || 
         (item.detalhes && item.detalhes.toLowerCase().includes(termoBuscaEstoqueAdm))
     );
+
+    // [NOVO] Ordenação Alfabética por Produto (A-Z)
+    filtrados.sort((a, b) => a.produto.localeCompare(b.produto));
 
     const paginacao = paginarArray(filtrados, pagAtualEstoqueAdm);
     
@@ -184,7 +188,12 @@ function renderizarTabelaProntaEntrega() {
     if (!tbody) return;
     tbody.innerHTML = "";
 
+    // Filtragem
     const filtrados = itensEstoque.filter(item => item.produto.toLowerCase().includes(termoBuscaVendaEstoque));
+    
+    // [NOVO] Ordenação Alfabética por Produto (A-Z)
+    filtrados.sort((a, b) => a.produto.localeCompare(b.produto));
+
     const paginacao = paginarArray(filtrados, pagAtualVendaEstoque);
 
     if (paginacao.itens.length === 0) {
