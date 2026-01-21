@@ -541,3 +541,82 @@ button:hover { background-color: #5a8289; }
     border-color: #ccc;
     color: #999;
 }
+
+/* =========================================
+   7. MELHORIAS UX (BUSCA E ORDENAÇÃO) - NOVO
+   ========================================= */
+
+/* Wrapper para posicionar o botão X relativo ao input */
+.search-wrapper {
+    position: relative;
+    width: 100%;
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+/* Ajuste fino no input para que o texto não fique por baixo do X */
+.search-wrapper .search-input {
+    width: 100% !important;
+    padding-right: 40px !important;
+    box-sizing: border-box;
+}
+
+/* Botão de Limpar (X) */
+.btn-clear-search {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none !important; /* Sobrescreve estilo padrão de botões */
+    border: none !important;
+    padding: 6px !important;
+    cursor: pointer;
+    display: none; /* Inicia oculto, JS controla */
+    align-items: center;
+    justify-content: center;
+    color: #dfb6b0; /* Cor Rosé inicial */
+    min-width: auto !important;
+    border-radius: 50% !important;
+    transition: color 0.2s, background-color 0.2s;
+    width: 32px;
+    height: 32px;
+}
+
+.btn-clear-search:hover {
+    color: #e53935; /* Vermelho no hover */
+    background-color: rgba(229, 57, 53, 0.1) !important;
+}
+
+.btn-clear-search svg {
+    display: block;
+    width: 18px;
+    height: 18px;
+    stroke-width: 2.5;
+}
+
+/* Ordenação de Tabelas */
+th.sortable {
+    cursor: pointer;
+    position: relative;
+    transition: background-color 0.2s;
+    user-select: none; /* Evita selecionar o texto ao clicar rápido */
+}
+
+th.sortable:hover {
+    background-color: #d8a098; /* Um tom um pouco mais escuro que o padrão */
+}
+
+/* Indicador visual de ordenação (Setas) */
+th.sortable::after {
+    content: '↕'; /* Seta dupla padrão */
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: 0.5;
+    font-size: 0.8em;
+}
+
+/* Estados ativos (Classes adicionadas via JS se desejar refinar no futuro) */
+th.sortable.asc::after { content: '↑'; opacity: 1; }
+th.sortable.desc::after { content: '↓'; opacity: 1; }
