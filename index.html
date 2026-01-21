@@ -213,14 +213,32 @@
                 <section id="orcamentos-gerados" class="pagina" style="display: none;">
                     <h2 class="section-title-lined">Orçamentos Gerados</h2>
                     
-                    <!-- Barra de Busca -->
+                    <!-- Barra de Busca COM WRAPPER E X -->
                     <div class="search-container">
-                        <input type="text" id="busca-orcamentos" placeholder="🔍 Buscar por Cliente, Número ou Data..." class="search-input">
+                        <div class="search-wrapper">
+                            <input type="text" id="busca-orcamentos" placeholder="🔍 Buscar por Cliente, Número ou Data..." class="search-input">
+                            <button type="button" class="btn-clear-search" onclick="limparBusca('busca-orcamentos')">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                            </button>
+                        </div>
                     </div>
 
                     <div class="table-responsive">
                         <table id="tabela-orcamentos">
-                            <thead><tr><th>Nº</th><th>Data</th><th>Cliente</th><th>Total</th><th>Pedido?</th><th>Ações</th></tr></thead>
+                            <thead>
+                                <tr>
+                                    <th>Nº</th>
+                                    <th>Data</th>
+                                    <!-- Coluna Ordenável -->
+                                    <th class="sortable" onclick="ordenarTabela('orcamentos', 'cliente')">Cliente</th>
+                                    <th>Total</th>
+                                    <th>Pedido?</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
                             <tbody></tbody>
                         </table>
                     </div>
@@ -237,14 +255,31 @@
                 <section id="lista-pedidos" class="pagina" style="display: none;">
                     <h2 class="section-title-lined">Pedidos Realizados</h2>
                     
-                    <!-- Barra de Busca -->
+                    <!-- Barra de Busca COM WRAPPER E X -->
                     <div class="search-container">
-                        <input type="text" id="busca-pedidos" placeholder="🔍 Buscar por Cliente, Número ou Data..." class="search-input">
+                        <div class="search-wrapper">
+                            <input type="text" id="busca-pedidos" placeholder="🔍 Buscar por Cliente, Número ou Data..." class="search-input">
+                            <button type="button" class="btn-clear-search" onclick="limparBusca('busca-pedidos')">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                            </button>
+                        </div>
                     </div>
 
                     <div class="table-responsive">
                         <table id="tabela-pedidos">
-                            <thead><tr><th>Nº</th><th>Data</th><th>Cliente</th><th>Total</th><th>Ações</th></tr></thead>
+                            <thead>
+                                <tr>
+                                    <th>Nº</th>
+                                    <th>Data</th>
+                                    <!-- Coluna Ordenável -->
+                                    <th class="sortable" onclick="ordenarTabela('pedidos', 'cliente')">Cliente</th>
+                                    <th>Total</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
                             <tbody></tbody>
                         </table>
                     </div>
@@ -264,9 +299,17 @@
                 <section id="pronta-entrega" class="pagina" style="display: none;">
                     <h2 class="section-title-lined">Venda Pronta Entrega</h2>
                     
-                    <!-- Busca Padronizada -->
+                    <!-- Busca Padronizada COM WRAPPER E X -->
                     <div class="search-container">
-                        <input type="text" id="busca-vendas-estoque" placeholder="🔍 Buscar item para vender..." class="search-input">
+                        <div class="search-wrapper">
+                            <input type="text" id="busca-vendas-estoque" placeholder="🔍 Buscar item para vender..." class="search-input">
+                            <button type="button" class="btn-clear-search" onclick="limparBusca('busca-vendas-estoque')">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                            </button>
+                        </div>
                     </div>
 
                     <!-- Tabela de Vendas -->
@@ -274,7 +317,8 @@
                         <table id="tabela-vendas-estoque">
                             <thead>
                                 <tr>
-                                    <th>Produto</th>
+                                    <!-- Coluna Ordenável -->
+                                    <th class="sortable" onclick="ordenarTabela('vendas', 'produto')">Produto</th>
                                     <th style="text-align: center;">Em Estoque</th>
                                     <th>Valor Unit.</th>
                                     <th>Ações</th>
@@ -392,9 +436,17 @@
 
                     <hr class="menu">
 
-                    <!-- Busca Estoque -->
+                    <!-- Busca Estoque COM WRAPPER E X -->
                     <div class="search-container">
-                        <input type="text" id="busca-lista-estoque-adm" placeholder="🔍 Buscar no estoque..." class="search-input">
+                        <div class="search-wrapper">
+                            <input type="text" id="busca-lista-estoque-adm" placeholder="🔍 Buscar no estoque..." class="search-input">
+                            <button type="button" class="btn-clear-search" onclick="limparBusca('busca-lista-estoque-adm')">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                            </button>
+                        </div>
                     </div>
 
                     <!-- Tabela Estoque (Com Editar/Excluir) -->
@@ -402,7 +454,8 @@
                         <table id="tabela-estoque-adm">
                             <thead>
                                 <tr>
-                                    <th>Produto</th>
+                                    <!-- Coluna Ordenável -->
+                                    <th class="sortable" onclick="ordenarTabela('estoque', 'produto')">Produto</th>
                                     <th style="text-align: center;">Qtd</th>
                                     <th>Valor</th>
                                     <th>Ações</th>
@@ -670,14 +723,32 @@
                 
                 <hr class="menu">
 
-                <!-- Barra de Busca -->
+                <!-- Barra de Busca COM WRAPPER E X -->
                 <div class="search-container">
-                    <input type="text" id="busca-material" placeholder="🔍 Buscar Material..." class="search-input">
+                    <div class="search-wrapper">
+                        <input type="text" id="busca-material" placeholder="🔍 Buscar Material..." class="search-input">
+                        <button type="button" class="btn-clear-search" onclick="limparBusca('busca-material')">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
                 
                 <div class="table-responsive">
                     <table id="tabela-materiais-insumos" class="tabela-gerada">
-                        <thead><tr><th>Nome</th><th>Tipo</th><th>Medida</th><th>Custo Loja</th><th>Custo Unit.</th><th>Ações</th></tr></thead>
+                        <thead>
+                            <tr>
+                                <!-- Coluna Ordenável -->
+                                <th class="sortable" onclick="ordenarTabela('materiais', 'nome')">Nome</th>
+                                <th>Tipo</th>
+                                <th>Medida</th>
+                                <th>Custo Loja</th>
+                                <th>Custo Unit.</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
                         <tbody></tbody>
                     </table>
                 </div>
@@ -738,14 +809,30 @@
                 
                 <hr class="menu">
                 
-                <!-- Barra de Busca -->
+                <!-- Barra de Busca COM WRAPPER E X -->
                 <div class="search-container">
-                    <input type="text" id="busca-custo-indireto" placeholder="🔍 Buscar Gasto Fixo..." class="search-input">
+                    <div class="search-wrapper">
+                        <input type="text" id="busca-custo-indireto" placeholder="🔍 Buscar Gasto Fixo..." class="search-input">
+                        <button type="button" class="btn-clear-search" onclick="limparBusca('busca-custo-indireto')">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
                 
                 <div class="table-responsive">
                     <table id="tabela-custos-indiretos" class="tabela-gerada">
-                        <thead><tr><th>Descrição</th><th>Mensal</th><th>Por Hora</th><th>Ação</th></tr></thead>
+                        <thead>
+                            <tr>
+                                <!-- Coluna Ordenável -->
+                                <th class="sortable" onclick="ordenarTabela('custos', 'descricao')">Descrição</th>
+                                <th>Mensal</th>
+                                <th>Por Hora</th>
+                                <th>Ação</th>
+                            </tr>
+                        </thead>
                         <tbody></tbody>
                     </table>
                 </div>
@@ -786,14 +873,31 @@
 
                 <h2>Produtos Cadastrados</h2>
 
-                <!-- Barra de Busca -->
+                <!-- Barra de Busca COM WRAPPER E X -->
                 <div class="search-container">
-                    <input type="text" id="busca-produto-lista" placeholder="🔍 Buscar Produto..." class="search-input">
+                    <div class="search-wrapper">
+                        <input type="text" id="busca-produto-lista" placeholder="🔍 Buscar Produto..." class="search-input">
+                        <button type="button" class="btn-clear-search" onclick="limparBusca('busca-produto-lista')">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
 
                 <div class="table-responsive">
                     <table id="tabela-produtos" class="tabela-gerada">
-                        <thead><tr><th>Nome</th><th>Itens</th><th>-</th><th>Custo Total</th><th>Ação</th></tr></thead>
+                        <thead>
+                            <tr>
+                                <!-- Coluna Ordenável -->
+                                <th class="sortable" onclick="ordenarTabela('produtos', 'nome')">Nome</th>
+                                <th>Itens</th>
+                                <th>-</th>
+                                <th>Custo Total</th>
+                                <th>Ação</th>
+                            </tr>
+                        </thead>
                         <tbody></tbody>
                     </table>
                 </div>
@@ -980,14 +1084,31 @@
             <div id="precificacoes-geradas" class="subpagina" style="display:none;">
                 <h2 class="section-title-lined">Histórico de Precificações</h2>
                 
-                <!-- Barra de Busca Padronizada -->
+                <!-- Barra de Busca COM WRAPPER E X -->
                 <div class="search-container">
-                    <input type="text" id="busca-precificacao" placeholder="🔍 Buscar por Produto ou Número..." class="search-input">
+                    <div class="search-wrapper">
+                        <input type="text" id="busca-precificacao" placeholder="🔍 Buscar por Produto ou Número..." class="search-input">
+                        <button type="button" class="btn-clear-search" onclick="limparBusca('busca-precificacao')">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
 
                 <div class="table-responsive">
                     <table id="tabela-precificacoes-geradas" class="tabela-gerada">
-                        <thead><tr><th>Nº</th><th>Produto</th><th>Data</th><th>Total</th><th>Ações</th></tr></thead>
+                        <thead>
+                            <tr>
+                                <th>Nº</th>
+                                <!-- Coluna Ordenável -->
+                                <th class="sortable" onclick="ordenarTabela('historico', 'produto')">Produto</th>
+                                <th>Data</th>
+                                <th>Total</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
                         <tbody></tbody>
                     </table>
                 </div>
