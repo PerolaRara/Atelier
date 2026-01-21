@@ -410,12 +410,14 @@ export function atualizarTabelaProdutosCadastrados() {
     if(!tbody) return;
     tbody.innerHTML = '';
     
-    // 1. Filtragem (Busca) e Ordenação
+    // 1. Filtragem (Busca)
     const termo = termoBuscaProd.trim().toLowerCase();
     const filtrados = produtos.filter(p => p.nome.toLowerCase().includes(termo));
+    
+    // 2. Ordenação (Alfabética A-Z) - Garantida
     filtrados.sort((a,b) => a.nome.localeCompare(b.nome));
 
-    // 2. Paginação
+    // 3. Paginação
     const totalPaginas = Math.ceil(filtrados.length / ITENS_POR_PAGINA) || 1;
     if (pagAtualProd > totalPaginas) pagAtualProd = totalPaginas;
     if (pagAtualProd < 1) pagAtualProd = 1;
@@ -424,7 +426,7 @@ export function atualizarTabelaProdutosCadastrados() {
     const fim = inicio + ITENS_POR_PAGINA;
     const itensPagina = filtrados.slice(inicio, fim);
 
-    // 3. Renderização
+    // 4. Renderização
     if (itensPagina.length === 0) {
         tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Nenhum produto encontrado.</td></tr>';
     } else {
@@ -447,7 +449,7 @@ export function atualizarTabelaProdutosCadastrados() {
         });
     }
 
-    // 4. Atualizar Controles de Paginação
+    // 5. Atualizar Controles de Paginação
     if (infoPag) infoPag.textContent = `Página ${pagAtualProd} de ${totalPaginas}`;
     if (btnAnt) {
         btnAnt.disabled = (pagAtualProd === 1);
