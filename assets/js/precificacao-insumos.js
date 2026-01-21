@@ -194,7 +194,7 @@ export function atualizarTabelaMateriaisInsumos() {
         return m.nome.toLowerCase().includes(termo);
     });
 
-    // 2. Ordenação (Alfabética)
+    // 2. Ordenação (Alfabética A-Z) - Garantida
     filtrados.sort((a,b) => a.nome.localeCompare(b.nome));
 
     // 3. Paginação
