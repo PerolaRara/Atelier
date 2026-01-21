@@ -557,40 +557,46 @@ button:hover { background-color: #5a8289; }
 /* Ajuste no input para dar espaço ao ícone na direita */
 .search-wrapper .search-input {
     width: 100% !important;
-    padding-right: 40px !important; /* Espaço para o X */
+    padding-right: 35px !important; /* Espaço reservado para o X */
     box-sizing: border-box;
 }
 
-/* 2. Botão de Limpar (X) - VERSÃO CORRIGIDA DE ALINHAMENTO */
+/* 2. Botão de Limpar (X) - VERSÃO BLINDADA (SEM FUNDO ESCURO) */
 .btn-clear-search {
     position: absolute;
-    right: 15px; /* Ligeiro ajuste na direita */
+    right: 10px; /* Mais próximo da borda direita */
     
-    /* Centralização Vertical Matemática */
+    /* Centralização Vertical */
     top: 50%;
     transform: translateY(-50%);
     
-    /* --- CORREÇÕES CRÍTICAS DE ALINHAMENTO --- */
-    margin: 0;         /* Remove margem padrão que empurra para baixo */
-    padding: 0;        /* Remove preenchimento interno desnecessário */
-    border: none;      /* Remove bordas padrão */
-    background: none;  /* Remove fundo padrão */
-    line-height: 0;    /* Remove altura de linha de texto que afeta ícones */
+    /* --- RESETS AGRESSIVOS PARA IGNORAR ESTILOS GLOBAIS --- */
+    background-color: transparent !important; /* Remove fundo padrão */
+    width: auto !important;      /* Remove largura fixa global */
+    min-width: 0 !important;     /* Remove largura mínima global (Causa da barra larga) */
+    padding: 4px !important;     /* Padding mínimo apenas para área de clique */
+    margin: 0 !important;
+    border: none !important;
+    box-shadow: none !important; /* Remove sombras globais */
+    line-height: 0 !important;
     
-    display: none;     /* Oculto por padrão. Vira 'flex' via JS */
+    display: none; /* Controlado via JS */
     cursor: pointer;
     color: #999;
-    transition: color 0.2s;
-    z-index: 10;       /* Garante que fique acima do input */
+    z-index: 10;
 }
 
+/* Hover: Apenas muda a cor do ícone, SEM fundo */
 .btn-clear-search:hover {
-    color: #e53935; /* Vermelho ao passar o mouse */
+    background-color: transparent !important; /* Garante que não fique escuro */
+    color: #e53935 !important; /* Ícone vermelho */
+    box-shadow: none !important;
+    transform: translateY(-50%) scale(1.1); /* Ligeiro zoom no ícone */
 }
 
 .btn-clear-search svg {
-    display: block;    /* Garante comportamento de bloco para o SVG */
-    width: 18px;       /* Tamanho forçado para consistência */
+    display: block;
+    width: 18px;
     height: 18px;
 }
 
@@ -599,14 +605,14 @@ th.sortable {
     cursor: pointer;
     position: relative;
     transition: background-color 0.2s;
-    padding-right: 25px; /* Espaço para ícone de seta se quiser adicionar depois */
+    padding-right: 25px; /* Espaço para indicador */
 }
 
 th.sortable:hover {
-    background-color: #d8a098; /* Um tom um pouco mais escuro que o padrão */
+    background-color: #d8a098; /* Tom levemente mais escuro */
 }
 
-/* Indicador visual simples de ordenação (opcional, via CSS puro) */
+/* Indicador visual simples de ordenação */
 th.sortable::after {
     content: '↕';
     position: absolute;
