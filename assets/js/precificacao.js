@@ -572,7 +572,7 @@ function atualizarTabelaPrecificacoesGeradas() {
     if(!tbody) return;
     tbody.innerHTML = '';
     
-    // 1. Filtragem e Ordenação
+    // 1. Filtragem
     const termo = termoBuscaHist.trim().toLowerCase();
     const filtrados = precificacoesGeradas.filter(p => {
         const matchProd = p.produto.toLowerCase().includes(termo);
@@ -580,9 +580,11 @@ function atualizarTabelaPrecificacoesGeradas() {
         return matchProd || matchNum;
     });
 
-    filtrados.sort((a,b) => b.numero - a.numero);
+    // 2. Ordenação (Alfabética por Nome do Produto A-Z)
+    // Anteriormente era por número (b.numero - a.numero)
+    filtrados.sort((a,b) => a.produto.localeCompare(b.produto));
 
-    // 2. Paginação
+    // 3. Paginação
     const totalPaginas = Math.ceil(filtrados.length / ITENS_POR_PAGINA) || 1;
     if (pagAtualHist > totalPaginas) pagAtualHist = totalPaginas;
     if (pagAtualHist < 1) pagAtualHist = 1;
@@ -591,7 +593,7 @@ function atualizarTabelaPrecificacoesGeradas() {
     const fim = inicio + ITENS_POR_PAGINA;
     const itensPagina = filtrados.slice(inicio, fim);
 
-    // 3. Renderização
+    // 4. Renderização
     if (itensPagina.length === 0) {
         tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Nenhum registro encontrado.</td></tr>';
     } else {
@@ -612,7 +614,7 @@ function atualizarTabelaPrecificacoesGeradas() {
         });
     }
 
-    // 4. Atualizar Controles
+    // 5. Atualizar Controles
     if (infoPag) infoPag.textContent = `Página ${pagAtualHist} de ${totalPaginas}`;
     if (btnAnt) {
         btnAnt.disabled = (pagAtualHist === 1);
