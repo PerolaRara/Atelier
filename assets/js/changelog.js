@@ -6,6 +6,16 @@
  */
 const changeLogData = [
     {
+        version: "1.2.1",
+        date: "25/01/2026",
+        changes: [
+            "🔍 **Busca Ágil (Quick Clear):** Implementamos um botão de limpeza rápida (ícone 'X') dentro de todas as barras de pesquisa. Agora, apagar termos digitados é instantâneo, agilizando a navegação entre consultas diferentes.",
+            "🎨 **Polimento de UI:** Correção de refinamento visual nos campos de input. O alinhamento vertical dos ícones foi ajustado matematicamente para garantir simetria perfeita em relação ao texto, eliminando deslocamentos visuais.",
+            "🗂️ **Interatividade de Tabelas:** Os cabeçalhos das listas (ex: Cliente, Produto) receberam indicadores visuais de clique, preparando a interface para a funcionalidade de ordenação alfabética dinâmica.",
+            "🛠️ **Otimização de Código:** Centralização da lógica de controle de inputs no arquivo `utils.js`. Isso reduz a repetição de código nos módulos e garante que o comportamento da busca seja consistente em todo o sistema."
+        ]
+    },
+    {
         version: "1.2.0",
         date: "20/01/2026",
         changes: [
@@ -66,14 +76,14 @@ const changeLogData = [
         ]
     },
     {
-    version: "1.1.4",
-    date: "02/01/2026",
-    changes: [
-    "🏗️ Refatoração Estratégica: O antigo arquivo 'gigante' de Orçamentos foi dividido em dois especialistas: Vendas (orcamentos.js) e Produção (pedidos.js).",
-    "🏭 Foco em Produção: O novo módulo de Pedidos agora gerencia exclusivamente o 'chão de fábrica' (checklists, edição de entregas e relatórios), garantindo que a área de vendas não seja impactada por mudanças na produção.",
-    "🧩 Arquitetura Limpa: Implementamos um padrão de 'Injeção de Dependências', permitindo que os módulos compartilhem ferramentas (como formatação de moeda e salvamento) sem criar conflitos técnicos.",
-    "🚀 Base Sólida: Essa separação prepara o terreno para futuras funcionalidades avançadas, como um Kanban de Produção e controle de estoque, sem a necessidade de reescrever o código antigo."
-    ]
+        version: "1.1.4",
+        date: "02/01/2026",
+        changes: [
+            "🏗️ **Refatoração Estratégica:** O antigo arquivo 'gigante' de Orçamentos foi dividido em dois especialistas: Vendas (orcamentos.js) e Produção (pedidos.js).",
+            "🏭 **Foco em Produção:** O novo módulo de Pedidos agora gerencia exclusivamente o 'chão de fábrica' (checklists, edição de entregas e relatórios), garantindo que a área de vendas não seja impactada por mudanças na produção.",
+            "🧩 **Arquitetura Limpa:** Implementamos um padrão de 'Injeção de Dependências', permitindo que os módulos compartilhem ferramentas (como formatação de moeda e salvamento) sem criar conflitos técnicos.",
+            "🚀 **Base Sólida:** Essa separação prepara o terreno para futuras funcionalidades avançadas, como um Kanban de Produção e controle de estoque, sem a necessidade de reescrever o código antigo."
+        ]
     },
     {
         version: "1.1.3",
