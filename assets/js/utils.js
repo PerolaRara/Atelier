@@ -1,5 +1,3 @@
---- START OF FILE utils.js ---
-
 // assets/js/utils.js
 
 export const utils = {
