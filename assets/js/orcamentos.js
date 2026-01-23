@@ -617,7 +617,7 @@ async function gerarPedido(orcamentoId) {
     // a melhor proteção é o confirm() e a transação, mas podemos mudar cursor global
     document.body.style.cursor = "wait";
 
-    // --- BLOCO DE INTELIGÊNCIA FINANCEIRA (MANTIDO) ---
+   // --- BLOCO DE INTELIGÊNCIA FINANCEIRA (ATUALIZADO - CASCATA DE DESCONTOS) ---
     let custosMateriaisComIndiretos = 0;
     let maoDeObraAcumulada = 0;
     let produtosSemPrecificacao = 0;
@@ -646,20 +646,46 @@ async function gerarPedido(orcamentoId) {
         console.error("Erro na inteligência financeira:", err);
     }
 
-    const lucroRealCalculado = orc.valorOrcamento - custosMateriaisComIndiretos - maoDeObraAcumulada;
+    // APLICANDO A CASCATA DE DESCONTOS (v1.2.1)
+    // Se o valor cobrado for menor que o ideal, o sistema sacrifica o Lucro primeiro, depois o Salário.
+    const resultadoFinanceiro = utils.calcularCascataFinanceira(
+        orc.valorOrcamento,          // Receita (Valor dos Produtos)
+        custosMateriaisComIndiretos, // Custos Fixos + Materiais
+        maoDeObraAcumulada           // Salário Alvo
+    );
 
+    // Montagem da Mensagem Inteligente
     let mensagemConfirmacao = `Pedido calculado com sucesso!\n\n` +
-        `Resumo Financeiro Estimado:\n` +
+        `Resumo Financeiro Real:\n` +
         `💰 Receita Produtos: ${utils.formatarMoeda(orc.valorOrcamento)}\n` +
-        `🔴 Custos (Mat + Fixos): ${utils.formatarMoeda(custosMateriaisComIndiretos)}\n` +
-        `🔵 Seu Salário: ${utils.formatarMoeda(maoDeObraAcumulada)}\n` +
-        `🟢 Lucro Empresa: ${utils.formatarMoeda(lucroRealCalculado)}`;
+        `🔴 Custos (Mat + Fixos): ${utils.formatarMoeda(resultadoFinanceiro.custos)}\n`;
+
+    // Verifica status para dar feedback adequado
+    if (resultadoFinanceiro.status === 'alerta') {
+        mensagemConfirmacao += `⚠️ SEU SALÁRIO: ${utils.formatarMoeda(resultadoFinanceiro.salario)} (Reduzido por desconto)\n`;
+        mensagemConfirmacao += `❌ LUCRO: R$ 0,00 (Margem absorvida)`;
+    } else if (resultadoFinanceiro.status === 'prejuizo') {
+        mensagemConfirmacao += `⛔ PREJUÍZO OPERACIONAL DETECTADO!\n`;
+        mensagemConfirmacao += `O valor cobrado não cobre nem os materiais.`;
+    } else {
+        mensagemConfirmacao += `🔵 Seu Salário: ${utils.formatarMoeda(resultadoFinanceiro.salario)}\n`;
+        mensagemConfirmacao += `🟢 Lucro Empresa: ${utils.formatarMoeda(resultadoFinanceiro.lucro)}`;
+    }
 
     if (produtosSemPrecificacao > 0) {
         mensagemConfirmacao += `\n\n⚠️ ATENÇÃO: ${produtosSemPrecificacao} item(ns) não possuem precificação cadastrada.`;
     }
 
-    alert(mensagemConfirmacao);
+    // Trava de segurança para prejuízo
+    if (resultadoFinanceiro.status === 'prejuizo') {
+        if(!confirm(mensagemConfirmacao + "\n\nTEM CERTEZA QUE DESEJA GERAR ESSE PEDIDO COM PREJUÍZO?")) {
+            // Se cancelar, reseta o cursor e sai
+            document.body.style.cursor = "default";
+            return;
+        }
+    } else {
+        alert(mensagemConfirmacao);
+    }
     // --- FIM BLOCO FINANCEIRO ---
 
     const pedido = {
@@ -683,9 +709,10 @@ async function gerarPedido(orcamentoId) {
         produtos: orc.produtos,
         // tipo: 'pedido' (Injetado na Transação)
         
-        custoMaoDeObra: maoDeObraAcumulada,
-        margemLucro: lucroRealCalculado,
-        custosTotais: custosMateriaisComIndiretos
+        // DADOS FINANCEIROS REAIS (PÓS-CASCATA)
+        custoMaoDeObra: resultadoFinanceiro.salario,
+        margemLucro: resultadoFinanceiro.lucro,
+        custosTotais: resultadoFinanceiro.custos
     };
 
     try {
