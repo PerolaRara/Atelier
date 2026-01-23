@@ -1,5 +1,3 @@
---- START OF FILE pedidos.js ---
-
 // assets/js/pedidos.js
 
 import { utils } from './utils.js'; // Prioridade 1: Importação da Caixa de Ferramentas
