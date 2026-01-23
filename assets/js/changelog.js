@@ -6,6 +6,16 @@
  */
 const changeLogData = [
     {
+        version: "1.2.2",
+        date: "26/01/2026",
+        changes: [
+            "💸 **Cascata de Descontos (Saneamento Financeiro):** Acabamos com a ilusão do 'lucro falso'. Agora, se você der um desconto ao cliente no fechamento do pedido, o sistema abate esse valor automaticamente primeiro da Margem de Lucro, e depois do seu Salário. O relatório financeiro agora reflete a dura realidade, não apenas o cenário ideal.",
+            "🛑 **Trava de Prejuízo:** Implementamos um alerta de segurança crítica. Se o valor da venda for reduzido a ponto de não cobrir nem os custos dos materiais, o sistema emite um aviso vermelho e exige confirmação extra, evitando que você 'pague para trabalhar'.",
+            "🎨 **Feedback Visual na Edição:** Ao editar um pedido existente, os campos de 'Meu Salário' mudam de cor em tempo real. Ficará Laranja se o desconto estiver comendo parte do seu salário, e Vermelho se estiver gerando prejuízo.",
+            "🧠 **Cérebro Financeiro Unificado:** Centralização da lógica matemática. Tanto a geração de novos pedidos a partir de orçamentos quanto a edição manual agora usam a mesma regra de distribuição financeira, garantindo consistência total nos dados."
+        ]
+    },
+    {
         version: "1.2.1",
         date: "25/01/2026",
         changes: [
