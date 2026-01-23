@@ -1,3 +1,5 @@
+--- START OF FILE utils.js ---
+
 // assets/js/utils.js
 
 export const utils = {
@@ -122,6 +124,47 @@ export const utils = {
             if (valA > valB) return ordem === 'asc' ? 1 : -1;
             return 0;
         });
+    },
+
+    // 8. LÓGICA DE CASCATA DE DESCONTOS (NOVO - v1.2.1 - Prioridade 1)
+    // Distribui o valor da venda priorizando: Custos > Salário > Lucro
+    calcularCascataFinanceira: (valorVendaTotal, custoProducaoTotal, salarioAlvoTotal) => {
+        // 1. Garante números limpos e seguros
+        const vlrVenda = parseFloat(valorVendaTotal) || 0;
+        const vlrCusto = parseFloat(custoProducaoTotal) || 0;
+        const vlrSalarioAlvo = parseFloat(salarioAlvoTotal) || 0;
+
+        // 2. O que sobra após pagar os materiais/custos fixos?
+        const sobraOperacional = vlrVenda - vlrCusto;
+
+        let salarioReal = 0;
+        let lucroReal = 0;
+        let status = 'normal'; // normal, alerta (salário reduzido), prejuizo (custo não pago)
+
+        if (sobraOperacional < 0) {
+            // CENÁRIO CRÍTICO: Preço não cobre nem os custos
+            status = 'prejuizo';
+            salarioReal = 0;
+            lucroReal = 0; // Prejuízo técnico fica implicito na diferença entre Venda e Custos
+        } else if (sobraOperacional < vlrSalarioAlvo) {
+            // CENÁRIO DE ALERTA: Cobre custos, mas "come" parte do salário
+            status = 'alerta';
+            salarioReal = sobraOperacional; // Artesã recebe apenas o que sobrou
+            lucroReal = 0; // Empresa não lucra
+        } else {
+            // CENÁRIO IDEAL: Cobre custos e salário integral
+            status = 'normal';
+            salarioReal = vlrSalarioAlvo;
+            lucroReal = sobraOperacional - vlrSalarioAlvo; // O excedente vai para o caixa
+        }
+
+        return {
+            custos: vlrCusto,
+            salario: salarioReal,
+            lucro: lucroReal,
+            status: status,
+            sobraOperacional: sobraOperacional
+        };
     }
 };
 
