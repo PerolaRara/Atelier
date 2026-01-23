@@ -1,3 +1,5 @@
+--- START OF FILE pedidos.js ---
+
 // assets/js/pedidos.js
 
 import { utils } from './utils.js'; // Prioridade 1: Importação da Caixa de Ferramentas
@@ -253,6 +255,24 @@ function editarPedido(id) {
     setValMoeda("maoDeObraPedido", pedido.custoMaoDeObra || 0);
     setValMoeda("lucroPedido", pedido.margemLucro || 0);
     
+    // --- NOVO (Prioridade 2): Armazenar Salário Base para Cálculos de Desconto ---
+    // Salva o valor original/alvo em um atributo data para não perder a referência
+    // quando o usuário começar a dar descontos que reduzem o salário visualmente.
+    const inputMO = document.getElementById("maoDeObraPedido");
+    if(inputMO) {
+        inputMO.dataset.salarioAlvo = pedido.custoMaoDeObra || 0;
+        
+        // Reseta estilos visuais de alerta (caso venha de um estado anterior)
+        inputMO.style.backgroundColor = ""; 
+        inputMO.style.color = "";
+        const inputLucro = document.getElementById("lucroPedido");
+        if(inputLucro) {
+            inputLucro.style.backgroundColor = ""; 
+            inputLucro.style.color = "";
+        }
+    }
+    // -----------------------------------------------------------------------------
+
     // Produtos
     const tbody = document.querySelector("#tabelaProdutosEdicao tbody");
     tbody.innerHTML = '';
@@ -271,8 +291,8 @@ async function atualizarPedido() {
     
     // Captura valores financeiros usando Utils
     const custosTotais = getValMoeda("custoTotalPedido");
-    const custoMO = getValMoeda("maoDeObraPedido");
-    const margem = getValMoeda("lucroPedido");
+    const custoMO = getValMoeda("maoDeObraPedido"); // Este valor já terá sido ajustado pela Cascata se houve desconto
+    const margem = getValMoeda("lucroPedido");      // Este valor já terá sido ajustado pela Cascata se houve desconto
 
     const dados = {
         ...pedidos[index],
@@ -360,22 +380,76 @@ function excluirProdutoEdicao(btn) {
     atualizarTotaisEdicao();
 }
 
-function atualizarTotaisEdicao() {
-    let total = 0;
+// Função ATUALIZADA com Lógica de Cascata de Descontos (Prioridade 2)
+window.atualizarTotaisEdicao = function() {
+    // 1. Recalcula totais visuais dos produtos
+    let totalProd = 0;
     document.querySelectorAll("#tabelaProdutosEdicao tbody tr").forEach(row => {
         const qtd = parseFloat(row.querySelector(".produto-quantidade").value) || 0;
         const unit = utils.converterMoedaParaNumero(row.querySelector(".produto-valor-unit").value);
         const sub = qtd * unit;
         row.cells[3].textContent = utils.formatarMoeda(sub);
-        total += sub;
+        totalProd += sub;
     });
     
-    const frete = getValMoeda("valorFreteEdicao");
-    const totalFinal = total + frete;
-    document.getElementById("valorPedidoEdicao").value = utils.formatarMoeda(total);
-    document.getElementById("totalEdicao").value = utils.formatarMoeda(totalFinal);
+    // 2. Calcula Total Final (Produtos + Frete)
+    const frete = utils.converterMoedaParaNumero(document.getElementById("valorFreteEdicao").value);
+    const novoTotalVenda = totalProd + frete;
+
+    document.getElementById("valorPedidoEdicao").value = utils.formatarMoeda(totalProd);
+    document.getElementById("totalEdicao").value = utils.formatarMoeda(novoTotalVenda);
+    
+    // 3. LÓGICA DA CASCATA DE DESCONTOS (NOVO)
+    const custoProdTotal = utils.converterMoedaParaNumero(document.getElementById("custoTotalPedido").value);
+    
+    // Recupera o Salário Alvo (Original) do dataset para garantir que descontos
+    // sejam calculados sobre o valor ideal, e não sobre um valor já degradado.
+    const inputMO = document.getElementById("maoDeObraPedido");
+    let salarioAlvo = 0;
+    
+    if (inputMO.dataset.salarioAlvo) {
+        salarioAlvo = parseFloat(inputMO.dataset.salarioAlvo);
+    } else {
+        // Fallback: Se não houver histórico, usa o valor atual como alvo e grava
+        salarioAlvo = utils.converterMoedaParaNumero(inputMO.value);
+        inputMO.dataset.salarioAlvo = salarioAlvo;
+    }
+
+    // Chama a função centralizada no utils.js
+    const resultado = utils.calcularCascataFinanceira(novoTotalVenda, custoProdTotal, salarioAlvo);
+
+    // Atualiza os campos do demonstrativo com a REALIDADE financeira
+    inputMO.value = utils.formatarMoeda(resultado.salario);
+    document.getElementById("lucroPedido").value = utils.formatarMoeda(resultado.lucro);
+
+    // 4. Feedback Visual (Prioridade 3)
+    const inputLucro = document.getElementById("lucroPedido");
+    
+    // Reseta estilos
+    inputMO.style.backgroundColor = ""; 
+    inputMO.style.color = "";
+    inputLucro.style.backgroundColor = ""; 
+    inputLucro.style.color = "";
+
+    if (resultado.status === 'alerta') {
+        // Laranja: Comendo Salário
+        inputMO.style.backgroundColor = "#fff3e0"; 
+        inputMO.style.color = "#e65100";
+        inputMO.title = "Atenção: O desconto está reduzindo seu salário!";
+        
+        // Vermelho suave: Lucro Zerado
+        inputLucro.style.backgroundColor = "#ffebee";
+        inputLucro.style.color = "#c62828";
+    } else if (resultado.status === 'prejuizo') {
+        // Vermelho Crítico
+        inputMO.style.backgroundColor = "#ffebee";
+        inputMO.style.color = "#c62828";
+        inputMO.title = "PREJUÍZO: Valor de venda não cobre os custos!";
+    }
+
+    // 5. Atualiza Restante a Pagar
     atualizarRestanteEdicao();
-}
+};
 
 function atualizarRestanteEdicao() {
     const total = getValMoeda("totalEdicao");
