@@ -11,9 +11,9 @@ import {
     deleteDoc, 
     query, 
     where, 
-    runTransaction, // Importação para venda segura
-    setDoc,          // Necessário para criar documentos com ID específico ou na transação
-    writeBatch       // [NOVO] Importação para atualização em massa (Sincronização)
+    runTransaction, 
+    setDoc,          
+    writeBatch       
 } from './firebase-config.js';
 
 import { adicionarPedidoNaLista } from './pedidos.js'; 
