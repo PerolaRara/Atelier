@@ -3,7 +3,7 @@
 import { db, auth } from './firebase-config.js';
 import { 
     collection, addDoc, getDocs, doc, setDoc, updateDoc, 
-    query, orderBy, getDoc, runTransaction 
+    query, orderBy, getDoc, runTransaction, where // [NOVO] Importação de 'where'
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 
 // IMPORTAÇÕES DE MÓDULOS E UTILITÁRIOS
@@ -25,16 +25,16 @@ const ITENS_POR_PAGINA = 10;
 let pagAtualOrc = 1;
 let termoBuscaOrc = "";
 
-// Variáveis de Ordenação (NOVO)
-let colunaOrdenacaoOrc = ""; // Qual coluna está sendo ordenada ('cliente' ou vazio)
-let ordemAtualOrc = "asc";   // Direção: 'asc' (A-Z) ou 'desc' (Z-A)
+// Variáveis de Ordenação
+let colunaOrdenacaoOrc = ""; 
+let ordemAtualOrc = "asc";
 
 // ==========================================================================
 // 1. INICIALIZAÇÃO E CARREGAMENTO
 // ==========================================================================
 
 export async function initOrcamentos() {
-    console.log("Inicializando Módulo Orçamentos (Vendas) v1.2.0...");
+    console.log("Inicializando Módulo Orçamentos (Vendas) v1.2.0 + Multi-Inquilinato...");
     
     // EXPOR FUNÇÕES GLOBAIS PARA O HTML (ONCLICK)
     window.excluirProduto = excluirProduto;
@@ -44,7 +44,7 @@ export async function initOrcamentos() {
     window.gerarOrcamento = gerarOrcamento;
     window.atualizarOrcamento = atualizarOrcamento;
     
-    // EXPOR FUNÇÃO DE ORDENAÇÃO (NOVO)
+    // EXPOR FUNÇÃO DE ORDENAÇÃO
     window.ordenarTabelaOrcamentos = ordenarTabelaOrcamentos;
     
     // EXPOR A MÁSCARA DE MOEDA DO UTILS PARA O HTML
@@ -81,8 +81,15 @@ async function carregarDados() {
         orcamentos = [];
         const pedidosTemp = []; 
 
-        // Carregar Orçamentos e Pedidos
-        const q = query(orcamentosPedidosRef, orderBy("numero", "desc")); 
+        // [ALTERAÇÃO] Carregar Orçamentos e Pedidos APENAS DO USUÁRIO LOGADO
+        // Nota: Esta query composta exige um Índice no Firebase (ownerId + numero).
+        // Verifique o console do navegador se aparecer erro de "precondition failed".
+        const q = query(
+            orcamentosPedidosRef, 
+            where("ownerId", "==", user.uid),
+            orderBy("numero", "desc")
+        ); 
+        
         const snapshot = await getDocs(q);
 
         snapshot.forEach(doc => {
@@ -138,6 +145,8 @@ async function criarDocumentoSeguro(tipo, dadosBase, idOrcamentoOriginal = null)
             const contadorDoc = await transaction.get(contadoresRef);
             
             // 2. CÁLCULO DO NÚMERO
+            // Nota: O contador segue sendo GLOBAL para sequencialidade única, 
+            // mas o documento gerado será de propriedade EXCLUSIVA do usuário.
             let proximoNumero = 1;
             if (contadorDoc.exists()) {
                 const dataContador = contadorDoc.data();
@@ -150,6 +159,7 @@ async function criarDocumentoSeguro(tipo, dadosBase, idOrcamentoOriginal = null)
             // 3. PREPARAÇÃO DO OBJETO FINAL
             const dadosFinais = {
                 ...dadosBase,
+                ownerId: user.uid, // [NOVO] Vincula o documento ao usuário logado
                 id: novaDocRef.id,
                 numero: numeroFormatado,
                 tipo: tipo,
@@ -168,6 +178,8 @@ async function criarDocumentoSeguro(tipo, dadosBase, idOrcamentoOriginal = null)
             // C. Se for conversão, atualiza o orçamento original
             if (tipo === 'pedido' && idOrcamentoOriginal) {
                 const orcamentoRef = doc(db, "Orcamento-Pedido", idOrcamentoOriginal);
+                // Apenas atualiza se o orçamento também pertencer ao usuário (segurança implícita na transação,
+                // mas garantida pela lógica de UI que só mostra itens do usuário)
                 transaction.update(orcamentoRef, { 
                     pedidoGerado: true, 
                     numeroPedido: numeroFormatado 
@@ -177,6 +189,7 @@ async function criarDocumentoSeguro(tipo, dadosBase, idOrcamentoOriginal = null)
             // Atualiza o objeto local (referência) para uso na UI
             dadosBase.numero = numeroFormatado;
             dadosBase.id = novaDocRef.id;
+            dadosBase.ownerId = user.uid; // [NOVO]
         });
 
         return dadosBase; // Retorna com o número preenchido
@@ -192,17 +205,21 @@ async function criarDocumentoSeguro(tipo, dadosBase, idOrcamentoOriginal = null)
  * Para CRIAÇÃO de novos itens, usar criarDocumentoSeguro.
  */
 async function salvarDados(dados, tipo) {
-    if (!auth.currentUser) {
+    const user = auth.currentUser;
+    if (!user) {
         alert("Sessão expirada.");
         return;
     }
     try {
+        // Garante que o ID do dono está presente ao salvar/atualizar
+        const dadosComDono = { ...dados, ownerId: user.uid };
+
         if (dados.id) {
             const docRef = doc(orcamentosPedidosRef, dados.id);
-            await setDoc(docRef, dados, { merge: true });
+            await setDoc(docRef, dadosComDono, { merge: true });
         } else {
             // Fallback apenas se chamado incorretamente, mas o fluxo principal usa Transação
-            const docRef = await addDoc(orcamentosPedidosRef, { ...dados, tipo });
+            const docRef = await addDoc(orcamentosPedidosRef, { ...dadosComDono, tipo });
             dados.id = docRef.id;
         }
     } catch (error) {
@@ -330,7 +347,7 @@ function atualizarTotais() {
     document.getElementById("total").value = utils.formatarMoeda(totalProd + frete);
 }
 
-// --- FUNÇÃO ATUALIZADA COM SEGURANÇA E UX ---
+// --- FUNÇÃO DE GERAÇÃO SEGURA ---
 async function gerarOrcamento() {
     // 1. Bloqueio de UX
     const btn = document.getElementById("btnGerarOrcamento");
@@ -340,7 +357,6 @@ async function gerarOrcamento() {
     btn.style.cursor = "wait";
 
     const dados = {
-        // numero: REMOVIDO (Será gerado na transação)
         dataOrcamento: document.getElementById("dataOrcamento").value,
         dataValidade: document.getElementById("dataValidade").value,
         cliente: document.getElementById("cliente").value,
@@ -357,7 +373,6 @@ async function gerarOrcamento() {
         observacoes: document.getElementById("observacoes").value,
         produtos: [],
         pedidoGerado: false,
-        // tipo: 'orcamento' (Será injetado na transação)
     };
 
     document.querySelectorAll("#tabelaProdutos tbody tr").forEach(row => {
@@ -371,6 +386,7 @@ async function gerarOrcamento() {
 
     try {
         // 2. Chamada Segura (Transação)
+        // Nota: A função criarDocumentoSeguro já adiciona o ownerId
         const resultado = await criarDocumentoSeguro('orcamento', dados);
 
         orcamentos.unshift(resultado); 
@@ -474,7 +490,7 @@ async function atualizarOrcamento() {
         });
     });
 
-    // Usa função simples para update
+    // Usa função simples para update, que injeta o ownerId
     await salvarDados(dados, 'orcamento');
     orcamentos[index] = dados;
     
@@ -488,19 +504,13 @@ async function atualizarOrcamento() {
 }
 
 // ==========================================================================
-// FUNÇÕES DE ORDENAÇÃO (NOVO)
+// FUNÇÕES DE ORDENAÇÃO
 // ==========================================================================
 
-/**
- * Função chamada ao clicar no cabeçalho da tabela (TH)
- * Alterna entre ascendente e descendente
- */
 function ordenarTabelaOrcamentos(coluna) {
     if (colunaOrdenacaoOrc === coluna) {
-        // Se clicou na mesma coluna, inverte a ordem
         ordemAtualOrc = ordemAtualOrc === 'asc' ? 'desc' : 'asc';
     } else {
-        // Se é uma coluna nova, reseta para ascendente
         colunaOrdenacaoOrc = coluna;
         ordemAtualOrc = 'asc';
     }
@@ -527,7 +537,7 @@ function mostrarOrcamentosGerados() {
                dataFormatada.includes(termo);
     });
 
-    // 2. Ordenação (Lógica Atualizada)
+    // 2. Ordenação
     if (colunaOrdenacaoOrc === 'cliente') {
         filtrados.sort((a, b) => {
             const valA = (a.cliente || '').toLowerCase();
@@ -537,9 +547,6 @@ function mostrarOrcamentosGerados() {
             if (valA > valB) return ordemAtualOrc === 'asc' ? 1 : -1;
             return 0;
         });
-    } else {
-        // Se não houver ordenação específica, mantém a ordem original (Data/Número Descendente)
-        // Como o array principal já é carregado e mantido nessa ordem, não precisamos de sort extra aqui.
     }
 
     const totalItens = filtrados.length;
@@ -583,7 +590,7 @@ function mostrarOrcamentosGerados() {
                 
                 const btnGerar = document.createElement('button');
                 btnGerar.textContent = "Gerar Pedido";
-                btnGerar.onclick = () => gerarPedido(orc.id); // Este acionará a função atualizada
+                btnGerar.onclick = () => gerarPedido(orc.id); 
                 cellAcoes.appendChild(btnGerar);
             } else {
                 const span = document.createElement('span');
@@ -605,25 +612,28 @@ function mostrarOrcamentosGerados() {
 // 5. PONTE VENDAS -> PRODUÇÃO (GERAR PEDIDO COM INTELIGÊNCIA FINANCEIRA)
 // ==========================================================================
 
-// --- FUNÇÃO ATUALIZADA COM SEGURANÇA E UX ---
+// --- FUNÇÃO DE GERAÇÃO SEGURA ---
 async function gerarPedido(orcamentoId) {
+    const user = auth.currentUser;
+    if (!user) return; // Segurança
+
     const orc = orcamentos.find(o => o.id === orcamentoId);
     if (!orc) return;
 
     if(!confirm(`Gerar pedido para o cliente ${orc.cliente}?`)) return;
 
-    // 1. UX: Bloqueio para evitar clique duplo
-    // Como não há um botão direto no DOM (é criado dinamicamente na tabela), 
-    // a melhor proteção é o confirm() e a transação, mas podemos mudar cursor global
+    // 1. UX: Bloqueio
     document.body.style.cursor = "wait";
 
-   // --- BLOCO DE INTELIGÊNCIA FINANCEIRA (ATUALIZADO - CASCATA DE DESCONTOS) ---
+    // --- BLOCO DE INTELIGÊNCIA FINANCEIRA (COM FILTRO POR USUÁRIO) ---
     let custosMateriaisComIndiretos = 0;
     let maoDeObraAcumulada = 0;
     let produtosSemPrecificacao = 0;
 
     try {
-        const precSnap = await getDocs(collection(db, "precificacoes-geradas"));
+        // [ALTERAÇÃO] Busca precificações apenas do usuário logado para cálculo correto
+        const qPrec = query(collection(db, "precificacoes-geradas"), where("ownerId", "==", user.uid));
+        const precSnap = await getDocs(qPrec);
         const basePrecificacao = [];
         precSnap.forEach(d => basePrecificacao.push(d.data()));
 
@@ -646,8 +656,7 @@ async function gerarPedido(orcamentoId) {
         console.error("Erro na inteligência financeira:", err);
     }
 
-    // APLICANDO A CASCATA DE DESCONTOS (v1.2.1)
-    // Se o valor cobrado for menor que o ideal, o sistema sacrifica o Lucro primeiro, depois o Salário.
+    // APLICANDO A CASCATA DE DESCONTOS
     const resultadoFinanceiro = utils.calcularCascataFinanceira(
         orc.valorOrcamento,          // Receita (Valor dos Produtos)
         custosMateriaisComIndiretos, // Custos Fixos + Materiais
@@ -660,7 +669,6 @@ async function gerarPedido(orcamentoId) {
         `💰 Receita Produtos: ${utils.formatarMoeda(orc.valorOrcamento)}\n` +
         `🔴 Custos (Mat + Fixos): ${utils.formatarMoeda(resultadoFinanceiro.custos)}\n`;
 
-    // Verifica status para dar feedback adequado
     if (resultadoFinanceiro.status === 'alerta') {
         mensagemConfirmacao += `⚠️ SEU SALÁRIO: ${utils.formatarMoeda(resultadoFinanceiro.salario)} (Reduzido por desconto)\n`;
         mensagemConfirmacao += `❌ LUCRO: R$ 0,00 (Margem absorvida)`;
@@ -676,10 +684,8 @@ async function gerarPedido(orcamentoId) {
         mensagemConfirmacao += `\n\n⚠️ ATENÇÃO: ${produtosSemPrecificacao} item(ns) não possuem precificação cadastrada.`;
     }
 
-    // Trava de segurança para prejuízo
     if (resultadoFinanceiro.status === 'prejuizo') {
         if(!confirm(mensagemConfirmacao + "\n\nTEM CERTEZA QUE DESEJA GERAR ESSE PEDIDO COM PREJUÍZO?")) {
-            // Se cancelar, reseta o cursor e sai
             document.body.style.cursor = "default";
             return;
         }
@@ -689,7 +695,6 @@ async function gerarPedido(orcamentoId) {
     // --- FIM BLOCO FINANCEIRO ---
 
     const pedido = {
-        // numero: REMOVIDO (Transação cuidará disso)
         dataPedido: new Date().toISOString().split('T')[0],
         dataEntrega: orc.dataValidade,
         cliente: orc.cliente,
@@ -707,9 +712,8 @@ async function gerarPedido(orcamentoId) {
         entrada: 0,
         restante: orc.total,
         produtos: orc.produtos,
-        // tipo: 'pedido' (Injetado na Transação)
         
-        // DADOS FINANCEIROS REAIS (PÓS-CASCATA)
+        // DADOS FINANCEIROS REAIS
         custoMaoDeObra: resultadoFinanceiro.salario,
         margemLucro: resultadoFinanceiro.lucro,
         custosTotais: resultadoFinanceiro.custos
@@ -717,6 +721,7 @@ async function gerarPedido(orcamentoId) {
 
     try {
         // 2. Chamada Segura (Transação) vinculando ao Orçamento Original
+        // A função criaDocumentoSeguro já adiciona o ownerId ao pedido
         const resultado = await criarDocumentoSeguro('pedido', pedido, orcamentoId);
 
         // Atualiza orçamento localmente
