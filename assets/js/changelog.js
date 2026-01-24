@@ -6,6 +6,15 @@
  */
 const changeLogData = [
     {
+        version: "1.2.3",
+        date: "28/01/2026",
+        changes: [
+            "🔐 **Isolamento de Dados (Multi-inquilinato):** Implementamos uma 'parede virtual' entre as contas. Agora, o que é cadastrado ou vendido no 'Usuário de Teste' fica visível apenas para ele, sem poluir os relatórios e estoques da conta Oficial (Karina).",
+            "🛡️ **Segurança de Acesso:** Cada Orçamento, Pedido, Produto e item de Estoque agora recebe um 'carimbo digital' de propriedade (`ownerId`) no momento da criação. O sistema usa isso para filtrar automaticamente o que deve aparecer na tela de cada usuário.",
+            "🧹 **Limpeza Automática de Visão:** Ao fazer login, o sistema agora ignora qualquer dado que não pertença ao seu usuário. Isso permite testar novas funcionalidades à vontade, com a garantia de que o ambiente de produção real permanecerá intocado e limpo."
+        ]
+    },
+    {
         version: "1.2.2",
         date: "26/01/2026",
         changes: [
