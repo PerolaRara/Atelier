@@ -1,6 +1,6 @@
 // assets/js/precificacao-insumos.js
 
-import { db, auth } from './firebase-config.js';
+import { db, auth, query, where } from './firebase-config.js';
 import { 
     collection, doc, setDoc, getDocs, updateDoc, deleteDoc, addDoc, getDoc 
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
@@ -153,7 +153,7 @@ function calcularCustoUnitario(tipo, valorTotal, comprimentoCm, volumeMl, pesoG,
 // FUNÇÃO AGRUPADORA (LOADER)
 // ==========================================
 export async function carregarDadosInsumos() {
-    console.log("Carregando dados de insumos...");
+    console.log("Carregando dados de insumos (Isolamento por Usuário)...");
     await Promise.all([
         carregarMateriais(),
         carregarMaoDeObra(),
@@ -167,8 +167,17 @@ export async function carregarDadosInsumos() {
 // ==========================================
 
 export async function carregarMateriais() {
+    const user = auth.currentUser;
+    if (!user) return;
+
     try {
-        const matSnap = await getDocs(collection(db, "materiais-insumos"));
+        // [MODIFICAÇÃO PRIORIDADE 2] Filtra materiais pelo ownerId do usuário logado
+        const q = query(
+            collection(db, "materiais-insumos"), 
+            where("ownerId", "==", user.uid)
+        );
+        const matSnap = await getDocs(q);
+        
         materiais = [];
         matSnap.forEach(d => materiais.push({id: d.id, ...d.data()}));
         atualizarTabelaMateriaisInsumos();
@@ -256,6 +265,9 @@ export function toggleCamposMaterial(tipo) {
 }
 
 export async function cadastrarMaterialInsumo() {
+    const user = auth.currentUser;
+    if (!user) return alert("Sessão expirada. Faça login novamente.");
+
     const nomeInput = document.getElementById('nome-material').value;
     const radioChecked = document.querySelector('input[name="tipo-material"]:checked');
     const tipo = radioChecked ? radioChecked.value : 'comprimento';
@@ -289,6 +301,7 @@ export async function cadastrarMaterialInsumo() {
     const custoUnitario = calcularCustoUnitario(tipo, valorTotal, comprimentoCm, volumeMl, pesoG, larguraCm, alturaCm);
 
     const materialData = {
+        ownerId: user.uid, // [MODIFICAÇÃO PRIORIDADE 2] Vincula o material ao usuário
         nome, tipo, valorTotal, 
         comprimentoCm, volumeMl, pesoG, larguraCm, alturaCm,
         custoUnitario,
@@ -384,9 +397,22 @@ export function buscarMateriaisCadastrados() {
 // ==========================================
 
 export async function carregarMaoDeObra() {
+    const user = auth.currentUser;
+    if (!user) return;
+
     try {
-        const moDoc = await getDoc(doc(db, "configuracoes", "maoDeObra"));
-        if (moDoc.exists()) maoDeObra = { ...maoDeObra, ...moDoc.data() };
+        // [MODIFICAÇÃO PRIORIDADE 2] Carrega configuração específica do usuário
+        // O ID do documento agora é 'maoDeObra_UID'
+        const docId = `maoDeObra_${user.uid}`;
+        const moDoc = await getDoc(doc(db, "configuracoes", docId));
+        
+        if (moDoc.exists()) {
+            maoDeObra = { ...maoDeObra, ...moDoc.data() };
+        } else {
+            // Se não existir (primeiro acesso), mantemos o padrão zerado/default
+            // Não carregamos o 'maoDeObra' global para evitar contaminação
+            console.log("Configuração de mão de obra não encontrada para este usuário. Usando padrão.");
+        }
         preencherCamposMaoDeObra();
     } catch (e) {
         console.error("Erro ao carregar Mão de Obra:", e);
@@ -394,6 +420,9 @@ export async function carregarMaoDeObra() {
 }
 
 export async function salvarMaoDeObra() {
+    const user = auth.currentUser;
+    if (!user) return alert("Sessão expirada.");
+
     const salarioEl = document.getElementById('salario-receber');
     const horasEl = document.getElementById('horas-trabalhadas');
     const feriasEl = document.getElementById('incluir-ferias-13o-sim');
@@ -416,10 +445,16 @@ export async function salvarMaoDeObra() {
         custoEncargos = (totalDireitosAnual / 12) / horas;
     }
 
-    maoDeObra = { salario, horas, valorHora, incluirFerias13o: incluirFerias, custoFerias13o: custoEncargos };
+    maoDeObra = { 
+        ownerId: user.uid, // [NOVO]
+        salario, horas, valorHora, incluirFerias13o: incluirFerias, custoFerias13o: custoEncargos 
+    };
 
     try {
-        await setDoc(doc(db, "configuracoes", "maoDeObra"), maoDeObra);
+        // [MODIFICAÇÃO PRIORIDADE 2] Salva em documento específico do usuário
+        const docId = `maoDeObra_${user.uid}`;
+        await setDoc(doc(db, "configuracoes", docId), maoDeObra);
+        
         preencherCamposMaoDeObra();
         toggleEdicaoMaoDeObra(false);
         atualizarTabelaCustosIndiretos(); // Atualiza pois depende da hora
@@ -490,10 +525,19 @@ function toggleEdicaoMaoDeObra(editando) {
 // ==========================================
 
 export async function carregarCustosIndiretos() {
+    const user = auth.currentUser;
+    if (!user) return;
+
     try {
         custosIndiretosPredefinidos = JSON.parse(JSON.stringify(custosIndiretosPredefinidosBase));
 
-        const ciPreSnap = await getDocs(collection(db, "custos-indiretos-predefinidos"));
+        // [MODIFICAÇÃO PRIORIDADE 2] Filtra Custos Predefinidos por usuário
+        const qPre = query(
+            collection(db, "custos-indiretos-predefinidos"), 
+            where("ownerId", "==", user.uid)
+        );
+        const ciPreSnap = await getDocs(qPre);
+        
         ciPreSnap.forEach(d => {
             const data = d.data();
             const idx = custosIndiretosPredefinidos.findIndex(c => c.descricao === data.descricao);
@@ -502,7 +546,13 @@ export async function carregarCustosIndiretos() {
             }
         });
 
-        const ciAddSnap = await getDocs(collection(db, "custos-indiretos-adicionais"));
+        // [MODIFICAÇÃO PRIORIDADE 2] Filtra Custos Adicionais por usuário
+        const qAdd = query(
+            collection(db, "custos-indiretos-adicionais"),
+            where("ownerId", "==", user.uid)
+        );
+        const ciAddSnap = await getDocs(qAdd);
+        
         custosIndiretosAdicionais = [];
         ciAddSnap.forEach(d => custosIndiretosAdicionais.push({id: d.id, ...d.data()}));
 
@@ -564,6 +614,9 @@ export function carregarCustosIndiretosPredefinidosUI() {
 }
 
 export async function salvarCustoIndiretoPredefinido(descricao, idx, parametrosOpcionais = null) {
+    const user = auth.currentUser;
+    if (!user) return alert("Sessão expirada.");
+
     const input = document.getElementById(`ci-pref-${idx}`);
     let val = 0;
     
@@ -581,6 +634,7 @@ export async function salvarCustoIndiretoPredefinido(descricao, idx, parametrosO
     const finalParams = parametrosOpcionais || paramsAtuais || null;
 
     const item = { 
+        ownerId: user.uid, // [NOVO]
         descricao, 
         valorMensal: val, 
         valorPorHora: val / maoDeObra.horas,
@@ -591,7 +645,11 @@ export async function salvarCustoIndiretoPredefinido(descricao, idx, parametrosO
     else custosIndiretosPredefinidos.push(item);
     
     try {
-        await setDoc(doc(db, "custos-indiretos-predefinidos", descricao), item);
+        // [MODIFICAÇÃO PRIORIDADE 2] ID composto para não sobrescrever dados de outro usuário
+        // Ex: "Energia elétrica_UID"
+        const docId = `${descricao}_${user.uid}`;
+        await setDoc(doc(db, "custos-indiretos-predefinidos", docId), item);
+        
         atualizarTabelaCustosIndiretos();
         if(idx !== -1 && !parametrosOpcionais) alert("Custo salvo!"); 
     } catch(e) {
@@ -615,11 +673,19 @@ export function adicionarNovoCustoIndireto() {
     const btn = li.querySelector('.btn-salvar-novo-ci');
     if(btn) {
         btn.onclick = async () => {
+            const user = auth.currentUser;
+            if(!user) return alert("Sessão expirada.");
+
             const nome = li.querySelector('.novo-ci-nome').value;
             const valor = parseFloat(li.querySelector('.novo-ci-valor').value);
             
             if(nome && valor >= 0) {
-                const novo = { descricao: nome, valorMensal: valor, valorPorHora: valor / maoDeObra.horas };
+                const novo = { 
+                    ownerId: user.uid, // [NOVO]
+                    descricao: nome, 
+                    valorMensal: valor, 
+                    valorPorHora: valor / maoDeObra.horas 
+                };
                 try {
                     const ref = await addDoc(collection(db, "custos-indiretos-adicionais"), novo);
                     novo.id = ref.id;
@@ -650,17 +716,29 @@ export async function removerCustoIndiretoAdicional(id) {
 }
 
 export async function zerarCustoIndireto(descricao, idOpcional) {
+    const user = auth.currentUser;
+    if (!user) return;
+
     if(!confirm(`Deseja zerar o custo de "${descricao}"? Ele sairá desta lista.`)) return;
 
     if (idOpcional && idOpcional !== 'undefined' && idOpcional !== undefined) {
         await removerCustoIndiretoAdicional(idOpcional);
     } else {
-        const item = { descricao, valorMensal: 0, valorPorHora: 0, parametros: null };
+        const item = { 
+            ownerId: user.uid, // [NOVO]
+            descricao, 
+            valorMensal: 0, 
+            valorPorHora: 0, 
+            parametros: null 
+        };
         const arrIdx = custosIndiretosPredefinidos.findIndex(c => c.descricao === descricao);
         if(arrIdx !== -1) custosIndiretosPredefinidos[arrIdx] = item;
         
         try {
-            await setDoc(doc(db, "custos-indiretos-predefinidos", descricao), item);
+            // [MODIFICAÇÃO PRIORIDADE 2] Mesmo padrão de ID composto
+            const docId = `${descricao}_${user.uid}`;
+            await setDoc(doc(db, "custos-indiretos-predefinidos", docId), item);
+            
             carregarCustosIndiretosPredefinidosUI(); 
             atualizarTabelaCustosIndiretos(); 
         } catch(e) { 
