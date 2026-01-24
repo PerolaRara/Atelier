@@ -61,16 +61,16 @@ async function carregarDadosEstoque() {
     const user = auth.currentUser;
     if (!user) return;
 
-    // 1. Carregar Itens
+    // 1. Carregar Itens (Filtrados pelo Usuário Logado)
     itensEstoque = [];
     try {
-        const snapshot = await getDocs(estoqueRef);
+        const q = query(estoqueRef, where("ownerId", "==", user.uid));
+        const snapshot = await getDocs(q);
+        
         snapshot.forEach(doc => {
             itensEstoque.push({ id: doc.id, ...doc.data() });
         });
 
-        // Não precisamos mais carregar pedidos para descobrir o número (usaremos contador central)
-        
         renderizarTabelaProntaEntrega();
         renderizarTabelaEstoqueAdm();
     } catch (e) {
