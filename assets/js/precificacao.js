@@ -3,7 +3,7 @@
 // 1. IMPORTAÇÕES DE INFRAESTRUTURA
 import { db, auth } from './firebase-config.js';
 import { 
-    collection, doc, addDoc, getDocs, setDoc, deleteDoc, getDoc 
+    collection, doc, addDoc, getDocs, setDoc, deleteDoc, getDoc, query, where // [MODIFICADO] Adicionado query e where
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 
 // 2. IMPORTAÇÕES DOS MÓDULOS DE DADOS (INSUMOS E PRODUTOS)
@@ -53,23 +53,19 @@ let termoBuscaHist = "";
 // 4. INICIALIZAÇÃO E CARREGAMENTO
 // ==========================================================================
 export async function initPrecificacao() {
-    console.log("Inicializando Módulo Precificação (Refatorado - V2)...");
+    console.log("Inicializando Módulo Precificação (Refatorado - V2 - Isolado)...");
     
     // EXPOR FUNÇÕES AO ESCOPO GLOBAL (WINDOW)
-    // Funções de Insumos
-    window.editarMaterialInsumo = window.editarMaterialInsumo; // Já exposto no insumos.js, mas reforçando se necessário
+    window.editarMaterialInsumo = window.editarMaterialInsumo; 
     window.removerMaterialInsumo = window.removerMaterialInsumo;
     
-    // Funções de Produtos (Vindas do novo módulo)
     window.editarProduto = editarProduto;
     window.removerProduto = removerProduto;
     
-    // Funções de Histórico (Locais)
     window.buscarPrecificacoesGeradas = atualizarTabelaPrecificacoesGeradas;
     window.visualizarPrecificacao = visualizarPrecificacao;
     window.removerPrecificacao = removerPrecificacao;
 
-    // Configura o Callback: Quando um material mudar, avisa o módulo de produtos
     setOnMaterialUpdateCallback(atualizarCustosProdutosPorMaterial);
 
     await carregarDadosCompletos();
@@ -81,21 +77,27 @@ export async function initPrecificacao() {
 }
 
 async function carregarDadosCompletos() {
-    const user = auth.currentUser;
+    const user = auth.currentUser; // [MODIFICADO] Captura usuário
     if (!user) return;
 
     try {
         // Carregamento Paralelo para Performance
+        // carregarDadosInsumos() e carregarProdutos() agora usam filtros internos de usuário
         await Promise.all([
             carregarDadosInsumos(), // Insumos.js
             carregarProdutos()      // Produtos.js
         ]);
 
-        // Carrega Configurações Locais e Histórico
-        const taxaDoc = await getDoc(doc(db, "configuracoes", "taxaCredito"));
+        // [MODIFICADO] Isolar Taxa de Crédito por Usuário
+        // A chave do documento agora inclui o UID para não conflitar
+        const taxaDocId = `taxaCredito_${user.uid}`;
+        const taxaDoc = await getDoc(doc(db, "configuracoes", taxaDocId));
         if (taxaDoc.exists()) taxaCredito = { ...taxaCredito, ...taxaDoc.data() };
 
-        const precSnap = await getDocs(collection(db, "precificacoes-geradas"));
+        // [MODIFICADO] Filtra histórico de precificação por usuário
+        const q = query(collection(db, "precificacoes-geradas"), where("ownerId", "==", user.uid));
+        const precSnap = await getDocs(q);
+        
         precificacoesGeradas = [];
         precSnap.forEach(d => precificacoesGeradas.push({id: d.id, ...d.data()}));
 
@@ -283,6 +285,7 @@ function buscarProdutosAutocomplete() {
     }
 
     // Usa a lista 'produtos' importada do precificacao-produtos.js
+    // A lista 'produtos' já está filtrada por usuário no módulo de origem
     const results = produtos.filter(p => p.nome.toLowerCase().includes(termo));
 
     if (results.length === 0) {
@@ -326,6 +329,7 @@ function verificarPrecoExistente(nomeProduto) {
     const avisoEl = document.getElementById('aviso-preco-existente');
     if (!avisoEl) return;
 
+    // precificacoesGeradas já está filtrado por usuário
     const existente = precificacoesGeradas.find(p => p.produto === nomeProduto);
 
     if (existente) {
@@ -425,11 +429,18 @@ function calcularCustos() {
 }
 
 async function salvarTaxaCredito() {
+    const user = auth.currentUser;
+    if (!user) return alert("Erro: Usuário não identificado.");
+
     const perc = parseFloat(document.getElementById('taxa-credito-percentual').value) || 0;
     const incluir = document.getElementById('incluir-taxa-credito-sim').checked;
     
     taxaCredito = { percentual: perc, incluir };
-    await setDoc(doc(db, "configuracoes", "taxaCredito"), taxaCredito);
+    
+    // [MODIFICADO] Salva configuração com UID para isolamento
+    const taxaDocId = `taxaCredito_${user.uid}`;
+    await setDoc(doc(db, "configuracoes", taxaDocId), taxaCredito);
+    
     calcularTotalComTaxas();
     alert("Taxa salva!");
 }
@@ -460,6 +471,8 @@ function calcularTotalComTaxas() {
 // ==========================================================================
 
 function obterProximoNumeroDisponivel() {
+    // Como precificacoesGeradas já é filtrada por usuário no carregamento,
+    // a numeração será sequencial e isolada para cada usuário.
     const numerosExistentes = precificacoesGeradas
         .map(p => p.numero)
         .sort((a, b) => a - b);
@@ -476,6 +489,9 @@ function obterProximoNumeroDisponivel() {
 }
 
 async function gerarNotaPrecificacao() {
+    const user = auth.currentUser; // [MODIFICADO]
+    if (!user) return alert("Sessão expirada.");
+
     const prodNome = document.getElementById('produto-pesquisa').value;
     const totalFinal = converterMoeda(document.getElementById('total-final-com-taxas').textContent);
 
@@ -500,6 +516,7 @@ async function gerarNotaPrecificacao() {
     }
 
     const nota = {
+        ownerId: user.uid, // [MODIFICADO] Carimba o dono
         numero: numeroParaSalvar,
         produto: prodNome,
         horas: document.getElementById('horas-produto').value,
@@ -581,7 +598,6 @@ function atualizarTabelaPrecificacoesGeradas() {
     });
 
     // 2. Ordenação (Alfabética por Nome do Produto A-Z)
-    // Anteriormente era por número (b.numero - a.numero)
     filtrados.sort((a,b) => a.produto.localeCompare(b.produto));
 
     // 3. Paginação
