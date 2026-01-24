@@ -1,8 +1,8 @@
 // assets/js/precificacao-produtos.js
 
-import { db } from './firebase-config.js';
+import { db, auth } from './firebase-config.js'; // [MODIFICADO] Adicionado auth
 import { 
-    collection, doc, addDoc, getDocs, updateDoc, deleteDoc 
+    collection, doc, addDoc, getDocs, updateDoc, deleteDoc, query, where // [MODIFICADO] Adicionado query e where
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 import { 
     materiais, 
@@ -28,12 +28,18 @@ let termoBuscaProd = "";
 // ==========================================
 
 export async function carregarProdutos() {
+    const user = auth.currentUser; // [MODIFICADO] Captura usuário
+    if (!user) return;
+
     try {
-        const prodSnap = await getDocs(collection(db, "produtos"));
+        // [MODIFICADO] Filtra produtos pelo ID do usuário logado
+        const q = query(collection(db, "produtos"), where("ownerId", "==", user.uid));
+        const prodSnap = await getDocs(q);
+        
         produtos = [];
         prodSnap.forEach(d => produtos.push({id: d.id, ...d.data()}));
         atualizarTabelaProdutosCadastrados();
-        console.log("Produtos carregados:", produtos.length);
+        console.log(`Produtos carregados para ${user.email}:`, produtos.length);
     } catch (e) {
         console.error("Erro ao carregar produtos:", e);
     }
@@ -74,6 +80,8 @@ export function initListenersProdutos() {
 export async function atualizarCustosProdutosPorMaterial(material) {
     console.log(`Atualizando produtos que usam: ${material.nome}`);
     
+    // A lista 'produtos' já está filtrada por usuário em carregarProdutos(),
+    // então a atualização afetará apenas os produtos do usuário logado.
     const produtosAfetados = produtos.filter(p => p.materiais.some(m => m.materialId === material.id));
 
     for (const prod of produtosAfetados) {
@@ -88,6 +96,7 @@ export async function atualizarCustosProdutosPorMaterial(material) {
         // Recalcula o total do produto
         prod.custoTotal = prod.materiais.reduce((acc, item) => acc + item.custoTotal, 0);
 
+        // Atualiza no banco
         await updateDoc(doc(db, "produtos", prod.id), {
             materiais: prod.materiais,
             custoTotal: prod.custoTotal
@@ -181,6 +190,7 @@ function buscarMateriaisAutocomplete() {
     
     // Usa a lista de materiais exportada pelo módulo de insumos
     // Filtra apenas materiais ATIVOS para novas adições
+    // OBS: A lista 'materiais' importada já estará filtrada pelo precificacao-insumos.js
     const results = materiais.filter(m => m.ativo !== false && m.nome.toLowerCase().includes(termo));
     
     results.forEach(m => {
@@ -286,6 +296,9 @@ function recalcularLinhaProduto(row, mat) {
 // ==========================================
 
 async function cadastrarProduto() {
+    const user = auth.currentUser; // [MODIFICADO] Captura usuário
+    if (!user) return alert("Sessão expirada. Faça login novamente.");
+
     const inputNome = document.getElementById('nome-produto');
     const nomeBruto = inputNome.value;
     
@@ -330,12 +343,13 @@ async function cadastrarProduto() {
     rows.forEach(row => {
         const matId = row.cells[0].dataset.id;
         // Busca material original para garantir dados frescos
+        // NOTA: 'materiais' é importado e já deve estar filtrado por usuário pelo outro módulo
         const matOriginal = materiais.find(m => m.id === matId);
         
         // Se material foi arquivado ou não existe mais, usa o dado salvo no dataset (fallback seguro)
         // para evitar salvar HTML de alerta (emojis) no nome.
         const nomeMat = matOriginal ? matOriginal.nome : (row.cells[0].dataset.nomeOriginal || row.cells[0].innerText);
-        const custoUnit = matOriginal ? matOriginal.custoUnitario : 0; // Se não existir, custo unitário 0 ou mantido antigo se lógica permitisse
+        const custoUnit = matOriginal ? matOriginal.custoUnitario : 0; // Se não existir, custo unitário 0
 
         const tipo = row.cells[1].innerText;
         const qtd = parseFloat(row.querySelector('.qtd-input').value);
@@ -367,6 +381,7 @@ async function cadastrarProduto() {
 
     // Adiciona flag de auditoria se houver dados defasados
     const prodData = { 
+        ownerId: user.uid, // [MODIFICADO] Vincula ao dono
         nome: nomeNormalizado, 
         materiais: materiaisList, 
         custoTotal,
@@ -478,7 +493,7 @@ export function editarProduto(id) {
         let isInativo = false;
 
         if(matReal) {
-            // Caso 1: Material existe no cadastro
+            // Caso 1: Material existe no cadastro (filtrado por usuário)
             if (matReal.ativo === false) {
                 // Existe, mas foi arquivado/desativado
                 isInativo = true;
@@ -489,25 +504,24 @@ export function editarProduto(id) {
                 materialParaRenderizar = matReal;
             }
         } else {
-            // Caso 2: Material foi excluído permanentemente (Hard Delete) do banco de insumos
-            console.warn("Material original não encontrado (pode ter sido excluído):", item.materialId);
+            // Caso 2: Material foi excluído ou pertence a outro usuário (isolamento)
+            // Se pertence a outro usuário, aparecerá como inexistente aqui, o que é correto
+            console.warn("Material original não encontrado (pode ter sido excluído ou pertence a outro usuário):", item.materialId);
             isInativo = true;
             
             // Cria objeto Mock com dados históricos salvos dentro do item do produto
-            // Isso previne que a tabela quebre ou mostre campos vazios
             materialParaRenderizar = {
                 id: item.materialId,
                 nome: item.material ? item.material.nome : "(Nome Indisponível)",
                 custoUnitario: item.material ? item.material.custoUnitario : 0,
                 tipo: item.tipo,
-                // Preenche medidas com dados do item para manter a renderização dos inputs correta
                 comprimentoCm: item.comprimento || 0,
                 volumeMl: item.volume || 0,
                 pesoG: item.peso || 0,
                 larguraCm: item.largura || 0,
                 alturaCm: item.altura || 0,
                 quantidadeMaterial: item.quantidadeMaterial || 0,
-                ativo: false // Marca explicita
+                ativo: false 
             };
         }
 
