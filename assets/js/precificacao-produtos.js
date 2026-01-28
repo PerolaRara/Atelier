@@ -223,22 +223,23 @@ function adicionarMaterialNaTabelaProduto(mat, dadosSalvos = null, statusInativo
     let inputDimensao = '';
     let valDimensao = 0;
 
+    // AQUI ESTÁ A ALTERAÇÃO: Removemos style="width:..." para o CSS controlar o tamanho
     if (mat.tipo === 'comprimento') {
         valDimensao = dadosSalvos ? dadosSalvos.comprimento : mat.comprimentoCm;
-        inputDimensao = `<input type="number" class="dim-input" value="${valDimensao}" style="width:60px"> cm`;
+        inputDimensao = `<input type="number" class="dim-input" value="${valDimensao}"> cm`;
     } else if (mat.tipo === 'area') {
         const l = dadosSalvos ? dadosSalvos.largura : mat.larguraCm;
         const a = dadosSalvos ? dadosSalvos.altura : mat.alturaCm;
-        inputDimensao = `<input type="number" class="dim-l" value="${l}" style="width:50px"> x <input type="number" class="dim-a" value="${a}" style="width:50px"> cm`;
+        inputDimensao = `<input type="number" class="dim-l" value="${l}"> x <input type="number" class="dim-a" value="${a}"> cm`;
     } else if (mat.tipo === 'litro') {
         valDimensao = dadosSalvos ? dadosSalvos.volume : mat.volumeMl;
-        inputDimensao = `<input type="number" class="dim-input" value="${valDimensao}" style="width:60px"> ml`;
+        inputDimensao = `<input type="number" class="dim-input" value="${valDimensao}"> ml`;
     } else if (mat.tipo === 'quilo') {
         valDimensao = dadosSalvos ? dadosSalvos.peso : mat.pesoG;
-        inputDimensao = `<input type="number" class="dim-input" value="${valDimensao}" style="width:60px"> g`;
+        inputDimensao = `<input type="number" class="dim-input" value="${valDimensao}"> g`;
     } else {
         const qtdUn = dadosSalvos ? dadosSalvos.quantidadeMaterial : 1;
-        inputDimensao = `<input type="number" class="dim-input" value="${qtdUn}" style="width:60px"> un`;
+        inputDimensao = `<input type="number" class="dim-input" value="${qtdUn}"> un`;
     }
 
     const qtd = dadosSalvos ? dadosSalvos.quantidade : 1;
@@ -251,7 +252,7 @@ function adicionarMaterialNaTabelaProduto(mat, dadosSalvos = null, statusInativo
         <td>${mat.tipo}</td>
         <td>${formatarMoeda(mat.custoUnitario)}</td>
         <td class="cell-dimensao">${inputDimensao}</td>
-        <td><input type="number" class="qtd-input" value="${qtd}" style="width:50px"></td>
+        <td><input type="number" class="qtd-input" value="${qtd}"></td>
         <td class="custo-total-item">R$ 0,00</td>
         <td><button type="button" class="${classeBotao}" onclick="this.closest('tr').remove()">X</button></td>
     `;
