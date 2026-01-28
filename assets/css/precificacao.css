@@ -1250,3 +1250,45 @@ input[type="checkbox"] {
     margin-top: 20px;
     margin-bottom: 20px;
 }
+
+/* 1. Ajuste de Largura das Colunas da Tabela de Montagem */
+#tabela-materiais-produto {
+    table-layout: fixed; /* Permite controlar a largura exata das colunas */
+    width: 100%;
+}
+
+/* Definição de pesos para cada coluna */
+#tabela-materiais-produto th:nth-child(1) { width: 30%; } /* Material (Nome) - Reduzido */
+#tabela-materiais-produto th:nth-child(2) { width: 10%; } /* Tipo */
+#tabela-materiais-produto th:nth-child(3) { width: 12%; } /* Custo Unit. */
+#tabela-materiais-produto th:nth-child(4) { width: 28%; } /* Dimensões - AUMENTADO SIGNIFICATIVAMENTE */
+#tabela-materiais-produto th:nth-child(5) { width: 10%; } /* Qtd - AUMENTADO */
+#tabela-materiais-produto th:nth-child(6) { width: 15%; } /* Total */
+#tabela-materiais-produto th:nth-child(7) { width: 5%; }  /* Ação (X) */
+
+/* 2. Ajuste dos Campos de Input (Dimensões e Qtd) */
+#tabela-materiais-produto input[type="number"] {
+    width: 100% !important;   /* Força ocupar a célula inteira */
+    min-width: 60px;          /* Tamanho mínimo seguro */
+    padding: 8px 4px;         /* Melhor área de clique */
+    font-size: 1rem;          /* Fonte legível */
+    text-align: center;       /* Centralizar número */
+    box-sizing: border-box;
+    height: 40px;             /* Altura confortável */
+}
+
+/* Ajuste específico para quando há 2 inputs (Área: Largura x Altura) */
+.cell-dimensao {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    white-space: nowrap; /* Evita que o "cm" quebre linha */
+}
+
+/* Inputs duplos (Largura e Altura) dividem o espaço */
+.cell-dimensao .dim-l, 
+.cell-dimensao .dim-a {
+    width: 45% !important; 
+    min-width: 50px;
+}
