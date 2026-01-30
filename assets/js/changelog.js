@@ -6,6 +6,16 @@
  */
 const changeLogData = [
     {
+        version: "1.2.4",
+        date: "29/01/2026",
+        changes: [
+            "📝 **Histórico Vivo (Edição de Precificação):** O módulo de precificação deixou de ser estático. Agora é possível clicar em 'Editar' no histórico para recuperar os dados, alterar a margem de lucro ou horas trabalhadas e salvar a atualização sem gerar duplicidade.",
+            "🔄 **Precificação Reativa (Atualização em Cascata):** Ao editar uma precificação antiga, o sistema agora busca automaticamente os custos atuais do produto no banco de dados. Se o preço do tecido subiu desde a última vez, o sistema recalcula o preço de venda na hora, garantindo que você nunca tenha prejuízo silencioso.",
+            "⚠️ **Alerta de Defasagem:** Implementamos um aviso inteligente. Se ao abrir uma precificação antiga o sistema detectar que os custos dos materiais mudaram, você receberá um alerta visual informando a diferença de valor, sugerindo a atualização do preço de venda.",
+            "🚫 **Cancelamento Seguro:** Adicionado botão de 'Cancelar Edição' para que você possa desistir das alterações e limpar o formulário sem afetar o registro original."
+        ]
+    },
+    {
         version: "1.2.3",
         date: "28/01/2026",
         changes: [
