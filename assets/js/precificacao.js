@@ -3,7 +3,7 @@
 // 1. IMPORTAÇÕES DE INFRAESTRUTURA
 import { db, auth } from './firebase-config.js';
 import { 
-    collection, doc, addDoc, getDocs, setDoc, deleteDoc, getDoc, query, where // [MODIFICADO] Adicionado query e where
+    collection, doc, addDoc, getDocs, setDoc, deleteDoc, getDoc, query, where
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 
 // 2. IMPORTAÇÕES DOS MÓDULOS DE DADOS (INSUMOS E PRODUTOS)
@@ -25,7 +25,7 @@ import {
 } from './precificacao-insumos.js';
 
 import {
-    // Dados e Funções de Produtos (NOVO)
+    // Dados e Funções de Produtos
     produtos,
     carregarProdutos,
     initListenersProdutos,
@@ -49,6 +49,9 @@ let pagAtualHist = 1;
 const ITENS_POR_PAGINA = 10;
 let termoBuscaHist = "";
 
+// Variável de Controle de Edição (NOVO)
+let precificacaoEmEdicaoId = null;
+
 // ==========================================================================
 // 4. INICIALIZAÇÃO E CARREGAMENTO
 // ==========================================================================
@@ -65,6 +68,9 @@ export async function initPrecificacao() {
     window.buscarPrecificacoesGeradas = atualizarTabelaPrecificacoesGeradas;
     window.visualizarPrecificacao = visualizarPrecificacao;
     window.removerPrecificacao = removerPrecificacao;
+    
+    // EXPOR NOVA FUNÇÃO DE EDIÇÃO AO WINDOW
+    window.editarPrecificacao = editarPrecificacao;
 
     setOnMaterialUpdateCallback(atualizarCustosProdutosPorMaterial);
 
@@ -77,24 +83,22 @@ export async function initPrecificacao() {
 }
 
 async function carregarDadosCompletos() {
-    const user = auth.currentUser; // [MODIFICADO] Captura usuário
+    const user = auth.currentUser; // Captura usuário
     if (!user) return;
 
     try {
         // Carregamento Paralelo para Performance
-        // carregarDadosInsumos() e carregarProdutos() agora usam filtros internos de usuário
         await Promise.all([
             carregarDadosInsumos(), // Insumos.js
             carregarProdutos()      // Produtos.js
         ]);
 
-        // [MODIFICADO] Isolar Taxa de Crédito por Usuário
-        // A chave do documento agora inclui o UID para não conflitar
+        // Carregar Taxa de Crédito Isolada
         const taxaDocId = `taxaCredito_${user.uid}`;
         const taxaDoc = await getDoc(doc(db, "configuracoes", taxaDocId));
         if (taxaDoc.exists()) taxaCredito = { ...taxaCredito, ...taxaDoc.data() };
 
-        // [MODIFICADO] Filtra histórico de precificação por usuário
+        // Carregar Histórico de Precificação (Filtrado por usuário)
         const q = query(collection(db, "precificacoes-geradas"), where("ownerId", "==", user.uid));
         const precSnap = await getDocs(q);
         
@@ -142,15 +146,17 @@ function setupEventListeners() {
     document.querySelectorAll('#module-precificacao nav ul li a.nav-link').forEach(link => {
         link.addEventListener('click', (e) => {
             e.preventDefault();
+            // Se estiver editando e mudar de aba, perguntar se quer cancelar?
+            // Por simplicidade, mantemos o estado, mas o ideal seria limpar se sair do fluxo.
             mostrarSubMenu(link.dataset.submenu);
         });
     });
 
     // 2. Inicializa Listeners dos Sub-módulos
-    initListenersInsumos(); // Insumos.js
-    initListenersProdutos(); // Produtos.js (NOVO)
+    initListenersInsumos(); 
+    initListenersProdutos(); 
 
-    // 3. Listeners Manuais de Insumos (Legado/UI)
+    // 3. Listeners Manuais de Insumos
     bindClick('#cadastrar-material-insumo-btn', cadastrarMaterialInsumo);
     document.querySelectorAll('input[name="tipo-material"]').forEach(radio => {
         radio.addEventListener('change', function() { toggleCamposMaterial(this.value); });
@@ -232,6 +238,10 @@ function setupEventListeners() {
     });
     
     bindClick('#btn-gerar-nota', gerarNotaPrecificacao);
+    
+    // LISTENER NOVO: Botão de Cancelar Edição
+    bindClick('#btn-cancelar-edicao-precificacao', cancelarEdicaoPrecificacao);
+
     addChangeListeners(['horas-produto', 'margem-lucro-final'], calcularCustos);
     addChangeListeners(['incluir-taxa-credito-sim', 'incluir-taxa-credito-nao'], calcularTotalComTaxas);
     bindClick('#btn-salvar-taxa-credito', salvarTaxaCredito);
@@ -265,7 +275,7 @@ function converterMoeda(str) {
 }
 
 // ==========================================================================
-// 6. MÓDULO: DASHBOARD DE CÁLCULO (Lógica Financeira)
+// 6. MÓDULO: DASHBOARD DE CÁLCULO (Lógica Financeira & CRUD)
 // ==========================================================================
 
 function buscarProdutosAutocomplete() {
@@ -284,8 +294,6 @@ function buscarProdutosAutocomplete() {
         return; 
     }
 
-    // Usa a lista 'produtos' importada do precificacao-produtos.js
-    // A lista 'produtos' já está filtrada por usuário no módulo de origem
     const results = produtos.filter(p => p.nome.toLowerCase().includes(termo));
 
     if (results.length === 0) {
@@ -329,10 +337,10 @@ function verificarPrecoExistente(nomeProduto) {
     const avisoEl = document.getElementById('aviso-preco-existente');
     if (!avisoEl) return;
 
-    // precificacoesGeradas já está filtrado por usuário
+    // Se estivermos editando, não avisa que existe (pois estamos editando ele mesmo)
     const existente = precificacoesGeradas.find(p => p.produto === nomeProduto);
 
-    if (existente) {
+    if (existente && (!precificacaoEmEdicaoId || existente.id !== precificacaoEmEdicaoId)) {
         avisoEl.textContent = `⚠️ Já precificado (Nº ${existente.numero})`;
         avisoEl.classList.remove('hidden');
     } else {
@@ -363,8 +371,102 @@ function selecionarProdutoParaCalculo(prod) {
     verificarPrecoExistente(prod.nome);
 }
 
+// === FUNÇÕES NOVAS PARA EDIÇÃO (CRUD) ===
+
+function editarPrecificacao(id) {
+    const p = precificacoesGeradas.find(x => x.id === id);
+    if(!p) return;
+
+    // 1. Define estado de edição
+    precificacaoEmEdicaoId = id;
+    
+    // Input hidden (se existir no HTML, caso contrário usamos a variável global)
+    const hiddenId = document.getElementById('id-precificacao-edicao');
+    if(hiddenId) hiddenId.value = id;
+
+    // 2. Muda para a aba de cálculo
+    mostrarSubMenu('calculo-precificacao');
+
+    // 3. Preenche os campos "Fixos"
+    document.getElementById('produto-pesquisa').value = p.produto;
+    document.getElementById('horas-produto').value = p.horas;
+    document.getElementById('margem-lucro-final').value = p.margem;
+
+    // 4. LÓGICA DE CASCATA (Reatividade) - Prioridade 3
+    // Busca o produto ATUAL para pegar custos ATUALIZADOS
+    const produtoAtual = produtos.find(prod => prod.nome === p.produto);
+    
+    if (produtoAtual) {
+        const custoAtualizado = produtoAtual.custoTotal;
+        document.getElementById('custo-produto').textContent = formatarMoeda(custoAtualizado);
+        
+        // Atualiza a lista visual de materiais
+        const ul = document.getElementById('lista-materiais-produto');
+        if(ul) {
+            ul.innerHTML = '';
+            produtoAtual.materiais.forEach(m => {
+                const li = document.createElement('li');
+                li.textContent = `${m.material.nome}: ${formatarMoeda(m.custoTotal)}`;
+                ul.appendChild(li);
+            });
+        }
+        
+        // Prioridade 2: Feedback visual se houve mudança de preço
+        // Compara o custo salvo no histórico (p.custoMateriais) com o do cadastro atual (custoAtualizado)
+        if (Math.abs(custoAtualizado - p.custoMateriais) > 0.01) {
+            alert(`⚠️ ATENÇÃO: O custo dos materiais mudou desde a última precificação.\n\nAntigo: ${formatarMoeda(p.custoMateriais)}\nNovo (Atual): ${formatarMoeda(custoAtualizado)}\n\nO preço de venda sugerido será recalculado automaticamente.`);
+        }
+    } else {
+        // Fallback: Produto pode ter sido excluído ou renomeado. Usa o valor histórico.
+        document.getElementById('custo-produto').textContent = formatarMoeda(p.custoMateriais);
+        alert("Aviso: O produto original não foi encontrado no cadastro atual. Usando custos históricos.");
+    }
+
+    // 5. Ajustes de UI
+    const btnSalvarTexto = document.getElementById('texto-btn-salvar-precificacao');
+    if(btnSalvarTexto) btnSalvarTexto.textContent = 'Atualizar Precificação';
+    
+    const btnCancelar = document.getElementById('btn-cancelar-edicao-precificacao');
+    if(btnCancelar) btnCancelar.style.display = 'block';
+
+    // 6. Recalcula tudo com os novos dados
+    calcularCustos();
+    verificarPrecoExistente(p.produto);
+}
+
+function cancelarEdicaoPrecificacao() {
+    precificacaoEmEdicaoId = null;
+    const hiddenId = document.getElementById('id-precificacao-edicao');
+    if(hiddenId) hiddenId.value = '';
+    
+    // Limpar campos principais
+    document.getElementById('produto-pesquisa').value = '';
+    document.getElementById('horas-produto').value = '1';
+    document.getElementById('margem-lucro-final').value = margemLucroPadrao; // Reseta para padrão
+    
+    // Limpar listas de detalhes
+    const ul = document.getElementById('lista-materiais-produto');
+    if(ul) ul.innerHTML = '';
+    
+    // Resetar UI dos botões
+    const btnSalvarTexto = document.getElementById('texto-btn-salvar-precificacao');
+    if(btnSalvarTexto) btnSalvarTexto.textContent = 'Salvar Precificação';
+    
+    const btnCancelar = document.getElementById('btn-cancelar-edicao-precificacao');
+    if(btnCancelar) btnCancelar.style.display = 'none';
+    
+    // Ocultar resultados / Zerar
+    const elHidden = document.getElementById('custo-produto');
+    if(elHidden) elHidden.textContent = '0';
+    
+    const avisoEl = document.getElementById('aviso-preco-existente');
+    if(avisoEl) avisoEl.classList.add('hidden');
+
+    calcularCustos(); // Zera os totais visuais
+}
+
 function calcularCustos() {
-    // 1. Custos Diretos (Materiais) - Vem do Produto
+    // 1. Custos Diretos (Materiais) - Vem do Produto (Atualizado ou Histórico)
     const custoMatDisplay = document.getElementById('custo-produto').textContent;
     const custoMat = converterMoeda(custoMatDisplay);
     
@@ -437,7 +539,6 @@ async function salvarTaxaCredito() {
     
     taxaCredito = { percentual: perc, incluir };
     
-    // [MODIFICADO] Salva configuração com UID para isolamento
     const taxaDocId = `taxaCredito_${user.uid}`;
     await setDoc(doc(db, "configuracoes", taxaDocId), taxaCredito);
     
@@ -467,7 +568,7 @@ function calcularTotalComTaxas() {
 }
 
 // ==========================================================================
-// 7. HISTÓRICO DE PRECIFICAÇÕES
+// 7. HISTÓRICO DE PRECIFICAÇÕES & SALVAMENTO
 // ==========================================================================
 
 function obterProximoNumeroDisponivel() {
@@ -489,7 +590,7 @@ function obterProximoNumeroDisponivel() {
 }
 
 async function gerarNotaPrecificacao() {
-    const user = auth.currentUser; // [MODIFICADO]
+    const user = auth.currentUser;
     if (!user) return alert("Sessão expirada.");
 
     const prodNome = document.getElementById('produto-pesquisa').value;
@@ -497,26 +598,43 @@ async function gerarNotaPrecificacao() {
 
     if(!prodNome || totalFinal <= 0) return alert("Selecione um produto e calcule o preço antes de salvar.");
 
+    // Verifica se existe precificação anterior para este produto
     const precificacaoExistente = precificacoesGeradas.find(p => p.produto === prodNome);
     
-    let idParaSalvar = null;
+    // Variáveis para lógica de Atualização vs Criação
+    const isEditMode = !!precificacaoEmEdicaoId;
+    let idParaSalvar = precificacaoEmEdicaoId;
     let numeroParaSalvar = 0;
-    let isUpdate = false;
 
-    if (precificacaoExistente) {
+    // LÓGICA DE DECISÃO:
+    // 1. Se estiver editando explicitamente (clicou em editar), atualiza o ID em edição.
+    // 2. Se não estiver editando, mas já existe, pergunta se quer sobrescrever (modo legado/segurança).
+    
+    if (isEditMode) {
+        // Modo Edição Explícito: Mantém o número original
+        const original = precificacoesGeradas.find(x => x.id === precificacaoEmEdicaoId);
+        if (original) {
+            numeroParaSalvar = original.numero;
+        } else {
+            // Caso raro de erro
+            numeroParaSalvar = obterProximoNumeroDisponivel();
+            idParaSalvar = null; // Força criar novo se perdeu a referência
+        }
+    } else if (precificacaoExistente) {
+        // Modo Criação, mas já existe registro
         const confirmar = confirm(`O produto "${prodNome}" já possui precificação (Nº ${precificacaoExistente.numero}).\nDeseja atualizar os valores mantendo este número?`);
         if (!confirmar) return; 
         
         idParaSalvar = precificacaoExistente.id;
         numeroParaSalvar = precificacaoExistente.numero;
-        isUpdate = true;
     } else {
+        // Modo Criação Puro
         numeroParaSalvar = obterProximoNumeroDisponivel();
-        isUpdate = false;
+        idParaSalvar = null; // Será gerado pelo Firebase
     }
 
     const nota = {
-        ownerId: user.uid, // [MODIFICADO] Carimba o dono
+        ownerId: user.uid,
         numero: numeroParaSalvar,
         produto: prodNome,
         horas: document.getElementById('horas-produto').value,
@@ -527,40 +645,45 @@ async function gerarNotaPrecificacao() {
         custoIndiretoTotal: converterMoeda(document.getElementById('custo-indireto').textContent),
         detalhesMateriais: getListaTexto('lista-materiais-produto'),
         detalhesCustosIndiretos: getListaTexto('lista-custos-indiretos-detalhes'),
-        dataGeracao: new Date().toISOString()
+        dataGeracao: new Date().toISOString() // Atualiza data sempre que salvar
     };
 
     try {
-        if (isUpdate) {
+        if (idParaSalvar) {
+            // ATUALIZAÇÃO (PUT)
             await setDoc(doc(db, "precificacoes-geradas", idParaSalvar), nota);
+            
+            // Atualiza array local
             const index = precificacoesGeradas.findIndex(p => p.id === idParaSalvar);
             if (index !== -1) precificacoesGeradas[index] = { id: idParaSalvar, ...nota };
-            alert(`Precificação do produto "${prodNome}" atualizada!`);
+            
+            alert(`Precificação atualizada com sucesso!`);
+            
+            // Se estava em modo de edição, limpa o estado
+            if(isEditMode) cancelarEdicaoPrecificacao();
+        
         } else {
+            // CRIAÇÃO (POST)
             const ref = await addDoc(collection(db, "precificacoes-geradas"), nota);
             nota.id = ref.id;
             precificacoesGeradas.push(nota);
             alert(`Precificação Nº ${nota.numero} salva para "${prodNome}"!`);
         }
 
-        // --- INÍCIO DA SINCRONIZAÇÃO COM ESTOQUE (PRIORIDADE 1) ---
-        // Coleta os dados financeiros mais recentes da tela para enviar ao estoque
+        // --- SINCRONIZAÇÃO COM ESTOQUE ---
+        // Atualiza o cadastro de estoque com os novos custos e preços
         const dadosFinanceirosAtualizados = {
-            valorVenda: totalFinal, // Preço Final de Venda Sugerido
+            valorVenda: totalFinal, 
             financeiro: {
-                // Soma Custos Diretos e Indiretos
                 custoProducao: converterMoeda(document.getElementById('custo-produto').textContent) + 
                                converterMoeda(document.getElementById('custo-indireto').textContent),
-                
                 maoDeObra: converterMoeda(document.getElementById('total-mao-de-obra').textContent),
                 margemLucro: converterMoeda(document.getElementById('margem-lucro-valor').textContent)
             }
         };
 
-        // Chama a função exportada do estoque.js para verificar duplicidades e atualizar
-        // Passamos 'prodNome' que é o identificador comum neste estágio
         await verificarAtualizacaoEstoque(prodNome, dadosFinanceirosAtualizados);
-        // --- FIM DA SINCRONIZAÇÃO COM ESTOQUE ---
+        // --- FIM DA SINCRONIZAÇÃO ---
         
         atualizarTabelaPrecificacoesGeradas();
         verificarPrecoExistente(prodNome);
@@ -617,12 +740,14 @@ function atualizarTabelaPrecificacoesGeradas() {
             const row = tbody.insertRow();
             const dataFormatada = p.dataGeracao ? new Date(p.dataGeracao).toLocaleDateString() : '-';
             
+            // PRIORIDADE 1: Adicionado botão de editar com classe específica
             row.innerHTML = `
                 <td>${p.numero}</td>
                 <td>${p.produto}</td>
                 <td>${dataFormatada}</td>
                 <td>${formatarMoeda(p.total)}</td>
                 <td>
+                    <button class="btn-editar-precificacao" onclick="editarPrecificacao('${p.id}')">Editar</button>
                     <button onclick="visualizarPrecificacao('${p.id}')">Visualizar</button>
                     <button onclick="removerPrecificacao('${p.id}')" style="background-color: #e57373; margin-left: 5px;">Excluir</button>
                 </td>
@@ -698,7 +823,6 @@ async function removerPrecificacao(id) {
 }
 
 function calcularMaoDeObraTempoReal() {
-    // Apenas UI logic, os dados reais são salvos via Insumos.js
     const salario = parseFloat(document.getElementById('salario-receber').value) || 0;
     const horas = parseFloat(document.getElementById('horas-trabalhadas').value) || 220;
     const incluirEncargos = document.getElementById('incluir-ferias-13o-sim')?.checked;
