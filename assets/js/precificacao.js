@@ -734,26 +734,26 @@ function atualizarTabelaPrecificacoesGeradas() {
 
     // 4. Renderização
     if (itensPagina.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Nenhum registro encontrado.</td></tr>';
-    } else {
-        itensPagina.forEach(p => {
-            const row = tbody.insertRow();
-            const dataFormatada = p.dataGeracao ? new Date(p.dataGeracao).toLocaleDateString() : '-';
-            
-            // PRIORIDADE 1: Adicionado botão de editar com classe específica
-            row.innerHTML = `
-                <td>${p.numero}</td>
-                <td>${p.produto}</td>
-                <td>${dataFormatada}</td>
-                <td>${formatarMoeda(p.total)}</td>
-                <td>
-                    <button class="btn-editar-precificacao" onclick="editarPrecificacao('${p.id}')">Editar</button>
-                    <button onclick="visualizarPrecificacao('${p.id}')">Visualizar</button>
-                    <button onclick="removerPrecificacao('${p.id}')" style="background-color: #e57373; margin-left: 5px;">Excluir</button>
-                </td>
-            `;
-        });
-    }
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Nenhum registro encontrado.</td></tr>';
+        } else {
+            itensPagina.forEach(p => {
+                const row = tbody.insertRow();
+                const dataFormatada = p.dataGeracao ? new Date(p.dataGeracao).toLocaleDateString() : '-';
+                
+                // Aplicando as novas classes .btn-tabela-acao em TODOS os botões
+                row.innerHTML = `
+                    <td>${p.numero}</td>
+                    <td>${p.produto}</td>
+                    <td>${dataFormatada}</td>
+                    <td>${formatarMoeda(p.total)}</td>
+                    <td style="white-space: nowrap;">
+                        <button class="btn-tabela-acao btn-cor-editar" onclick="editarPrecificacao('${p.id}')">Editar</button>
+                        <button class="btn-tabela-acao btn-cor-visualizar" onclick="visualizarPrecificacao('${p.id}')">Visualizar</button>
+                        <button class="btn-tabela-acao btn-cor-excluir" onclick="removerPrecificacao('${p.id}')">Excluir</button>
+                    </td>
+                `;
+            });
+        }
 
     // 5. Atualizar Controles
     if (infoPag) infoPag.textContent = `Página ${pagAtualHist} de ${totalPaginas}`;
