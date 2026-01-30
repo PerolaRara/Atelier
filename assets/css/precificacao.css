@@ -1293,18 +1293,38 @@ input[type="checkbox"] {
     min-width: 50px;
 }
 
-.btn-editar-precificacao {
-    background-color: var(--cor-principal); /* Teal */
-    color: white;
-    padding: 5px 10px;
+/* --- BOTÕES PADRONIZADOS PARA TABELAS --- */
+.btn-tabela-acao {
+    padding: 8px 12px !important; /* Tamanho fixo para todos */
+    font-size: 0.85rem !important; /* Fonte legível e igual */
+    border-radius: 20px;
     border: none;
-    border-radius: 15px;
-    font-size: 0.85rem;
     cursor: pointer;
+    color: white;
     margin-right: 5px;
-    transition: background-color 0.2s;
+    margin-bottom: 2px;
+    display: inline-block;
+    min-width: 80px; /* Largura mínima para ficarem alinhados */
+    text-align: center;
+    line-height: normal;
+    transition: opacity 0.2s, transform 0.1s;
 }
 
-.btn-editar-precificacao:hover {
-    background-color: #5a8289;
+/* Cores Individuais */
+.btn-cor-editar {
+    background-color: var(--cor-principal); /* Teal */
+}
+
+.btn-cor-visualizar {
+    background-color: #78909c; /* Azul Acinzentado */
+}
+
+.btn-cor-excluir {
+    background-color: #e57373; /* Vermelho Suave */
+}
+
+/* Efeito Hover Unificado */
+.btn-tabela-acao:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
 }
