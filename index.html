@@ -975,7 +975,10 @@
                             </div>
                         </div>
                         
-                        <div class="action-area">
+                        <div class="action-area" style="display: flex; gap: 10px; flex-direction: column;">
+                            <!-- Campo oculto para armazenar o ID se estiver editando -->
+                            <input type="hidden" id="id-precificacao-edicao">
+
                             <button type="button" id="btn-gerar-nota" class="btn-primary-large">
                                 <!-- SVG Salvar -->
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px; vertical-align:text-bottom;">
@@ -983,7 +986,12 @@
                                     <polyline points="17 21 17 13 7 13 7 21"></polyline>
                                     <polyline points="7 3 7 8 15 8"></polyline>
                                 </svg>
-                                Salvar Precificação
+                                <span id="texto-btn-salvar-precificacao">Salvar Precificação</span>
+                            </button>
+
+                             <!-- Botão de Cancelar (Inicialmente oculto) -->
+                             <button type="button" id="btn-cancelar-edicao-precificacao" class="btn-secondary" style="display: none; width: 100%; border-radius: 20px; padding: 10px; cursor: pointer;">
+                                Cancelar Edição
                             </button>
                         </div>
                     </div>
