@@ -1292,3 +1292,19 @@ input[type="checkbox"] {
     width: 45% !important; 
     min-width: 50px;
 }
+
+.btn-editar-precificacao {
+    background-color: var(--cor-principal); /* Teal */
+    color: white;
+    padding: 5px 10px;
+    border: none;
+    border-radius: 15px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    margin-right: 5px;
+    transition: background-color 0.2s;
+}
+
+.btn-editar-precificacao:hover {
+    background-color: #5a8289;
+}
