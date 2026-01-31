@@ -163,6 +163,24 @@ export const utils = {
             status: status,
             sobraOperacional: sobraOperacional
         };
+    },
+
+    // 9. SISTEMA DE TOAST (Feedback Visual)
+    // Centraliza a exibição de notificações temporárias para o usuário
+    showToast: (mensagem, tipo = 'info') => {
+        const container = document.getElementById('toast-container');
+        if (!container) return;
+
+        const toast = document.createElement('div');
+        toast.className = `toast ${tipo}`;
+        toast.innerText = mensagem;
+
+        container.appendChild(toast);
+
+        // Remove do DOM após a animação de saída (3s total: 0.3s entrada + 2.2s espera + 0.5s saída)
+        setTimeout(() => {
+            toast.remove();
+        }, 3000);
     }
 };
 
