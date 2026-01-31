@@ -6,6 +6,16 @@
  */
 const changeLogData = [
     {
+        version: "1.2.5",
+        date: "31/01/2026",
+        changes: [
+            "🍞 **Feedback Visual (Toasts):** Implementamos um sistema de notificações elegantes que surgem no canto da tela e desaparecem sozinhas, eliminando de vez os alertas intrusivos que travavam sua navegação.",
+            "🔄 **Sincronização Automática (Encargos):** Agora, ao alterar as opções de 'Encargos' na precificação, o sistema detecta a mudança e realiza o salvamento imediato no banco de dados, garantindo consistência total sem cliques extras.",
+            "🚀 **Experiência de Trabalho Fluida:** Substituição global de janelas de aviso por mensagens rápidas de confirmação (Sucesso/Erro), garantindo que o fluxo criativo no ateliê nunca seja interrompido por pop-ups.",
+            "🛠️ **Arquitetura de Comunicação Centralizada:** Integração do sistema de feedback no arquivo `utils.js`, permitindo que todos os módulos do portal agora utilizem um padrão visual moderno e coeso para informar o usuário."
+        ]
+    },
+    {
         version: "1.2.4",
         date: "29/01/2026",
         changes: [
