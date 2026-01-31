@@ -355,35 +355,33 @@ function editarPedido(id) {
 async function atualizarPedido() {
     if (!pedidoEditando) return;
     
-    // Captura valores financeiros usando Utils
+    // 1. Captura valores financeiros usando Utils
     const custosTotais = getValMoeda("custoTotalPedido");
     const custoMO = getValMoeda("maoDeObraPedido"); 
     const margem = getValMoeda("lucroPedido");      
 
-    // --- VALIDAÇÃO FINANCEIRA INTELIGENTE (SOFT BLOCK) ---
-    // Verifica se o somatório dos dados financeiros vitais está zerado (Blindagem Financeira)
-    if ((custosTotais + custoMO + margem) === 0) {
-        const confirmacao = confirm(
-            "🛑 ATENÇÃO: DADOS FINANCEIROS INCOMPLETOS!\n\n" +
-            "Os campos de Custo, Salário e Lucro estão zerados.\n" +
-            "Se salvar assim, seu Relatório Financeiro ficará incorreto.\n\n" +
-            "Deseja salvar mesmo assim?"
-        );
+    // 2. EDUCAÇÃO FINANCEIRA: Verificação de campos essenciais
+    // Verifica se ALGUM dos campos está zerado (não apenas a soma)
+    const dadosIncompletos = (custosTotais === 0 || custoMO === 0 || margem === 0);
+
+    if (dadosIncompletos) {
+        const mensagemEducativa = 
+            "⚠️ ATENÇÃO: DADOS FINANCEIROS INCOMPLETOS\n\n" +
+            "Notamos que um ou mais campos essenciais (Custos, Salário ou Lucro) estão zerados.\n" +
+            "Para que seu Relatório Financeiro funcione corretamente, é ideal preenchê-los.\n\n" +
+            "Deseja salvar mesmo assim?";
         
-        if (!confirmacao) {
-            // Usuário clicou em Cancelar: Interrompe e guia o foco para o campo de custo
-            const inputCusto = document.getElementById("custoTotalPedido");
-            if(inputCusto) {
-                inputCusto.focus();
-                inputCusto.style.border = "2px solid #e53935";
-            }
+        // Se o usuário clicar em Cancelar, abortamos o salvamento para que ele corrija
+        if (!confirm(mensagemEducativa)) {
+            // Foca no primeiro campo provável de erro
+            if(custosTotais === 0) document.getElementById("custoTotalPedido")?.focus();
+            else if(custoMO === 0) document.getElementById("maoDeObraPedido")?.focus();
             return; 
         }
     }
-    // ------------------------------------------------------
 
+    // 3. Preparação dos dados
     const index = pedidos.findIndex(p => p.id === pedidoEditando);
-    
     const dados = {
         ...pedidos[index],
         cliente: document.getElementById("clienteEdicao").value,
@@ -392,6 +390,7 @@ async function atualizarPedido() {
         total: getValMoeda("totalEdicao"),
         entrada: getValMoeda("entradaEdicao"),
         restante: getValMoeda("restanteEdicao"),
+        observacoes: document.getElementById("observacoesEdicao").value, // Garantir que obs sejam salvas
         
         custosTotais: custosTotais,
         custoMaoDeObra: custoMO,
@@ -400,20 +399,33 @@ async function atualizarPedido() {
         produtos: lerProdutosDaTabela()
     };
 
-    // Usa a função injetada pelo módulo pai para salvar
-    await salvarDadosFn(dados, 'pedido');
-    
-    pedidos[index] = dados;
+    try {
+        // 4. Salvar no Banco
+        await salvarDadosFn(dados, 'pedido');
+        pedidos[index] = dados;
 
-    // --- SUCESSO: RESETA A FLAG E O ESTADO DO BOTÃO ---
-    houveAlteracaoNaoSalva = false;
-    const btn = document.getElementById('btnSalvarPedidoEdicao');
-    if(btn) btn.innerText = "Salvar Pedido"; // Restaura texto original
-    
-    alert("Pedido Atualizado e Dados Financeiros Salvos!");
-    pedidoEditando = null;
-    mostrarPagina('lista-pedidos');
-    mostrarPedidosRealizados();
+        // 5. Reset de Estado
+        houveAlteracaoNaoSalva = false;
+        const btn = document.getElementById('btnSalvarPedidoEdicao');
+        if(btn) btn.innerText = "Salvar Pedido";
+        
+        // 6. FEEDBACK INTELIGENTE (TOASTS)
+        pedidoEditando = null;
+        mostrarPagina('lista-pedidos');
+        mostrarPedidosRealizados();
+
+        if (dadosIncompletos) {
+            // Aviso amarelo/laranja se salvou faltando dados
+            utils.showToast("Pedido salvo, mas sem dados financeiros completos.", "warning"); 
+        } else {
+            // Sucesso verde/teal
+            utils.showToast("Pedido atualizado e dados financeiros salvos!", "success");
+        }
+
+    } catch (error) {
+        console.error(error);
+        alert("Erro ao salvar pedido.");
+    }
 }
 
 // Helpers de Formulário
