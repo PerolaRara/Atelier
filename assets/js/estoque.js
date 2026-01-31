@@ -273,7 +273,7 @@ async function iniciarVenda(id) {
 
     try {
         // Executa tudo ou nada (Atomicidade)
-        await runTransaction(db, async (transaction) => {
+        const resultado = await runTransaction(db, async (transaction) => {
             // 1. LEITURAS (Devem ocorrer antes de qualquer escrita)
             const itemDocRef = doc(db, "estoque", id);
             const itemDoc = await transaction.get(itemDocRef);
@@ -347,15 +347,29 @@ async function iniciarVenda(id) {
             // C. Cria o Pedido Financeiro
             transaction.set(novoPedidoRef, novoPedido);
             
-            // Retornamos o pedido criado para usar na UI depois
-            return { novoPedido, novoEstoque, idItem: id };
+            // Retornamos dados essenciais incluindo o ID do novo pedido para redirecionamento
+            return { novoPedido, novoEstoque, idItem: id, idNovoPedido: novoPedidoRef.id };
         });
 
         // Se chegou aqui, a transação foi sucesso
-        alert("Venda realizada com sucesso!");
+        alert("Venda realizada com sucesso!\n\nRedirecionando para detalhes do pedido...");
         
         // Recarregar dados para refletir mudanças (especialmente estoque)
         await carregarDadosEstoque();
+
+        // [MUDANÇA DE FLUXO] Redireciona para edição do pedido gerado
+        // Isso permite ajustar o nome do cliente e conferir o financeiro
+        if (typeof window.editarPedido === 'function') {
+            // Pequeno delay para garantir que a interface atualize e a navegação ocorra suavemente
+            setTimeout(() => {
+                // Simula clique na aba de pedidos para carregar o contexto correto se necessário
+                const tabPedidos = document.querySelector('a[data-pagina="lista-pedidos"]');
+                if(tabPedidos) tabPedidos.click();
+                
+                // Abre a edição usando o ID retornado pela transação
+                window.editarPedido(resultado.idNovoPedido);
+            }, 100);
+        }
 
     } catch(e) { 
         console.error("Transação falhou: ", e); 
