@@ -4,6 +4,7 @@ import { db, auth, query, where } from './firebase-config.js';
 import { 
     collection, doc, setDoc, getDocs, updateDoc, deleteDoc, addDoc, getDoc 
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+import { utils } from './utils.js';
 
 // ==========================================
 // ESTADO COMPARTILHADO (Exports)
@@ -68,7 +69,6 @@ const calculadorasConfig = {
             { id: 'tarifa', label: 'Tarifa de Energia (R$/kWh)', tipo: 'number', value: 1.20, help: 'Olhe na sua conta de luz (Preço do kWh)' }
         ],
         calcular: (v) => {
-            // Fórmula: (Watts * Horas * Dias / 1000) * Tarifa
             const kwhMensal = (v.potencia * v.horasDia * v.diasMes) / 1000;
             return kwhMensal * v.tarifa;
         }
@@ -81,7 +81,6 @@ const calculadorasConfig = {
             { id: 'vidaUtil', label: 'Vida Útil (Anos)', tipo: 'number', value: 5, help: 'Quanto tempo pretende ficar com ela?' }
         ],
         calcular: (v) => {
-            // Fórmula: (Compra - Revenda) / Meses
             const meses = v.vidaUtil * 12;
             if (meses === 0) return 0;
             return (v.valorCompra - v.valorRevenda) / meses;
@@ -102,7 +101,6 @@ const calculadorasConfig = {
             { id: 'areaAtelie', label: 'Área do Ateliê (m²)', tipo: 'number' }
         ],
         calcular: (v) => {
-            // Regra de 3 simples
             if (v.areaTotal === 0) return 0;
             const percentual = v.areaAtelie / v.areaTotal;
             return v.valorTotal * percentual;
@@ -140,11 +138,11 @@ function calcularCustoUnitario(tipo, valorTotal, comprimentoCm, volumeMl, pesoG,
     if (valorTotal <= 0) return 0;
 
     switch (tipo) {
-        case "comprimento": custo = valorTotal / (comprimentoCm / 100); break; // R$/metro
-        case "litro": custo = valorTotal / (volumeMl / 1000); break; // R$/litro
-        case "quilo": custo = valorTotal / (pesoG / 1000); break; // R$/kg
-        case "unidade": custo = valorTotal; break; // R$/unidade
-        case "area": custo = valorTotal / ((larguraCm / 100) * (alturaCm / 100)); break; // R$/m²
+        case "comprimento": custo = valorTotal / (comprimentoCm / 100); break; 
+        case "litro": custo = valorTotal / (volumeMl / 1000); break; 
+        case "quilo": custo = valorTotal / (pesoG / 1000); break; 
+        case "unidade": custo = valorTotal; break; 
+        case "area": custo = valorTotal / ((larguraCm / 100) * (alturaCm / 100)); break; 
     }
     return custo;
 }
@@ -153,13 +151,11 @@ function calcularCustoUnitario(tipo, valorTotal, comprimentoCm, volumeMl, pesoG,
 // FUNÇÃO AGRUPADORA (LOADER)
 // ==========================================
 export async function carregarDadosInsumos() {
-    console.log("Carregando dados de insumos (Isolamento por Usuário)...");
     await Promise.all([
         carregarMateriais(),
         carregarMaoDeObra(),
         carregarCustosIndiretos()
     ]);
-    console.log("Dados de insumos carregados.");
 }
 
 // ==========================================
@@ -171,7 +167,6 @@ export async function carregarMateriais() {
     if (!user) return;
 
     try {
-        // [MODIFICAÇÃO PRIORIDADE 2] Filtra materiais pelo ownerId do usuário logado
         const q = query(
             collection(db, "materiais-insumos"), 
             where("ownerId", "==", user.uid)
@@ -195,18 +190,15 @@ export function atualizarTabelaMateriaisInsumos() {
     if(!tbody) return;
     tbody.innerHTML = '';
 
-    // 1. Filtragem
     const termo = termoBuscaMat.trim().toLowerCase();
     const filtrados = materiais.filter(m => {
-        if (m.ativo === false) return false; // Ignora arquivados
+        if (m.ativo === false) return false; 
         if (!termo) return true;
         return m.nome.toLowerCase().includes(termo);
     });
 
-    // 2. Ordenação (Alfabética A-Z) - Garantida
     filtrados.sort((a,b) => a.nome.localeCompare(b.nome));
 
-    // 3. Paginação
     const totalPaginas = Math.ceil(filtrados.length / ITENS_POR_PAGINA) || 1;
     if (pagAtualMat > totalPaginas) pagAtualMat = totalPaginas;
     if (pagAtualMat < 1) pagAtualMat = 1;
@@ -215,7 +207,6 @@ export function atualizarTabelaMateriaisInsumos() {
     const fim = inicio + ITENS_POR_PAGINA;
     const itensPagina = filtrados.slice(inicio, fim);
 
-    // 4. Renderização
     if (itensPagina.length === 0) {
         tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Nenhum material encontrado.</td></tr>';
     } else {
@@ -241,7 +232,6 @@ export function atualizarTabelaMateriaisInsumos() {
         });
     }
 
-    // 5. Atualizar Controles
     if (infoPag) infoPag.textContent = `Página ${pagAtualMat} de ${totalPaginas}`;
     if (btnAnt) {
         btnAnt.disabled = (pagAtualMat === 1);
@@ -266,7 +256,7 @@ export function toggleCamposMaterial(tipo) {
 
 export async function cadastrarMaterialInsumo() {
     const user = auth.currentUser;
-    if (!user) return alert("Sessão expirada. Faça login novamente.");
+    if (!user) return utils.showToast("Sessão expirada. Faça login novamente.", "error");
 
     const nomeInput = document.getElementById('nome-material').value;
     const radioChecked = document.querySelector('input[name="tipo-material"]:checked');
@@ -281,7 +271,7 @@ export async function cadastrarMaterialInsumo() {
     const alturaCm = parseFloat(document.getElementById('altura-cm').value) || 0;
 
     if(!nomeInput || valorTotal <= 0) {
-        alert("Preencha o nome e o valor total corretamente.");
+        utils.showToast("Preencha o nome e o valor total corretamente.", "error");
         return;
     }
 
@@ -294,14 +284,14 @@ export async function cadastrarMaterialInsumo() {
     });
 
     if (existeDuplicata) {
-        alert(`O material "${nome}" já está cadastrado.\nPor favor, utilize outro nome ou edite o existente.`);
+        utils.showToast(`O material "${nome}" já está cadastrado.`, "error");
         return;
     }
 
     const custoUnitario = calcularCustoUnitario(tipo, valorTotal, comprimentoCm, volumeMl, pesoG, larguraCm, alturaCm);
 
     const materialData = {
-        ownerId: user.uid, // [MODIFICAÇÃO PRIORIDADE 2] Vincula o material ao usuário
+        ownerId: user.uid, 
         nome, tipo, valorTotal, 
         comprimentoCm, volumeMl, pesoG, larguraCm, alturaCm,
         custoUnitario,
@@ -317,7 +307,7 @@ export async function cadastrarMaterialInsumo() {
             
             if(onMaterialUpdateCallback) await onMaterialUpdateCallback(materiais[idx]);
             
-            alert("Material atualizado com sucesso!");
+            utils.showToast("Material atualizado com sucesso!", "success");
             materialEmEdicao = null;
             const btn = document.querySelector('#cadastrar-material-insumo-btn');
             if(btn) btn.textContent = "Cadastrar Material";
@@ -325,7 +315,7 @@ export async function cadastrarMaterialInsumo() {
             const ref = await addDoc(collection(db, "materiais-insumos"), materialData);
             materialData.id = ref.id;
             materiais.push(materialData);
-            alert("Material cadastrado!");
+            utils.showToast("Material cadastrado com sucesso!", "success");
         }
 
         const form = document.getElementById('form-materiais-insumos');
@@ -335,7 +325,7 @@ export async function cadastrarMaterialInsumo() {
 
     } catch (e) {
         console.error(e);
-        alert("Erro ao salvar material.");
+        utils.showToast("Erro ao salvar material.", "error");
     }
 }
 
@@ -380,16 +370,17 @@ export async function removerMaterialInsumo(id) {
                 materiais[idx].ativo = false;
             }
             
+            utils.showToast("Material arquivado com sucesso!", "success");
             atualizarTabelaMateriaisInsumos();
         } catch(e) {
             console.error(e);
-            alert("Erro ao arquivar material.");
+            utils.showToast("Erro ao arquivar material.", "error");
         }
     }
 }
 
 export function buscarMateriaisCadastrados() {
-    // Depreciado: substituído pelo listener de debounce
+    // Depreciado
 }
 
 // ==========================================
@@ -401,17 +392,11 @@ export async function carregarMaoDeObra() {
     if (!user) return;
 
     try {
-        // [MODIFICAÇÃO PRIORIDADE 2] Carrega configuração específica do usuário
-        // O ID do documento agora é 'maoDeObra_UID'
         const docId = `maoDeObra_${user.uid}`;
         const moDoc = await getDoc(doc(db, "configuracoes", docId));
         
         if (moDoc.exists()) {
             maoDeObra = { ...maoDeObra, ...moDoc.data() };
-        } else {
-            // Se não existir (primeiro acesso), mantemos o padrão zerado/default
-            // Não carregamos o 'maoDeObra' global para evitar contaminação
-            console.log("Configuração de mão de obra não encontrada para este usuário. Usando padrão.");
         }
         preencherCamposMaoDeObra();
     } catch (e) {
@@ -421,7 +406,7 @@ export async function carregarMaoDeObra() {
 
 export async function salvarMaoDeObra() {
     const user = auth.currentUser;
-    if (!user) return alert("Sessão expirada.");
+    if (!user) return utils.showToast("Sessão expirada.", "error");
 
     const salarioEl = document.getElementById('salario-receber');
     const horasEl = document.getElementById('horas-trabalhadas');
@@ -433,7 +418,7 @@ export async function salvarMaoDeObra() {
     const horas = parseFloat(horasEl.value);
     const incluirFerias = feriasEl ? feriasEl.checked : false;
 
-    if(!salario || !horas) return alert("Preencha salário e horas.");
+    if(!salario || !horas) return utils.showToast("Preencha salário e horas.", "error");
 
     const valorHora = salario / horas;
     
@@ -446,22 +431,21 @@ export async function salvarMaoDeObra() {
     }
 
     maoDeObra = { 
-        ownerId: user.uid, // [NOVO]
+        ownerId: user.uid, 
         salario, horas, valorHora, incluirFerias13o: incluirFerias, custoFerias13o: custoEncargos 
     };
 
     try {
-        // [MODIFICAÇÃO PRIORIDADE 2] Salva em documento específico do usuário
         const docId = `maoDeObra_${user.uid}`;
         await setDoc(doc(db, "configuracoes", docId), maoDeObra);
         
         preencherCamposMaoDeObra();
         toggleEdicaoMaoDeObra(false);
-        atualizarTabelaCustosIndiretos(); // Atualiza pois depende da hora
-        alert("Mão de Obra Salva!");
+        atualizarTabelaCustosIndiretos(); 
+        utils.showToast("Mão de Obra salva e sincronizada!", "success");
     } catch(e) {
         console.error(e);
-        alert("Erro ao salvar configuração de mão de obra.");
+        utils.showToast("Erro ao salvar configuração de mão de obra.", "error");
     }
 }
 
@@ -521,7 +505,7 @@ function toggleEdicaoMaoDeObra(editando) {
 }
 
 // ==========================================
-// MÓDULO: CUSTOS INDIRETOS (COM CALCULADORA E PAGINAÇÃO)
+// MÓDULO: CUSTOS INDIRETOS
 // ==========================================
 
 export async function carregarCustosIndiretos() {
@@ -531,7 +515,6 @@ export async function carregarCustosIndiretos() {
     try {
         custosIndiretosPredefinidos = JSON.parse(JSON.stringify(custosIndiretosPredefinidosBase));
 
-        // [MODIFICAÇÃO PRIORIDADE 2] Filtra Custos Predefinidos por usuário
         const qPre = query(
             collection(db, "custos-indiretos-predefinidos"), 
             where("ownerId", "==", user.uid)
@@ -546,7 +529,6 @@ export async function carregarCustosIndiretos() {
             }
         });
 
-        // [MODIFICAÇÃO PRIORIDADE 2] Filtra Custos Adicionais por usuário
         const qAdd = query(
             collection(db, "custos-indiretos-adicionais"),
             where("ownerId", "==", user.uid)
@@ -568,10 +550,8 @@ export function carregarCustosIndiretosPredefinidosUI() {
     if(!lista) return;
     lista.innerHTML = '';
 
-    // Renderiza Predefinidos
     custosIndiretosPredefinidosBase.forEach((base, idx) => {
         const atual = custosIndiretosPredefinidos.find(c => c.descricao === base.descricao) || base;
-        
         const temCalculadora = calculadorasConfig.hasOwnProperty(base.descricao);
         
         const btnCalcHTML = temCalculadora 
@@ -601,7 +581,6 @@ export function carregarCustosIndiretosPredefinidosUI() {
         lista.appendChild(li);
     });
 
-    // Renderiza Adicionais
     custosIndiretosAdicionais.forEach(add => {
         const li = document.createElement('li');
         li.innerHTML = `
@@ -615,7 +594,7 @@ export function carregarCustosIndiretosPredefinidosUI() {
 
 export async function salvarCustoIndiretoPredefinido(descricao, idx, parametrosOpcionais = null) {
     const user = auth.currentUser;
-    if (!user) return alert("Sessão expirada.");
+    if (!user) return utils.showToast("Sessão expirada.", "error");
 
     const input = document.getElementById(`ci-pref-${idx}`);
     let val = 0;
@@ -630,11 +609,10 @@ export async function salvarCustoIndiretoPredefinido(descricao, idx, parametrosO
 
     const arrIdx = custosIndiretosPredefinidos.findIndex(c => c.descricao === descricao);
     const paramsAtuais = (arrIdx !== -1) ? custosIndiretosPredefinidos[arrIdx].parametros : null;
-    
     const finalParams = parametrosOpcionais || paramsAtuais || null;
 
     const item = { 
-        ownerId: user.uid, // [NOVO]
+        ownerId: user.uid, 
         descricao, 
         valorMensal: val, 
         valorPorHora: val / maoDeObra.horas,
@@ -645,16 +623,14 @@ export async function salvarCustoIndiretoPredefinido(descricao, idx, parametrosO
     else custosIndiretosPredefinidos.push(item);
     
     try {
-        // [MODIFICAÇÃO PRIORIDADE 2] ID composto para não sobrescrever dados de outro usuário
-        // Ex: "Energia elétrica_UID"
         const docId = `${descricao}_${user.uid}`;
         await setDoc(doc(db, "custos-indiretos-predefinidos", docId), item);
         
         atualizarTabelaCustosIndiretos();
-        if(idx !== -1 && !parametrosOpcionais) alert("Custo salvo!"); 
+        if(idx !== -1 && !parametrosOpcionais) utils.showToast("Custo fixo atualizado com sucesso!", "success");
     } catch(e) {
         console.error(e);
-        if(idx !== -1) alert("Erro ao salvar custo.");
+        if(idx !== -1) utils.showToast("Erro ao salvar custo. Tente novamente.", "error");
     }
 }
 
@@ -674,14 +650,14 @@ export function adicionarNovoCustoIndireto() {
     if(btn) {
         btn.onclick = async () => {
             const user = auth.currentUser;
-            if(!user) return alert("Sessão expirada.");
+            if(!user) return utils.showToast("Sessão expirada.", "error");
 
             const nome = li.querySelector('.novo-ci-nome').value;
             const valor = parseFloat(li.querySelector('.novo-ci-valor').value);
             
             if(nome && valor >= 0) {
                 const novo = { 
-                    ownerId: user.uid, // [NOVO]
+                    ownerId: user.uid, 
                     descricao: nome, 
                     valorMensal: valor, 
                     valorPorHora: valor / maoDeObra.horas 
@@ -692,9 +668,10 @@ export function adicionarNovoCustoIndireto() {
                     custosIndiretosAdicionais.push(novo);
                     carregarCustosIndiretosPredefinidosUI(); 
                     atualizarTabelaCustosIndiretos();
+                    utils.showToast("Custo adicional salvo!", "success");
                 } catch(e) {
                     console.error(e);
-                    alert("Erro ao adicionar custo extra.");
+                    utils.showToast("Erro ao adicionar custo extra.", "error");
                 }
             }
         };
@@ -708,9 +685,10 @@ export async function removerCustoIndiretoAdicional(id) {
             custosIndiretosAdicionais = custosIndiretosAdicionais.filter(c => c.id !== id);
             carregarCustosIndiretosPredefinidosUI();
             atualizarTabelaCustosIndiretos();
+            utils.showToast("Custo removido!", "success");
         } catch(e) {
             console.error(e);
-            alert("Erro ao remover custo.");
+            utils.showToast("Erro ao remover custo.", "error");
         }
     }
 }
@@ -725,7 +703,7 @@ export async function zerarCustoIndireto(descricao, idOpcional) {
         await removerCustoIndiretoAdicional(idOpcional);
     } else {
         const item = { 
-            ownerId: user.uid, // [NOVO]
+            ownerId: user.uid, 
             descricao, 
             valorMensal: 0, 
             valorPorHora: 0, 
@@ -735,19 +713,19 @@ export async function zerarCustoIndireto(descricao, idOpcional) {
         if(arrIdx !== -1) custosIndiretosPredefinidos[arrIdx] = item;
         
         try {
-            // [MODIFICAÇÃO PRIORIDADE 2] Mesmo padrão de ID composto
             const docId = `${descricao}_${user.uid}`;
             await setDoc(doc(db, "custos-indiretos-predefinidos", docId), item);
             
             carregarCustosIndiretosPredefinidosUI(); 
             atualizarTabelaCustosIndiretos(); 
+            utils.showToast("Custo zerado com sucesso!", "success");
         } catch(e) { 
             console.error("Erro ao zerar custo predefinido:", e); 
+            utils.showToast("Erro ao zerar custo.", "error");
         }
     }
 }
 
-// ATUALIZADO: Função com suporte a Paginação e Filtro
 export function atualizarTabelaCustosIndiretos() {
     const tbody = document.querySelector('#tabela-custos-indiretos tbody');
     const btnAnt = document.getElementById("btn-ant-custo");
@@ -757,22 +735,16 @@ export function atualizarTabelaCustosIndiretos() {
     if(!tbody) return;
     tbody.innerHTML = '';
     
-    // Combina predefinidos e adicionais
     let todos = [...custosIndiretosPredefinidos, ...custosIndiretosAdicionais];
-    
-    // 1. Filtragem (Busca)
     const termo = termoBuscaCustos.trim().toLowerCase();
     let filtrados = todos.filter(c => {
-        // Exibe apenas custos ativos (valor > 0 ou recém criados) E que batem com a busca
         const matchBusca = c.descricao.toLowerCase().includes(termo);
         const temValor = c.valorMensal > 0; 
         return matchBusca && temValor; 
     });
 
-    // 2. Ordenação (Alfabética A-Z) - Garantida
     filtrados.sort((a,b) => a.descricao.localeCompare(b.descricao));
 
-    // 3. Paginação
     const totalPaginas = Math.ceil(filtrados.length / ITENS_POR_PAGINA) || 1;
     if (pagAtualCustos > totalPaginas) pagAtualCustos = totalPaginas;
     if (pagAtualCustos < 1) pagAtualCustos = 1;
@@ -781,7 +753,6 @@ export function atualizarTabelaCustosIndiretos() {
     const fim = inicio + ITENS_POR_PAGINA;
     const itensPagina = filtrados.slice(inicio, fim);
 
-    // 4. Renderização
     if (itensPagina.length === 0) {
         tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Nenhum gasto encontrado.</td></tr>';
     } else {
@@ -802,7 +773,6 @@ export function atualizarTabelaCustosIndiretos() {
         });
     }
 
-    // 5. Atualizar Controles
     if (infoPag) infoPag.textContent = `Página ${pagAtualCustos} de ${totalPaginas}`;
     if (btnAnt) {
         btnAnt.disabled = (pagAtualCustos === 1);
@@ -815,15 +785,14 @@ export function atualizarTabelaCustosIndiretos() {
 }
 
 export function buscarCustosIndiretosCadastrados() {
-    // Depreciado: substituído pelo listener de debounce
+    // Depreciado
 }
 
 // ==========================================
-// INICIALIZAÇÃO DE LISTENERS (MATERIAIS E CUSTOS)
+// INICIALIZAÇÃO DE LISTENERS
 // ==========================================
 export function initListenersInsumos() {
     
-    // Listener de Materiais (existente)
     const inputBuscaMat = document.getElementById('busca-material');
     if(inputBuscaMat) {
         inputBuscaMat.addEventListener('input', debounce((e) => {
@@ -833,15 +802,23 @@ export function initListenersInsumos() {
         }));
     }
 
-    // NOVO: Listener de Gastos Fixos
     const inputBuscaCustos = document.getElementById('busca-custo-indireto');
     if(inputBuscaCustos) {
         inputBuscaCustos.addEventListener('input', debounce((e) => {
             termoBuscaCustos = e.target.value;
-            pagAtualCustos = 1; // Reseta para pág 1 na busca
+            pagAtualCustos = 1; 
             atualizarTabelaCustosIndiretos();
         }, 300));
     }
+
+    // AUTO-SAVE: Encargos (Férias/13º)
+    const radiosEncargos = document.querySelectorAll('input[name="incluir-ferias-13o"]');
+    radiosEncargos.forEach(r => {
+        r.addEventListener('change', () => {
+            // Dispara o salvamento no banco, que já chamará o Toast de sucesso
+            salvarMaoDeObra(); 
+        });
+    });
 }
 
 // ==========================================
@@ -880,7 +857,8 @@ window.abrirCalculadoraCustos = function(descricao, index) {
     if (paramsSalvos && Object.keys(paramsSalvos).length > 0) {
         window.recalcularPrevia(descricao);
     } else {
-        document.querySelector('#resultado-previo-calc strong').innerText = 'R$ 0,00';
+        const resPrev = document.querySelector('#resultado-previo-calc strong');
+        if(resPrev) resPrev.innerText = 'R$ 0,00';
     }
     
     const modal = document.getElementById('modal-calculadora-custos');
@@ -904,7 +882,8 @@ window.recalcularPrevia = function(descricao) {
     });
 
     const resultado = config.calcular(valores);
-    document.querySelector('#resultado-previo-calc strong').innerText = formatarMoeda(resultado);
+    const resPrev = document.querySelector('#resultado-previo-calc strong');
+    if(resPrev) resPrev.innerText = formatarMoeda(resultado);
 };
 
 function aplicarCalculo(descricao) {
@@ -924,7 +903,6 @@ function aplicarCalculo(descricao) {
     }
 
     salvarCustoIndiretoPredefinido(descricao, indexDestinoAtual, valoresParametros);
-
     window.fecharCalculadoraCustos();
 }
 
@@ -940,9 +918,7 @@ window.fecharCalculadoraCustos = function() {
 window.editarMaterialInsumo = editarMaterialInsumo;
 window.removerMaterialInsumo = removerMaterialInsumo;
 window.buscarMateriaisCadastrados = buscarMateriaisCadastrados;
-
 window.editarMaoDeObraUI = editarMaoDeObraUI;
-
 window.salvarCustoIndiretoPredefinido = salvarCustoIndiretoPredefinido;
 window.removerCustoIndiretoAdicional = removerCustoIndiretoAdicional;
 window.buscarCustosIndiretosCadastrados = buscarCustosIndiretosCadastrados;
