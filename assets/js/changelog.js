@@ -6,6 +6,16 @@
  */
 const changeLogData = [
     {
+        version: "1.2.6",
+        date: "31/01/2026",
+        changes: [
+            "🚀 **Fluxo de Venda Silencioso:** Removemos os alertas intrusivos ao gerar pedidos a partir de orçamentos. Agora o sistema realiza os cálculos em segundo plano e te redireciona instantaneamente para a edição, eliminando cliques desnecessários.",
+            "🎓 **Educação Financeira Ativa:** Implementamos um 'Soft Block' educativo na edição de pedidos. Se os campos de Custo, Salário ou Lucro estiverem zerados, o sistema emitirá um aviso explicando a importância desses dados para seus relatórios antes de permitir o salvamento.",
+            "🎨 **Toasts Condicionais (Inteligência Visual):** O sistema de notificações agora diferencia estados de integridade. Pedidos salvos com dados financeiros incompletos geram um alerta laranja (Warning), enquanto pedidos 100% preenchidos recebem a confirmação verde (Success).",
+            "💾 **Persistência de Notas:** Refatoração da captura de dados no módulo de pedidos para garantir que o campo de observações seja devidamente sincronizado e salvo no banco de dados junto com as alterações financeiras."
+        ]
+    },
+    {
         version: "1.2.5",
         date: "31/01/2026",
         changes: [
@@ -38,7 +48,7 @@ const changeLogData = [
         version: "1.2.2",
         date: "26/01/2026",
         changes: [
-            "💸 **Cascata de Descontos (Saneamento Financeiro):** Acabamos com a ilusão do 'lucro falso'. Agora, se você der um desconto ao cliente no fechamento do pedido, o sistema abate esse valor automaticamente primeiro da Margem de Lucro, e depois do seu Salário. O relatório financeiro agora reflete a dura realidade, não apenas o cenário ideal.",
+            "💸 **Cascata de Descontos (Saneamento Financeiro):** Acabamos com a ilusão do 'lucro falso'. Agora, se você dar um desconto ao cliente no fechamento do pedido, o sistema abate esse valor automaticamente primeiro da Margem de Lucro, e depois do seu Salário. O relatório financeiro agora reflete a dura realidade, não apenas o cenário ideal.",
             "🛑 **Trava de Prejuízo:** Implementamos um alerta de segurança crítica. Se o valor da venda for reduzido a ponto de não cobrir nem os custos dos materiais, o sistema emite um aviso vermelho e exige confirmação extra, evitando que você 'pague para trabalhar'.",
             "🎨 **Feedback Visual na Edição:** Ao editar um pedido existente, os campos de 'Meu Salário' mudam de cor em tempo real. Ficará Laranja se o desconto estiver comendo parte do seu salário, e Vermelho se estiver gerando prejuízo.",
             "🧠 **Cérebro Financeiro Unificado:** Centralização da lógica matemática. Tanto a geração de novos pedidos a partir de orçamentos quanto a edição manual agora usam a mesma regra de distribuição financeira, garantindo consistência total nos dados."
