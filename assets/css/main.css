@@ -624,7 +624,7 @@ th.sortable::after {
 th.sortable.asc::after { content: '↑'; opacity: 1; }
 th.sortable.desc::after { content: '↓'; opacity: 1; }
 
-/* --- COMPONENTE TOAST (FEEDBACK) --- */
+/* --- COMPONENTE TOAST (FEEDBACK) - VISUAL REFINADO --- */
 #toast-container {
     position: fixed;
     top: 20px;
@@ -632,29 +632,47 @@ th.sortable.desc::after { content: '↓'; opacity: 1; }
     z-index: 9999;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 12px;
 }
 
 .toast {
     background-color: #fff;
-    border-left: 5px solid var(--cor-principal); /* Teal */
-    color: #444;
-    padding: 15px 25px;
-    border-radius: 4px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    /* A borda esquerda agora é mais grossa para dar destaque */
+    border-left: 6px solid #ccc; 
+    color: #555; /* Texto cinza suave, não preto puro */
+    padding: 16px 20px;
+    border-radius: 8px; /* Cantos mais arredondados */
+    /* Sombra mais difusa e elegante (estilo cartão flutuante) */
+    box-shadow: 0 5px 20px rgba(122, 162, 169, 0.2); 
     font-family: 'Roboto', sans-serif;
     font-size: 0.95rem;
-    min-width: 250px;
+    font-weight: 500;
+    min-width: 280px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    animation: slideInRight 0.3s ease-out forwards, fadeOut 0.5s ease-in 2.5s forwards;
-    opacity: 0; /* Começa invisível para animação funcionar */
+    animation: slideInRight 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards, fadeOut 0.5s ease-in 3s forwards;
+    opacity: 0;
 }
 
-.toast.success { border-color: #4CAF50; } /* Verde para sucesso */
-.toast.info { border-color: var(--cor-principal); } /* Teal para info */
-.toast.error { border-color: #e53935; } /* Vermelho para erro */
+/* --- VARIAÇÕES DE COR ALINHADAS À MARCA --- */
+
+/* SUCESSO: Usa a cor TEAL (#7aa2a9) - A cor principal da marca */
+.toast.success { 
+    border-left-color: #7aa2a9; 
+    background-color: #fbfdfd; 
+}
+
+/* ERRO: Um vermelho mais suave/pastel (#e57373) para não agredir, mas alertar */
+.toast.error { 
+    border-left-color: #e57373;
+    background-color: #fff5f5;
+}
+
+/* INFO: Usa a cor SECUNDÁRIA (Rosa #dfb6b0) */
+.toast.info { 
+    border-left-color: #dfb6b0;
+}
 
 @keyframes slideInRight {
     from { transform: translateX(100%); opacity: 0; }
