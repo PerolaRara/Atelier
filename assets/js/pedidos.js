@@ -360,17 +360,23 @@ async function atualizarPedido() {
     const custoMO = getValMoeda("maoDeObraPedido"); 
     const margem = getValMoeda("lucroPedido");      
 
-    // --- PRIORIDADE 1: VALIDAÇÃO FINANCEIRA (SOFT BLOCK) ---
-    // Verifica se todos os campos do demonstrativo interno estão zerados
-    if (custosTotais === 0 && custoMO === 0 && margem === 0) {
+    // --- VALIDAÇÃO FINANCEIRA INTELIGENTE (SOFT BLOCK) ---
+    // Verifica se o somatório dos dados financeiros vitais está zerado (Blindagem Financeira)
+    if ((custosTotais + custoMO + margem) === 0) {
         const confirmacao = confirm(
-            "⚠️ ATENÇÃO: O Demonstrativo Financeiro (Interno) está ZERADO.\n\n" +
-            "Se você salvar assim, seu Relatório Financeiro mensal ficará incorreto.\n\n" +
-            "Deseja salvar o pedido mesmo sem essas informações?"
+            "🛑 ATENÇÃO: DADOS FINANCEIROS INCOMPLETOS!\n\n" +
+            "Os campos de Custo, Salário e Lucro estão zerados.\n" +
+            "Se salvar assim, seu Relatório Financeiro ficará incorreto.\n\n" +
+            "Deseja salvar mesmo assim?"
         );
         
         if (!confirmacao) {
-            // Usuário clicou em Cancelar: Interrompe o salvamento para que ele possa corrigir
+            // Usuário clicou em Cancelar: Interrompe e guia o foco para o campo de custo
+            const inputCusto = document.getElementById("custoTotalPedido");
+            if(inputCusto) {
+                inputCusto.focus();
+                inputCusto.style.border = "2px solid #e53935";
+            }
             return; 
         }
     }
@@ -399,8 +405,10 @@ async function atualizarPedido() {
     
     pedidos[index] = dados;
 
-    // --- SUCESSO: RESETA A FLAG DE ALTERAÇÃO ---
+    // --- SUCESSO: RESETA A FLAG E O ESTADO DO BOTÃO ---
     houveAlteracaoNaoSalva = false;
+    const btn = document.getElementById('btnSalvarPedidoEdicao');
+    if(btn) btn.innerText = "Salvar Pedido"; // Restaura texto original
     
     alert("Pedido Atualizado e Dados Financeiros Salvos!");
     pedidoEditando = null;
