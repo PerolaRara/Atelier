@@ -674,6 +674,13 @@ th.sortable.desc::after { content: '↓'; opacity: 1; }
     border-left-color: #dfb6b0;
 }
 
+/* ALERTA: Amarelo/Laranja para avisos de dados incompletos */
+.toast.warning {
+    border-left-color: #ff9800; /* Laranja Material Design */
+    background-color: #fff3e0; /* Fundo laranja bem claro */
+    color: #ef6c00; /* Texto laranja escuro para contraste */
+}
+
 @keyframes slideInRight {
     from { transform: translateX(100%); opacity: 0; }
     to { transform: translateX(0); opacity: 1; }
