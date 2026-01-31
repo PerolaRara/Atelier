@@ -721,22 +721,43 @@ async function gerarPedido(orcamentoId) {
 
     try {
         // 2. Chamada Segura (Transação) vinculando ao Orçamento Original
-        // A função criaDocumentoSeguro já adiciona o ownerId ao pedido
         const resultado = await criarDocumentoSeguro('pedido', pedido, orcamentoId);
 
         // Atualiza orçamento localmente
         orc.pedidoGerado = true;
         orc.numeroPedido = resultado.numero;
 
-        adicionarPedidoNaLista(resultado);
-        mostrarOrcamentosGerados(); 
+        // Adiciona à lista em memória (Módulo Pedidos)
+        if (typeof adicionarPedidoNaLista === 'function') {
+            adicionarPedidoNaLista(resultado); 
+        } else if (window.adicionarPedidoNaLista) {
+            window.adicionarPedidoNaLista(resultado);
+        }
         
+        mostrarOrcamentosGerados(); 
+
+        // --- MUDANÇA DE FLUXO (REDIRECIONAMENTO AUTOMÁTICO) ---
+        // 1. Simula o clique na aba de pedidos para carregar o contexto visual correto
         const tabPedidos = document.querySelector('a[data-pagina="lista-pedidos"]');
         if(tabPedidos) tabPedidos.click();
 
-        alert(`Pedido ${resultado.numero} gerado com sucesso!`);
+        // 2. Redireciona imediatamente para o formulário de edição do novo pedido
+        // Usamos um pequeno timeout para garantir que a transição de tela ocorra antes de preencher os dados
+        setTimeout(() => {
+            if (typeof window.editarPedido === 'function') {
+                window.editarPedido(resultado.id);
+                // Feedback visual discreto (Toast) em vez de Alert bloqueante
+                if(utils && utils.showToast) {
+                    utils.showToast(`Pedido ${resultado.numero} gerado! Preencha os dados financeiros.`, 'info');
+                }
+            } else {
+                console.error("Função editarPedido não encontrada no escopo global.");
+                alert(`Pedido ${resultado.numero} gerado! Acesse a aba de pedidos para editá-lo.`);
+            }
+        }, 150);
 
     } catch (error) {
+        console.error("Erro no fluxo de geração de pedido:", error);
         alert("Erro ao gerar pedido. Verifique sua conexão.");
     } finally {
         // 3. UX: Restaura cursor
