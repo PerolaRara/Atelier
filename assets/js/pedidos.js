@@ -90,13 +90,11 @@ function marcarAlteracao() {
 
 // --- PROTEÇÃO CONTRA FECHAMENTO DE ABA (PRIORIDADE 1) ---
 window.addEventListener('beforeunload', (e) => {
-    // Só bloqueia se houver alteração E estivermos na tela de edição (visível)
     const telaEdicao = document.getElementById('form-edicao-pedido');
-    const estaNaEdicao = telaEdicao && telaEdicao.style.display !== 'none';
-
-    if (houveAlteracaoNaoSalva && estaNaEdicao) {
+    // Só alerta se houver alteração E a tela de edição estiver visível
+    if (houveAlteracaoNaoSalva && telaEdicao && telaEdicao.style.display !== 'none') {
         e.preventDefault();
-        e.returnValue = ''; // Mensagem padrão do navegador
+        e.returnValue = 'Há alterações não salvas. Deseja sair?'; // Mensagem para navegadores que ainda a suportam
     }
 });
 
@@ -331,14 +329,25 @@ function editarPedido(id) {
         adicionarRowProdutoEdicao(tbody, { quantidade: 1, descricao: '', valorUnit: 0, valorTotal: 0 });
     }
 
-    // --- ATIVA O MONITORAMENTO DE ALTERAÇÕES EM TODOS OS CAMPOS ---
+    // --- ATIVA O MONITORAMENTO DE ALTERAÇÕES ---
+    houveAlteracaoNaoSalva = false; // Reseta flag ao abrir novo pedido
+    
+    // Reseta feedback visual de erro anterior, se houver
+    const inputCusto = document.getElementById("custoTotalPedido");
+    if(inputCusto) inputCusto.style.border = "";
+
     const inputsMonitorados = document.querySelectorAll('#form-edicao-pedido input, #form-edicao-pedido textarea');
     inputsMonitorados.forEach(input => {
-        // Remove listener antigo para não duplicar e adiciona o novo
-        input.removeEventListener('input', marcarAlteracao);
-        input.addEventListener('input', marcarAlteracao);
+        input.addEventListener('input', () => {
+            if(!houveAlteracaoNaoSalva) {
+                houveAlteracaoNaoSalva = true;
+                // Feedback visual no botão para indicar pendência de salvamento
+                const btn = document.getElementById('btnSalvarPedidoEdicao');
+                if(btn) btn.innerText = "Salvar Alterações *";
+            }
+        });
     });
-    // -------------------------------------------------------------
+    // ---------------------------------------------
 
     mostrarPagina('form-edicao-pedido');
 }
