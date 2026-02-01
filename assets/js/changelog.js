@@ -9,10 +9,10 @@ const changeLogData = [
         version: "1.2.6",
         date: "31/01/2026",
         changes: [
-            "🚀 **Fluxo de Venda Silencioso:** Removemos os alertas intrusivos ao gerar pedidos a partir de orçamentos. Agora o sistema realiza os cálculos em segundo plano e te redireciona instantaneamente para a edição, eliminando cliques desnecessários.",
-            "🎓 **Educação Financeira Ativa:** Implementamos um 'Soft Block' educativo na edição de pedidos. Se os campos de Custo, Salário ou Lucro estiverem zerados, o sistema emitirá um aviso explicando a importância desses dados para seus relatórios antes de permitir o salvamento.",
-            "🎨 **Toasts Condicionais (Inteligência Visual):** O sistema de notificações agora diferencia estados de integridade. Pedidos salvos com dados financeiros incompletos geram um alerta laranja (Warning), enquanto pedidos 100% preenchidos recebem a confirmação verde (Success).",
-            "💾 **Persistência de Notas:** Refatoração da captura de dados no módulo de pedidos para garantir que o campo de observações seja devidamente sincronizado e salvo no banco de dados junto com as alterações financeiras."
+            "🚀 **Sincronização Venda e Estoque:** Refatoração do fluxo de Pronta Entrega. Agora, ao vender um item do estoque, o sistema gera o pedido silenciosamente e redireciona você para a edição instantânea, garantindo agilidade no balcão.",
+            "🎓 **Soft Block Educativo (Unificado):** Implementamos a validação pedagógica tanto nos Pedidos quanto no Cadastro de Estoque. Se Custos, Salário ou Lucro estiverem zerados, o sistema exige confirmação para salvar, protegendo a saúde financeira do ateliê.",
+            "🎨 **Toasts Condicionais (Inteligência Visual):** O sistema de notificações agora é global. Pedidos ou itens de estoque salvos com dados incompletos geram alertas laranja (Warning), enquanto registros completos recebem a confirmação verde (Success).",
+            "💾 **Persistência de Dados e Notas:** Refatoração na captura de campos de observações e detalhes de estoque para garantir integridade total no banco de dados durante a transição entre módulos."
         ]
     },
     {
@@ -205,26 +205,21 @@ const changeLogData = [
 export function initChangelog() {
     const container = document.getElementById('version-container');
     
-    // Proteção caso o container não exista no HTML
     if (!container) {
         console.warn('Container de versão (#version-container) não encontrado.');
         return;
     }
 
-    // Pega a versão mais recente (o primeiro item do array)
     const latestVer = changeLogData[0].version;
 
-    // Cria o elemento visual do indicador
     const indicator = document.createElement('div');
     indicator.id = 'version-indicator';
     indicator.textContent = `v${latestVer}`;
     indicator.title = "Clique para ver o histórico de atualizações";
     
-    // Adiciona evento de clique para abrir o modal
     indicator.addEventListener('click', () => openChangelogModal());
     
-    // Injeta no HTML
-    container.innerHTML = ''; // Limpa conteúdo anterior se houver
+    container.innerHTML = ''; 
     container.appendChild(indicator);
 }
 
@@ -232,14 +227,11 @@ export function initChangelog() {
  * Constrói e exibe o modal de histórico
  */
 function openChangelogModal() {
-    // Evita abrir múltiplos modais
     if (document.querySelector('.changelog-overlay')) return;
 
-    // Cria o overlay (fundo escuro)
     const overlay = document.createElement('div');
     overlay.className = 'changelog-overlay';
     
-    // Gera o HTML da lista de mudanças
     let listHTML = '';
     changeLogData.forEach(log => {
         const items = log.changes.map(c => `<li>${c}</li>`).join('');
@@ -249,32 +241,4 @@ function openChangelogModal() {
                     <span class="changelog-version">Versão ${log.version}</span>
                     <span class="changelog-date">${log.date}</span>
                 </div>
-                <ul class="changelog-list">${items}</ul>
-            </div>
-        `;
-    });
-
-    // Estrutura interna do Modal
-    overlay.innerHTML = `
-        <div class="changelog-modal">
-            <span class="close-changelog">&times;</span>
-            <div class="modal-header">
-                <h2>Histórico de Atualizações</h2>
-                <p>Acompanhe a evolução do Portal Pérola Rara</p>
-            </div>
-            <div class="changelog-content">
-                ${listHTML}
-            </div>
-        </div>
-    `;
-
-    // Lógica para fechar o modal (Botão X)
-    overlay.querySelector('.close-changelog').onclick = () => overlay.remove();
-
-    // Lógica para fechar clicando fora do modal
-    overlay.onclick = (e) => {
-        if (e.target === overlay) overlay.remove();
-    };
-
-    document.body.appendChild(overlay);
-}
+                <ul class="changelog-list">${items}</ul
