@@ -689,3 +689,23 @@ th.sortable.desc::after { content: '↓'; opacity: 1; }
 @keyframes fadeOut {
     to { opacity: 0; visibility: hidden; }
 }
+
+/* =========================================
+   8. AJUSTES PARA PRONTA ENTREGA (HISTÓRICO)
+   ========================================= */
+
+/* Ajuste para células da tabela com conteúdo detalhado de Pronta Entrega */
+#tabela-pedidos td:nth-child(3) { /* Coluna Cliente */
+    max-width: 250px;       /* Limite de largura para não esticar demais a tabela */
+    white-space: normal;    /* Permite quebra de linha se o nome do produto for longo */
+    line-height: 1.3;       /* Melhora leitura de linhas duplas */
+    word-wrap: break-word;  /* Quebra palavras muito longas */
+}
+
+/* Ajuste visual para destacar a quantidade dentro do texto */
+.qtd-destaque {
+    font-weight: bold;
+    color: var(--cor-principal);
+}
+
+}
