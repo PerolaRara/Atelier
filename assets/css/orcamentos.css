@@ -331,6 +331,20 @@ button:hover {
 .kpi-total { border-left: 5px solid #ff9800; background: #fff3e0; }
 .card-destaque-qtd { border-left: 5px solid #7aa2a9; background: #f0f7f7; }
 
+/* Estilo Específico para o Card do Dízimo */
+.kpi-dizimo {
+    border-left: 5px solid #8e24aa; /* Roxo (Simbologia de Nobreza/Espiritualidade) */
+    background: #f3e5f5; /* Fundo Lilás bem suave */
+    min-width: 250px; /* Um pouco mais largo para caber o texto */
+    transform: scale(1.05); /* Leve destaque de tamanho */
+    box-shadow: 0 4px 15px rgba(142, 36, 170, 0.2); /* Sombra colorida */
+}
+
+.kpi-dizimo strong {
+    color: #4a148c; /* Texto Roxo Escuro */
+    font-size: 1.6rem;
+}
+
 /* Barra Visual Empilhada */
 .distribuicao-financeira-container {
     margin-bottom: 30px;
@@ -617,6 +631,13 @@ nav ul li a[onclick="limparPagina()"]:hover {
         width: 100%;
         margin-bottom: 10px;
         padding: 15px;
+    }
+
+    /* Ajuste para o Card do Dízimo em telas menores */
+    .kpi-dizimo {
+        width: 100%;
+        transform: scale(1);
+        margin-bottom: 10px;
     }
     
     .table-responsive {
