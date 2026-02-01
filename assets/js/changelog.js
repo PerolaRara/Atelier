@@ -6,6 +6,14 @@
  */
 const changeLogData = [
     {
+        version: "1.2.7",
+        date: "01/02/2026",
+        changes: [
+            "🔍 **Detalhamento no Histórico:** Agora as vendas de estoque registram o nome do produto e a quantidade diretamente no campo de Cliente (ex: 'Venda Pronta Entrega (Produto - X un)'), permitindo identificação instantânea na lista de pedidos.",
+            "📏 **Layout Responsivo:** Implementação de limites de largura e quebra de texto na tabela de pedidos para acomodar as novas descrições detalhadas sem quebrar a interface em dispositivos móveis."
+        ]
+    },
+    {
         version: "1.2.6",
         date: "31/01/2026",
         changes: [
