@@ -811,6 +811,10 @@ function gerarRelatorioFinanceiro() {
     const ano = parseInt(anoSelect ? anoSelect.value : new Date().getFullYear());
 
     let totalFat = 0, totalMO = 0, totalLucro = 0, totalCustos = 0;
+    
+    // NOVO: Contador para a inteligência pedagógica
+    let pedidosComAlerta = 0;
+
     const tbody = document.querySelector("#tabela-relatorio tbody");
     if(!tbody) return;
     
@@ -829,6 +833,12 @@ function gerarRelatorioFinanceiro() {
         totalMO += (p.custoMaoDeObra || 0);
         totalLucro += (p.margemLucro || 0);
         totalCustos += (p.custosTotais || 0);
+
+        // LÓGICA PEDAGÓGICA: Verifica se o pedido está "oco" financeiramente
+        const somaFinanceira = (parseFloat(p.custosTotais)||0) + (parseFloat(p.custoMaoDeObra)||0) + (parseFloat(p.margemLucro)||0);
+        if (somaFinanceira === 0) {
+            pedidosComAlerta++;
+        }
 
         const row = tbody.insertRow();
         const nomeCliente = p.cliente.length > 15 ? p.cliente.substring(0, 15) + '...' : p.cliente;
@@ -853,6 +863,23 @@ function gerarRelatorioFinanceiro() {
     updateElementText("kpi-lucro", totalLucro);
     updateElementText("kpi-custos", totalCustos);
     updateElementText("kpi-total", totalFat);
+
+    // --- CÁLCULO E EXIBIÇÃO DO DÍZIMO ---
+    // Lógica: (Salário + Caixa da Empresa) * 10%
+    const baseCalculoDizimo = totalMO + totalLucro;
+    const valorDizimo = baseCalculoDizimo * 0.10;
+    updateElementText("kpi-dizimo", valorDizimo);
+
+    // --- DISPARO DO ALERTA PEDAGÓGICO ---
+    const modalAlerta = document.getElementById('modal-alerta-financeiro');
+    const spanQtd = document.getElementById('qtd-pedidos-incompletos');
+
+    if (pedidosFiltrados.length > 0 && pedidosComAlerta > 0 && modalAlerta) {
+        spanQtd.textContent = pedidosComAlerta;
+        modalAlerta.style.display = 'flex';
+    } else if (modalAlerta) {
+        modalAlerta.style.display = 'none';
+    }
 
     if (totalFat > 0) {
         setBarWidth("barra-custos", (totalCustos / totalFat) * 100);
