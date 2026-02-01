@@ -14,8 +14,17 @@ let pagAtualPed = 1;
 let termoBuscaPed = "";
 let pedidoEditando = null;
 
-// --- NOVA VARIÁVEL DE CONTROLE (PRIORIDADE 1 e 3) ---
+// --- NOVAS VARIÁVEIS DE FILTRO (PLANO DE EVOLUÇÃO) ---
+let filtroMesPed = "";
+let filtroAnoPed = "";
+let filtroSoPendentes = false;
+
+// --- VARIÁVEL DE CONTROLE DE ALTERAÇÃO ---
 let houveAlteracaoNaoSalva = false;
+
+// --- VARIÁVEIS DE CONTROLE DE ORDENAÇÃO ---
+let ordemAtualPed = 'asc';
+let colunaOrdenacaoPed = '';
 
 // ==========================================================================
 // 1. SETUP E INICIALIZAÇÃO (INTERFACE PÚBLICA)
@@ -47,10 +56,24 @@ export function setupPedidos(config) {
     window.atualizarTotaisEdicao = atualizarTotaisEdicao;
     window.atualizarRestanteEdicao = atualizarRestanteEdicao;
 
-    // 3. Inicializar Listeners de DOM específicos deste módulo
+    // 3. Popular Select de Anos Dinamicamente (PLANO DE EVOLUÇÃO)
+    const selectAno = document.getElementById("filtro-ped-ano");
+    if(selectAno) {
+        const anoAtual = new Date().getFullYear();
+        selectAno.innerHTML = '<option value="">Todos os Anos</option>';
+        // Mostra ano atual e 2 anos para trás
+        for(let i = anoAtual; i >= anoAtual - 2; i--) {
+            const opt = document.createElement("option");
+            opt.value = i;
+            opt.text = i;
+            selectAno.appendChild(opt);
+        }
+    }
+
+    // 4. Inicializar Listeners de DOM específicos deste módulo
     initListenersPedidos();
 
-    // 4. Renderização Inicial
+    // 5. Renderização Inicial
     mostrarPedidosRealizados();
 }
 
@@ -80,21 +103,19 @@ function debounce(func, timeout = 300) {
     };
 }
 
-// --- FUNÇÃO AUXILIAR PARA MARCAR ALTERAÇÃO (PRIORIDADE 1) ---
+// --- FUNÇÃO AUXILIAR PARA MARCAR ALTERAÇÃO ---
 function marcarAlteracao() {
     if (!houveAlteracaoNaoSalva) {
         houveAlteracaoNaoSalva = true;
-        // Opcional: Poderia mudar a cor do botão salvar para indicar pendência
     }
 }
 
-// --- PROTEÇÃO CONTRA FECHAMENTO DE ABA (PRIORIDADE 1) ---
+// --- PROTEÇÃO CONTRA FECHAMENTO DE ABA ---
 window.addEventListener('beforeunload', (e) => {
     const telaEdicao = document.getElementById('form-edicao-pedido');
-    // Só alerta se houver alteração E a tela de edição estiver visível
     if (houveAlteracaoNaoSalva && telaEdicao && telaEdicao.style.display !== 'none') {
         e.preventDefault();
-        e.returnValue = 'Há alterações não salvas. Deseja sair?'; // Mensagem para navegadores que ainda a suportam
+        e.returnValue = 'Há alterações não salvas. Deseja sair?';
     }
 });
 
@@ -109,6 +130,35 @@ function initListenersPedidos() {
         }));
     }
 
+    // --- NOVOS LISTENERS DE FILTRO (PLANO DE EVOLUÇÃO) ---
+    const selMes = document.getElementById('filtro-ped-mes');
+    const selAno = document.getElementById('filtro-ped-ano');
+    const chkPendentes = document.getElementById('filtro-ped-pendentes');
+
+    if(selMes) {
+        selMes.addEventListener('change', (e) => {
+            filtroMesPed = e.target.value;
+            pagAtualPed = 1;
+            mostrarPedidosRealizados();
+        });
+    }
+
+    if(selAno) {
+        selAno.addEventListener('change', (e) => {
+            filtroAnoPed = e.target.value;
+            pagAtualPed = 1;
+            mostrarPedidosRealizados();
+        });
+    }
+
+    if(chkPendentes) {
+        chkPendentes.addEventListener('change', (e) => {
+            filtroSoPendentes = e.target.checked;
+            pagAtualPed = 1;
+            mostrarPedidosRealizados();
+        });
+    }
+
     // Paginação
     const btnAnt = document.getElementById("btn-ant-ped");
     const btnProx = document.getElementById("btn-prox-ped");
@@ -118,7 +168,6 @@ function initListenersPedidos() {
     });
     
     if(btnProx) btnProx.addEventListener('click', () => { 
-        // A validação de limite máximo ocorre dentro do mostrarPedidosRealizados
         pagAtualPed++; 
         mostrarPedidosRealizados(); 
     });
@@ -139,8 +188,7 @@ function initListenersPedidos() {
         btnXLSX.addEventListener('click', gerarRelatorioXLSX);
     }
 
-    // --- PROTEÇÃO DE NAVEGAÇÃO INTERNA (PRIORIDADE 3) ---
-    // Intercepta cliques nos botões "Voltar ao Menu" ou troca de abas
+    // --- PROTEÇÃO DE NAVEGAÇÃO INTERNA ---
     document.querySelectorAll('.btn-back-hub, nav ul li a').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const telaEdicao = document.getElementById('form-edicao-pedido');
@@ -149,10 +197,9 @@ function initListenersPedidos() {
             if (houveAlteracaoNaoSalva && estaNaEdicao) {
                 const confirmacao = confirm("⚠️ Você tem alterações não salvas no pedido!\n\nSe sair agora, perderá os dados editados.\nDeseja sair mesmo assim?");
                 if (!confirmacao) {
-                    e.preventDefault(); // Impede a navegação/troca de tela
+                    e.preventDefault();
                     e.stopImmediatePropagation();
                 } else {
-                    // Se o usuário confirmar que quer sair, resetamos a flag para não bloquear mais
                     houveAlteracaoNaoSalva = false;
                 }
             }
@@ -163,10 +210,6 @@ function initListenersPedidos() {
 // ==========================================================================
 // 3. LISTAGEM (UI)
 // ==========================================================================
-
-// --- VARIÁVEIS DE CONTROLE DE ORDENAÇÃO ---
-let ordemAtualPed = 'asc';
-let colunaOrdenacaoPed = '';
 
 // Função exposta para o HTML chamar no onclick do cabeçalho
 window.ordenarPedidos = (coluna) => {
@@ -188,27 +231,56 @@ function mostrarPedidosRealizados() {
     if(!tbody) return;
     tbody.innerHTML = '';
 
-    // 1. Filtragem
+    // 1. FILTRAGEM AVANÇADA (PLANO DE EVOLUÇÃO)
     const termo = termoBuscaPed.trim();
     let filtrados = pedidos.filter(ped => {
-        if (!termo) return true;
-        const dataFormatada = utils.formatarDataBR(ped.dataPedido);
-        const matchCliente = ped.cliente.toLowerCase().includes(termo);
-        const matchNumero = ped.numero.toLowerCase().includes(termo);
-        const matchData = dataFormatada.includes(termo);
-        return matchCliente || matchNumero || matchData;
+        // A) Filtro de Texto (Busca Geral)
+        let matchTexto = true;
+        if (termo) {
+            const dataFormatada = utils.formatarDataBR(ped.dataPedido);
+            const matchCliente = ped.cliente.toLowerCase().includes(termo);
+            const matchNumero = ped.numero.toLowerCase().includes(termo);
+            const matchData = dataFormatada.includes(termo);
+            matchTexto = matchCliente || matchNumero || matchData;
+        }
+
+        // B) Filtros de Data (Mês/Ano)
+        let matchDataFiltro = true;
+        if (filtroMesPed !== "" || filtroAnoPed !== "") {
+            if (!ped.dataPedido) {
+                matchDataFiltro = false; 
+            } else {
+                const partes = ped.dataPedido.split('-'); 
+                const pAno = partes[0];
+                const pMes = String(parseInt(partes[1]) - 1); // Converte "01" para "0", etc.
+
+                if (filtroAnoPed !== "" && pAno !== filtroAnoPed) matchDataFiltro = false;
+                if (filtroMesPed !== "" && pMes !== filtroMesPed) matchDataFiltro = false;
+            }
+        }
+
+        // C) Filtro de Pendência Financeira (Inteligência Pedagógica)
+        let matchPendencia = true;
+        if (filtroSoPendentes) {
+            const custos = parseFloat(ped.custosTotais) || 0;
+            const maoObra = parseFloat(ped.custoMaoDeObra) || 0;
+            const lucro = parseFloat(ped.margemLucro) || 0;
+
+            const temDados = (custos + maoObra + lucro) > 0;
+            if (temDados) matchPendencia = false;
+        }
+
+        return matchTexto && matchDataFiltro && matchPendencia;
     });
 
     // 2. LÓGICA DE ORDENAÇÃO
     if (colunaOrdenacaoPed === 'cliente') {
-        // Ordena por cliente alfabeticamente
         filtrados.sort((a,b) => {
             const valA = (a.cliente || '').toLowerCase();
             const valB = (b.cliente || '').toLowerCase();
             return ordemAtualPed === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
         });
         
-        // Remove classes antigas e adiciona a atual (feedback visual opcional)
         document.querySelectorAll('th.sortable').forEach(th => th.classList.remove('asc', 'desc'));
         const thAtual = document.querySelector(`th[onclick*="ordenarPedidos('${colunaOrdenacaoPed}')"]`);
         if(thAtual) thAtual.classList.add(ordemAtualPed);
@@ -231,24 +303,30 @@ function mostrarPedidosRealizados() {
 
     // 4. Renderização
     if (itensPagina.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Nenhum pedido encontrado.</td></tr>';
+        if (filtroSoPendentes) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" style="text-align:center; padding: 30px;">
+                        <div style="font-size: 1.3em; color: #2e7d32; margin-bottom: 5px;">🎉 <strong>Parabéns!</strong></div>
+                        <div style="color: #666;">Todos os seus pedidos estão com o financeiro em dia!</div>
+                    </td>
+                </tr>`;
+        } else {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px;">Nenhum pedido encontrado.</td></tr>';
+        }
     } else {
         itensPagina.forEach(p => {
             const row = tbody.insertRow();
             
-            // --- PRIORIDADE 2: ALERTA VISUAL DE DADOS INCOMPLETOS ---
-            // Verifica se os campos vitais do financeiro estão zerados ou inexistentes
+            // Verificação de dados incompletos
             const custos = parseFloat(p.custosTotais) || 0;
             const maoObra = parseFloat(p.custoMaoDeObra) || 0;
             const lucro = parseFloat(p.margemLucro) || 0;
-            
-            // Consideramos "Zerado" se a soma dos três for zero (significa que não foi preenchido)
             const dadosZerados = (custos + maoObra + lucro) === 0;
             
             const alertaHtml = dadosZerados 
                 ? `<span style="margin-left:8px; cursor:help; font-size:1.2em;" title="⚠️ Pendência Financeira: O demonstrativo interno (Custos/Salário/Lucro) não foi preenchido. Edite para corrigir.">⚠️</span>` 
                 : '';
-            // -----------------------------------------------------------
 
             row.innerHTML = `
                 <td>${p.numero}</td>
@@ -292,7 +370,7 @@ function editarPedido(id) {
     setVal("contatoEdicao", pedido.telefone);
     setVal("coresEdicao", pedido.cores);
     
-    // Valores Monetários (Formatados com Utils)
+    // Valores Monetários
     setValMoeda("valorFreteEdicao", pedido.valorFrete);
     setValMoeda("valorPedidoEdicao", pedido.valorOrcamento || 0);
     setValMoeda("totalEdicao", pedido.total);
@@ -305,12 +383,10 @@ function editarPedido(id) {
     setValMoeda("maoDeObraPedido", pedido.custoMaoDeObra || 0);
     setValMoeda("lucroPedido", pedido.margemLucro || 0);
     
-    // --- Armazenar Salário Base para Cálculos de Desconto ---
+    // Armazenar Salário Base
     const inputMO = document.getElementById("maoDeObraPedido");
     if(inputMO) {
         inputMO.dataset.salarioAlvo = pedido.custoMaoDeObra || 0;
-        
-        // Reseta estilos visuais de alerta
         inputMO.style.backgroundColor = ""; 
         inputMO.style.color = "";
         const inputLucro = document.getElementById("lucroPedido");
@@ -329,10 +405,8 @@ function editarPedido(id) {
         adicionarRowProdutoEdicao(tbody, { quantidade: 1, descricao: '', valorUnit: 0, valorTotal: 0 });
     }
 
-    // --- ATIVA O MONITORAMENTO DE ALTERAÇÕES ---
-    houveAlteracaoNaoSalva = false; // Reseta flag ao abrir novo pedido
-    
-    // Reseta feedback visual de erro anterior, se houver
+    // Monitoramento de Alterações
+    houveAlteracaoNaoSalva = false;
     const inputCusto = document.getElementById("custoTotalPedido");
     if(inputCusto) inputCusto.style.border = "";
 
@@ -341,13 +415,11 @@ function editarPedido(id) {
         input.addEventListener('input', () => {
             if(!houveAlteracaoNaoSalva) {
                 houveAlteracaoNaoSalva = true;
-                // Feedback visual no botão para indicar pendência de salvamento
                 const btn = document.getElementById('btnSalvarPedidoEdicao');
                 if(btn) btn.innerText = "Salvar Alterações *";
             }
         });
     });
-    // ---------------------------------------------
 
     mostrarPagina('form-edicao-pedido');
 }
@@ -355,13 +427,10 @@ function editarPedido(id) {
 async function atualizarPedido() {
     if (!pedidoEditando) return;
     
-    // 1. Captura valores financeiros usando Utils
     const custosTotais = getValMoeda("custoTotalPedido");
     const custoMO = getValMoeda("maoDeObraPedido"); 
     const margem = getValMoeda("lucroPedido");      
 
-    // 2. EDUCAÇÃO FINANCEIRA: Verificação de campos essenciais
-    // Verifica se ALGUM dos campos está zerado (não apenas a soma)
     const dadosIncompletos = (custosTotais === 0 || custoMO === 0 || margem === 0);
 
     if (dadosIncompletos) {
@@ -371,16 +440,13 @@ async function atualizarPedido() {
             "Para que seu Relatório Financeiro funcione corretamente, é ideal preenchê-los.\n\n" +
             "Deseja salvar mesmo assim?";
         
-        // Se o usuário clicar em Cancelar, abortamos o salvamento para que ele corrija
         if (!confirm(mensagemEducativa)) {
-            // Foca no primeiro campo provável de erro
             if(custosTotais === 0) document.getElementById("custoTotalPedido")?.focus();
             else if(custoMO === 0) document.getElementById("maoDeObraPedido")?.focus();
             return; 
         }
     }
 
-    // 3. Preparação dos dados
     const index = pedidos.findIndex(p => p.id === pedidoEditando);
     const dados = {
         ...pedidos[index],
@@ -390,7 +456,7 @@ async function atualizarPedido() {
         total: getValMoeda("totalEdicao"),
         entrada: getValMoeda("entradaEdicao"),
         restante: getValMoeda("restanteEdicao"),
-        observacoes: document.getElementById("observacoesEdicao").value, // Garantir que obs sejam salvas
+        observacoes: document.getElementById("observacoesEdicao").value,
         
         custosTotais: custosTotais,
         custoMaoDeObra: custoMO,
@@ -400,25 +466,20 @@ async function atualizarPedido() {
     };
 
     try {
-        // 4. Salvar no Banco
         await salvarDadosFn(dados, 'pedido');
         pedidos[index] = dados;
 
-        // 5. Reset de Estado
         houveAlteracaoNaoSalva = false;
         const btn = document.getElementById('btnSalvarPedidoEdicao');
         if(btn) btn.innerText = "Salvar Pedido";
         
-        // 6. FEEDBACK INTELIGENTE (TOASTS)
         pedidoEditando = null;
         mostrarPagina('lista-pedidos');
         mostrarPedidosRealizados();
 
         if (dadosIncompletos) {
-            // Aviso amarelo/laranja se salvou faltando dados
             utils.showToast("Pedido salvo, mas sem dados financeiros completos.", "warning"); 
         } else {
-            // Sucesso verde/teal
             utils.showToast("Pedido atualizado e dados financeiros salvos!", "success");
         }
 
@@ -457,7 +518,6 @@ function mostrarPagina(idPagina) {
 function adicionarProdutoEdicao() {
     const tbody = document.querySelector("#tabelaProdutosEdicao tbody");
     adicionarRowProdutoEdicao(tbody, { quantidade: 1, descricao: '', valorUnit: 0, valorTotal: 0 });
-    // Marca alteração ao adicionar linha
     marcarAlteracao();
 }
 
@@ -471,7 +531,6 @@ function adicionarRowProdutoEdicao(tbody, p) {
         <td><button type="button" onclick="excluirProdutoEdicao(this)">Excluir</button></td>
     `;
     
-    // Adiciona listener nos novos inputs gerados dinamicamente
     row.querySelectorAll('input').forEach(input => {
         input.addEventListener('input', marcarAlteracao);
     });
@@ -493,15 +552,12 @@ function lerProdutosDaTabela() {
 function excluirProdutoEdicao(btn) {
     btn.closest('tr').remove();
     atualizarTotaisEdicao();
-    marcarAlteracao(); // Marca alteração ao excluir
+    marcarAlteracao();
 }
 
-// Função ATUALIZADA com Lógica de Cascata de Descontos
 window.atualizarTotaisEdicao = function() {
-    // Marca alteração pois os totais mudaram
     marcarAlteracao();
 
-    // 1. Recalcula totais visuais dos produtos
     let totalProd = 0;
     document.querySelectorAll("#tabelaProdutosEdicao tbody tr").forEach(row => {
         const qtd = parseFloat(row.querySelector(".produto-quantidade").value) || 0;
@@ -511,61 +567,46 @@ window.atualizarTotaisEdicao = function() {
         totalProd += sub;
     });
     
-    // 2. Calcula Total Final (Produtos + Frete)
     const frete = utils.converterMoedaParaNumero(document.getElementById("valorFreteEdicao").value);
     const novoTotalVenda = totalProd + frete;
 
     document.getElementById("valorPedidoEdicao").value = utils.formatarMoeda(totalProd);
     document.getElementById("totalEdicao").value = utils.formatarMoeda(novoTotalVenda);
     
-    // 3. LÓGICA DA CASCATA DE DESCONTOS
     const custoProdTotal = utils.converterMoedaParaNumero(document.getElementById("custoTotalPedido").value);
-    
-    // Recupera o Salário Alvo (Original) do dataset
     const inputMO = document.getElementById("maoDeObraPedido");
     let salarioAlvo = 0;
     
     if (inputMO.dataset.salarioAlvo) {
         salarioAlvo = parseFloat(inputMO.dataset.salarioAlvo);
     } else {
-        // Fallback
         salarioAlvo = utils.converterMoedaParaNumero(inputMO.value);
         inputMO.dataset.salarioAlvo = salarioAlvo;
     }
 
-    // Chama a função centralizada no utils.js
     const resultado = utils.calcularCascataFinanceira(novoTotalVenda, custoProdTotal, salarioAlvo);
 
-    // Atualiza os campos do demonstrativo com a REALIDADE financeira
     inputMO.value = utils.formatarMoeda(resultado.salario);
     document.getElementById("lucroPedido").value = utils.formatarMoeda(resultado.lucro);
 
-    // 4. Feedback Visual
     const inputLucro = document.getElementById("lucroPedido");
-    
-    // Reseta estilos
     inputMO.style.backgroundColor = ""; 
     inputMO.style.color = "";
     inputLucro.style.backgroundColor = ""; 
     inputLucro.style.color = "";
 
     if (resultado.status === 'alerta') {
-        // Laranja: Comendo Salário
         inputMO.style.backgroundColor = "#fff3e0"; 
         inputMO.style.color = "#e65100";
         inputMO.title = "Atenção: O desconto está reduzindo seu salário!";
-        
-        // Vermelho suave: Lucro Zerado
         inputLucro.style.backgroundColor = "#ffebee";
         inputLucro.style.color = "#c62828";
     } else if (resultado.status === 'prejuizo') {
-        // Vermelho Crítico
         inputMO.style.backgroundColor = "#ffebee";
         inputMO.style.color = "#c62828";
         inputMO.title = "PREJUÍZO: Valor de venda não cobre os custos!";
     }
 
-    // 5. Atualiza Restante a Pagar
     atualizarRestanteEdicao();
 };
 
@@ -577,7 +618,7 @@ function atualizarRestanteEdicao() {
 }
 
 // ==========================================================================
-// 6. RELATÓRIOS E CHECKLIST (MANTIDOS ORIGINAIS)
+// 6. RELATÓRIOS E CHECKLIST
 // ==========================================================================
 
 function imprimirChecklist(id) {
@@ -811,8 +852,6 @@ function gerarRelatorioFinanceiro() {
     const ano = parseInt(anoSelect ? anoSelect.value : new Date().getFullYear());
 
     let totalFat = 0, totalMO = 0, totalLucro = 0, totalCustos = 0;
-    
-    // NOVO: Contador para a inteligência pedagógica
     let pedidosComAlerta = 0;
 
     const tbody = document.querySelector("#tabela-relatorio tbody");
@@ -823,7 +862,7 @@ function gerarRelatorioFinanceiro() {
     const pedidosFiltrados = pedidos.filter(p => {
         if(!p.dataPedido) return false;
         const parts = p.dataPedido.split('-');
-        const pMes = parseInt(parts[1]) - 1; // Mes 0-indexado
+        const pMes = parseInt(parts[1]) - 1; 
         const pAno = parseInt(parts[0]);
         return pMes === mes && pAno === ano;
     });
@@ -834,7 +873,6 @@ function gerarRelatorioFinanceiro() {
         totalLucro += (p.margemLucro || 0);
         totalCustos += (p.custosTotais || 0);
 
-        // LÓGICA PEDAGÓGICA: Verifica se o pedido está "oco" financeiramente
         const somaFinanceira = (parseFloat(p.custosTotais)||0) + (parseFloat(p.custoMaoDeObra)||0) + (parseFloat(p.margemLucro)||0);
         if (somaFinanceira === 0) {
             pedidosComAlerta++;
@@ -864,13 +902,10 @@ function gerarRelatorioFinanceiro() {
     updateElementText("kpi-custos", totalCustos);
     updateElementText("kpi-total", totalFat);
 
-    // --- CÁLCULO E EXIBIÇÃO DO DÍZIMO ---
-    // Lógica: (Salário + Caixa da Empresa) * 10%
     const baseCalculoDizimo = totalMO + totalLucro;
     const valorDizimo = baseCalculoDizimo * 0.10;
     updateElementText("kpi-dizimo", valorDizimo);
 
-    // --- DISPARO DO ALERTA PEDAGÓGICO ---
     const modalAlerta = document.getElementById('modal-alerta-financeiro');
     const spanQtd = document.getElementById('qtd-pedidos-incompletos');
 
@@ -891,7 +926,6 @@ function gerarRelatorioFinanceiro() {
         setBarWidth("barra-lucro", 0);
     }
 
-    // Mensagem Motivacional
     const boxMsg = document.getElementById("mensagem-motivacional");
     if (boxMsg) {
         if (pedidosFiltrados.length > 0) {
