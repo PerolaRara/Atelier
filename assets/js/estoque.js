@@ -296,13 +296,16 @@ async function iniciarVenda(id) {
             const novoPedidoRef = doc(collection(db, "Orcamento-Pedido")); 
             const dadosItem = itemDoc.data();
             
+            // Monta a string de identificação detalhada para o campo Cliente
+            const identificacaoVenda = `Venda Pronta Entrega (${dadosItem.produto} - ${qtdVenda} un)`;
+
             const novoPedido = {
                 ownerId: user.uid,
                 numero: numeroPedidoFormatado,
                 tipo: 'pedido',
                 dataPedido: new Date().toISOString().split('T')[0],
                 dataEntrega: new Date().toISOString().split('T')[0],
-                cliente: "Venda Pronta Entrega",
+                cliente: identificacaoVenda,
                 endereco: "Balcão",
                 tema: "Pronta Entrega",
                 cores: dadosItem.detalhes || "-",
@@ -336,27 +339,22 @@ async function iniciarVenda(id) {
         await carregarDadosEstoque();
 
         // --- CORREÇÃO DO FLUXO (O Elo Perdido) ---
-        // Montamos o objeto completo com o ID gerado para avisar o módulo de Pedidos
         const pedidoCompleto = { 
             id: resultado.idNovoPedido, 
             ...resultado.novoPedido 
         };
         
-        // Injetamos o pedido na lista local da memória (função já importada no topo do arquivo)
         adicionarPedidoNaLista(pedidoCompleto);
         // ------------------------------------------
 
-        // 2. Redirecionamento para Edição (Agora vai funcionar pois o pedido existe na lista)
+        // 2. Redirecionamento para Edição
         if (typeof window.editarPedido === 'function') {
             setTimeout(() => {
-                // Força a troca de aba visualmente
                 const tabPedidos = document.querySelector('a[data-pagina="lista-pedidos"]');
                 if(tabPedidos) tabPedidos.click();
                 
-                // Abre o formulário de edição
                 window.editarPedido(resultado.idNovoPedido);
                 
-                // Reforço visual no contexto da edição
                 setTimeout(() => {
                    if(utils?.showToast) utils.showToast("Por favor, confira os dados financeiros desta venda.", "warning");
                 }, 800);
