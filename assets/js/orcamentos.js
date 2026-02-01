@@ -598,6 +598,18 @@ async function gerarPedido(orcamentoId) {
         maoDeObraAcumulada
     );
 
+    // --- BLOCO DE RIGOR PEDAGÓGICO ---
+    const custoMaoDeObra = resultadoFinanceiro.salario || 0;
+    const margemLucro = resultadoFinanceiro.lucro || 0;
+    const custosTotais = resultadoFinanceiro.custos || 0;
+
+    // Validação Pedagógica Estrita: Avisa se algum pilar estiver zerado
+    if (custoMaoDeObra === 0 || margemLucro === 0 || custosTotais === 0) {
+        if (utils && utils.showToast) {
+            utils.showToast("Alerta Pedagógico: O pedido será gerado com pendências financeiras (valores zerados).", "warning");
+        }
+    }
+
     // MANTIDO: Apenas trava crítica de prejuízo real
     if (resultadoFinanceiro.status === 'prejuizo') {
         let mensagemPrejuizo = `⛔ PREJUÍZO OPERACIONAL DETECTADO!\n`;
@@ -629,9 +641,9 @@ async function gerarPedido(orcamentoId) {
         entrada: 0,
         restante: orc.total,
         produtos: orc.produtos,
-        custoMaoDeObra: resultadoFinanceiro.salario,
-        margemLucro: resultadoFinanceiro.lucro,
-        custosTotais: resultadoFinanceiro.custos
+        custoMaoDeObra: custoMaoDeObra,
+        margemLucro: margemLucro,
+        custosTotais: custosTotais
     };
 
     try {
