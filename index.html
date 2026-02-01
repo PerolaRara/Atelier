@@ -253,8 +253,38 @@
                 <!-- LISTA DE PEDIDOS REALIZADOS -->
                 <section id="lista-pedidos" class="pagina" style="display: none;">
                     <h2 class="section-title-lined">Pedidos Realizados</h2>
+
+                    <div class="filters-container">
+                        <div class="filter-group">
+                            <label>Período:</label>
+                            <select id="filtro-ped-mes" class="filter-select">
+                                <option value="">Todos os Meses</option>
+                                <option value="0">Janeiro</option>
+                                <option value="1">Fevereiro</option>
+                                <option value="2">Março</option>
+                                <option value="3">Abril</option>
+                                <option value="4">Maio</option>
+                                <option value="5">Junho</option>
+                                <option value="6">Julho</option>
+                                <option value="7">Agosto</option>
+                                <option value="8">Setembro</option>
+                                <option value="9">Outubro</option>
+                                <option value="10">Novembro</option>
+                                <option value="11">Dezembro</option>
+                            </select>
+                            <select id="filtro-ped-ano" class="filter-select">
+                                <option value="">Todos os Anos</option>
+                            </select>
+                        </div>
+
+                        <div class="filter-group checkbox-highlight">
+                            <label for="filtro-ped-pendentes" style="cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                                <input type="checkbox" id="filtro-ped-pendentes">
+                                <span style="color: #e65100; font-weight: bold;">⚠️ Apenas Pendências Financeiras</span>
+                            </label>
+                        </div>
+                    </div>
                     
-                    <!-- Barra de Busca COM WRAPPER E X -->
                     <div class="search-container">
                         <div class="search-wrapper">
                             <input type="text" id="busca-pedidos" placeholder="🔍 Buscar por Cliente, Número ou Data..." class="search-input">
