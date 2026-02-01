@@ -6,6 +6,15 @@
  */
 const changeLogData = [
     {
+        version: "1.2.9",
+        date: "01/02/2026",
+        changes: [
+            "🔍 **Filtros Avançados de Pedidos:** Implementação de seletores por Mês e Ano na lista de pedidos realizados, permitindo uma navegação histórica muito mais ágil e organizada.",
+            "⚠️ **Gestão de Pendências Financeiras:** Adição de filtro inteligente com destaque visual (Laranja/Alerta) para localizar instantaneamente pedidos com dados financeiros incompletos (Soma Zero).",
+            "📱 **Interface de Controle Responsiva:** Nova barra de filtros adaptável que organiza os seletores automaticamente em dispositivos móveis, garantindo produtividade em qualquer tela."
+        ]
+    },
+    {
         version: "1.2.8",
         date: "01/02/2026",
         changes: [
