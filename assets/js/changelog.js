@@ -6,6 +6,14 @@
  */
 const changeLogData = [
     {
+        version: "1.2.8",
+        date: "01/02/2026",
+        changes: [
+            "✨ **Dízimo Automatizado:** Implementação do cálculo de 10% sobre o Lucro Líquido (soma do Meu Salário + Caixa da Empresa), permitindo a gestão fiel dos compromissos pessoais diretamente no dashboard financeiro.",
+            "🧠 **Inteligência Pedagógica:** Novo sistema de 'auditoria' que varre os pedidos do mês. Caso detecte registros sem custos definidos, o sistema apresenta um alerta educativo antes de exibir os resultados, garantindo a integridade dos dados e do cálculo do Dízimo."
+        ]
+    },
+    {
         version: "1.2.7",
         date: "01/02/2026",
         changes: [
