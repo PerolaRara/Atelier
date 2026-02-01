@@ -330,17 +330,33 @@ async function iniciarVenda(id) {
             return { novoPedido, novoEstoque, idItem: id, idNovoPedido: novoPedidoRef.id };
         });
 
+        // 1. Feedback rápido
         if(utils?.showToast) utils.showToast("Venda registrada! Redirecionando...", "info");
         
         await carregarDadosEstoque();
 
+        // --- CORREÇÃO DO FLUXO (O Elo Perdido) ---
+        // Montamos o objeto completo com o ID gerado para avisar o módulo de Pedidos
+        const pedidoCompleto = { 
+            id: resultado.idNovoPedido, 
+            ...resultado.novoPedido 
+        };
+        
+        // Injetamos o pedido na lista local da memória (função já importada no topo do arquivo)
+        adicionarPedidoNaLista(pedidoCompleto);
+        // ------------------------------------------
+
+        // 2. Redirecionamento para Edição (Agora vai funcionar pois o pedido existe na lista)
         if (typeof window.editarPedido === 'function') {
             setTimeout(() => {
+                // Força a troca de aba visualmente
                 const tabPedidos = document.querySelector('a[data-pagina="lista-pedidos"]');
                 if(tabPedidos) tabPedidos.click();
                 
+                // Abre o formulário de edição
                 window.editarPedido(resultado.idNovoPedido);
                 
+                // Reforço visual no contexto da edição
                 setTimeout(() => {
                    if(utils?.showToast) utils.showToast("Por favor, confira os dados financeiros desta venda.", "warning");
                 }, 800);
