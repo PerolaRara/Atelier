@@ -11,17 +11,17 @@ import {
     deleteDoc, 
     query, 
     where, 
-    runTransaction, // Importação para venda segura
-    setDoc,          // Necessário para criar documentos com ID específico ou na transação
-    writeBatch       // Importação para atualização em massa
+    runTransaction, 
+    setDoc,          
+    writeBatch       
 } from './firebase-config.js';
 
 import { adicionarPedidoNaLista } from './pedidos.js'; 
+import { utils } from './utils.js'; // Importação do sistema de utilitários e Toasts
 
 // Referências
 const estoqueRef = collection(db, "estoque");
 const orcamentosPedidosRef = collection(db, "Orcamento-Pedido");
-// Referência para o documento de contadores (Singleton)
 const contadorGeralRef = doc(db, "configuracoes", "contadores");
 
 // Estado Local
@@ -43,9 +43,8 @@ const helpers = {
 };
 
 export async function initEstoque() {
-    console.log("Inicializando Módulo Estoque v1.2.0 (Transacional + Multi-Inquilinato)...");
+    console.log("Inicializando Módulo Estoque v1.3.0 (Pedagógico + Toasts)...");
     
-    // Expor funções globais para o HTML
     window.cadastrarItemEstoque = cadastrarItemEstoque;
     window.iniciarVenda = iniciarVenda;
     window.excluirItemEstoque = excluirItemEstoque;
@@ -61,10 +60,8 @@ async function carregarDadosEstoque() {
     const user = auth.currentUser;
     if (!user) return;
 
-    // 1. Carregar Itens (COM FILTRO DE DONO)
     itensEstoque = [];
     try {
-        // [ALTERAÇÃO] Filtra apenas itens do usuário logado
         const q = query(estoqueRef, where("ownerId", "==", user.uid));
         const snapshot = await getDocs(q);
         
@@ -80,12 +77,10 @@ async function carregarDadosEstoque() {
 }
 
 function setupEventListeners() {
-    // Botões Principais
     document.getElementById('btn-salvar-estoque')?.addEventListener('click', cadastrarItemEstoque);
     document.getElementById('btn-cancelar-estoque')?.addEventListener('click', cancelarEdicaoEstoque);
     document.getElementById('btn-gerar-relatorio-saida')?.addEventListener('click', gerarRelatorioRanking);
 
-    // Inputs de busca com debounce
     const inputBuscaVenda = document.getElementById('busca-vendas-estoque');
     if(inputBuscaVenda) {
         inputBuscaVenda.addEventListener('input', (e) => {
@@ -104,32 +99,27 @@ function setupEventListeners() {
         });
     }
 
-    // Cálculo automático preço
     ['estoque-custo', 'estoque-mao-obra', 'estoque-margem'].forEach(id => {
         document.getElementById(id)?.addEventListener('input', atualizarPrecoVendaAutomatico);
     });
     
-    // Paginação
     document.getElementById('btn-ant-est-adm')?.addEventListener('click', () => { if(pagAtualEstoqueAdm > 1) {pagAtualEstoqueAdm--; renderizarTabelaEstoqueAdm();} });
     document.getElementById('btn-prox-est-adm')?.addEventListener('click', () => { pagAtualEstoqueAdm++; renderizarTabelaEstoqueAdm(); });
     
     document.getElementById('btn-ant-venda-est')?.addEventListener('click', () => { if(pagAtualVendaEstoque > 1) {pagAtualVendaEstoque--; renderizarTabelaProntaEntrega();} });
     document.getElementById('btn-prox-venda-est')?.addEventListener('click', () => { pagAtualVendaEstoque++; renderizarTabelaProntaEntrega(); });
 
-    // NOVO: Validação de Duplicidade em Tempo Real
     const inputNomeProduto = document.getElementById('estoque-produto');
     if(inputNomeProduto) {
         inputNomeProduto.addEventListener('input', (e) => verificarDuplicidade(e.target.value));
     }
 }
 
-// --- FUNÇÃO DE VALIDAÇÃO ---
 function verificarDuplicidade(nomeDigitado) {
     const termo = nomeDigitado.trim().toLowerCase();
     const btnSalvar = document.getElementById('btn-salvar-estoque');
     const idEdicao = document.getElementById('estoque-id-edicao').value;
 
-    // Procura item com mesmo nome, ignorando o próprio item se estiver editando
     const duplicado = itensEstoque.find(item => 
         item.produto.toLowerCase() === termo && item.id !== idEdicao
     );
@@ -137,12 +127,12 @@ function verificarDuplicidade(nomeDigitado) {
     if (duplicado) {
         btnSalvar.disabled = true;
         btnSalvar.textContent = "Nome já existe!";
-        btnSalvar.style.backgroundColor = "#e53935"; // Vermelho alerta
+        btnSalvar.style.backgroundColor = "#e53935";
         btnSalvar.style.cursor = "not-allowed";
     } else {
         btnSalvar.disabled = false;
         btnSalvar.textContent = idEdicao ? "Atualizar Estoque" : "Salvar no Estoque";
-        btnSalvar.style.backgroundColor = ""; // Volta ao estilo original (CSS)
+        btnSalvar.style.backgroundColor = "";
         btnSalvar.style.cursor = "pointer";
     }
 }
@@ -154,13 +144,11 @@ function renderizarTabelaEstoqueAdm() {
     if (!tbody) return;
     tbody.innerHTML = "";
 
-    // Filtragem
     const filtrados = itensEstoque.filter(item => 
         item.produto.toLowerCase().includes(termoBuscaEstoqueAdm) || 
         (item.detalhes && item.detalhes.toLowerCase().includes(termoBuscaEstoqueAdm))
     );
 
-    // Ordenação Alfabética por Produto (A-Z)
     filtrados.sort((a, b) => a.produto.localeCompare(b.produto));
 
     const paginacao = paginarArray(filtrados, pagAtualEstoqueAdm);
@@ -189,10 +177,7 @@ function renderizarTabelaProntaEntrega() {
     if (!tbody) return;
     tbody.innerHTML = "";
 
-    // Filtragem
     const filtrados = itensEstoque.filter(item => item.produto.toLowerCase().includes(termoBuscaVendaEstoque));
-    
-    // Ordenação Alfabética por Produto (A-Z)
     filtrados.sort((a, b) => a.produto.localeCompare(b.produto));
 
     const paginacao = paginarArray(filtrados, pagAtualVendaEstoque);
@@ -234,8 +219,21 @@ async function cadastrarItemEstoque() {
 
     if(!produto || valorVenda <= 0) return alert("Preencha o nome e valores.");
 
+    // --- LÓGICA PEDAGÓGICA (SOFT BLOCK) ---
+    const dadosFinanceirosIncompletos = (financeiro.custoProducao === 0 || financeiro.maoDeObra === 0 || financeiro.margemLucro === 0);
+
+    if (dadosFinanceirosIncompletos) {
+        const msgEducativa = 
+            "⚠️ ATENÇÃO: DADOS FINANCEIROS INCOMPLETOS\n\n" +
+            "Notamos que Custos, Salário ou Lucro estão zerados.\n" +
+            "Isso deixará seu Relatório Financeiro impreciso.\n\n" +
+            "Deseja salvar no estoque mesmo assim?";
+        
+        if (!confirm(msgEducativa)) return; 
+    }
+
     const item = { 
-        ownerId: user.uid, // [NOVO] Vincula o item ao usuário logado
+        ownerId: user.uid,
         produto, quantidade, valorVenda, financeiro,
         detalhes: document.getElementById('estoque-detalhes').value,
         dataAtualizacao: new Date().toISOString()
@@ -246,19 +244,27 @@ async function cadastrarItemEstoque() {
             await updateDoc(doc(estoqueRef, idEdicao), item);
             const idx = itensEstoque.findIndex(i => i.id === idEdicao);
             if(idx !== -1) itensEstoque[idx] = { id: idEdicao, ...item };
-            alert("Atualizado!");
         } else {
             const ref = await addDoc(estoqueRef, item);
             itensEstoque.push({ id: ref.id, ...item });
-            alert("Cadastrado!");
         }
+
+        // Feedback Visual (Toasts)
+        if (dadosFinanceirosIncompletos) {
+            if(utils?.showToast) utils.showToast("Item salvo com pendências financeiras.", "warning");
+        } else {
+            if(utils?.showToast) utils.showToast("Item salvo com sucesso!", "success");
+        }
+
         cancelarEdicaoEstoque();
         renderizarTabelaEstoqueAdm();
         renderizarTabelaProntaEntrega();
-    } catch(e) { console.error(e); alert("Erro ao salvar."); }
+    } catch(e) { 
+        console.error(e); 
+        if(utils?.showToast) utils.showToast("Erro ao salvar no banco de dados.", "error");
+    }
 }
 
-// --- LÓGICA DE VENDA SEGURA (TRANSAÇÃO) ---
 async function iniciarVenda(id) {
     const user = auth.currentUser;
     if (!user) return alert("Sessão expirada.");
@@ -272,45 +278,26 @@ async function iniciarVenda(id) {
     if(!qtdVenda || qtdVenda <= 0) return alert("Qtd inválida");
 
     try {
-        // Executa tudo ou nada (Atomicidade)
         const resultado = await runTransaction(db, async (transaction) => {
-            // 1. LEITURAS (Devem ocorrer antes de qualquer escrita)
             const itemDocRef = doc(db, "estoque", id);
             const itemDoc = await transaction.get(itemDocRef);
             
-            if (!itemDoc.exists()) {
-                throw "Este produto não existe mais no banco de dados.";
-            }
-
-            // [SEGURANÇA] Verifica se o item pertence ao usuário antes de vender
-            if (itemDoc.data().ownerId && itemDoc.data().ownerId !== user.uid) {
-                throw "Permissão negada: Este item não pertence ao seu usuário.";
-            }
+            if (!itemDoc.exists()) throw "Este produto não existe mais.";
+            if (itemDoc.data().ownerId && itemDoc.data().ownerId !== user.uid) throw "Permissão negada.";
 
             const contadorDoc = await transaction.get(contadorGeralRef);
-            
-            // 2. LÓGICA DE NEGÓCIO E CÁLCULOS
             const estoqueAtual = itemDoc.data().quantidade || 0;
             const novoEstoque = estoqueAtual - qtdVenda;
             
-            // Determinar próximo número de pedido
-            let proximoNumero = 1;
-            if (contadorDoc.exists()) {
-                proximoNumero = (contadorDoc.data().ultimoPedido || 0) + 1;
-            } else {
-                proximoNumero = 1;
-            }
-
+            let proximoNumero = (contadorDoc.exists()) ? (contadorDoc.data().ultimoPedido || 0) + 1 : 1;
             const anoAtual = new Date().getFullYear();
             const numeroPedidoFormatado = `${String(proximoNumero).padStart(4,'0')}/${anoAtual}`;
 
-            // Preparar dados do novo pedido
-            // Cria referência para novo documento na coleção de pedidos
             const novoPedidoRef = doc(collection(db, "Orcamento-Pedido")); 
             const dadosItem = itemDoc.data();
             
             const novoPedido = {
-                ownerId: user.uid, // [NOVO] Vincula o pedido gerado ao usuário logado
+                ownerId: user.uid,
                 numero: numeroPedidoFormatado,
                 tipo: 'pedido',
                 dataPedido: new Date().toISOString().split('T')[0],
@@ -324,7 +311,6 @@ async function iniciarVenda(id) {
                 restante: 0,
                 valorFrete: 0,
                 valorOrcamento: dadosItem.valorVenda * qtdVenda,
-                // Dados financeiros proporcionais
                 custosTotais: (dadosItem.financeiro?.custoProducao || 0) * qtdVenda,
                 custoMaoDeObra: (dadosItem.financeiro?.maoDeObra || 0) * qtdVenda,
                 margemLucro: (dadosItem.financeiro?.margemLucro || 0) * qtdVenda,
@@ -337,43 +323,33 @@ async function iniciarVenda(id) {
                 observacoes: `Venda via Estoque. Qtd: ${qtdVenda}`
             };
 
-            // 3. ESCRITAS (Batch de operações)
-            // A. Atualiza Estoque
             transaction.update(itemDocRef, { quantidade: novoEstoque });
-            
-            // B. Atualiza Contador Global (Compartilhado)
             transaction.set(contadorGeralRef, { ultimoPedido: proximoNumero }, { merge: true });
-            
-            // C. Cria o Pedido Financeiro
             transaction.set(novoPedidoRef, novoPedido);
             
-            // Retornamos dados essenciais incluindo o ID do novo pedido para redirecionamento
             return { novoPedido, novoEstoque, idItem: id, idNovoPedido: novoPedidoRef.id };
         });
 
-        // Se chegou aqui, a transação foi sucesso
-        alert("Venda realizada com sucesso!\n\nRedirecionando para detalhes do pedido...");
+        if(utils?.showToast) utils.showToast("Venda registrada! Redirecionando...", "info");
         
-        // Recarregar dados para refletir mudanças (especialmente estoque)
         await carregarDadosEstoque();
 
-        // [MUDANÇA DE FLUXO] Redireciona para edição do pedido gerado
-        // Isso permite ajustar o nome do cliente e conferir o financeiro
         if (typeof window.editarPedido === 'function') {
-            // Pequeno delay para garantir que a interface atualize e a navegação ocorra suavemente
             setTimeout(() => {
-                // Simula clique na aba de pedidos para carregar o contexto correto se necessário
                 const tabPedidos = document.querySelector('a[data-pagina="lista-pedidos"]');
                 if(tabPedidos) tabPedidos.click();
                 
-                // Abre a edição usando o ID retornado pela transação
                 window.editarPedido(resultado.idNovoPedido);
-            }, 100);
+                
+                setTimeout(() => {
+                   if(utils?.showToast) utils.showToast("Por favor, confira os dados financeiros desta venda.", "warning");
+                }, 800);
+            }, 500);
         }
 
     } catch(e) { 
         console.error("Transação falhou: ", e); 
-        alert("Erro ao realizar venda: " + e); 
+        if(utils?.showToast) utils.showToast("Erro ao processar venda: " + e, "error");
     }
 }
 
@@ -394,7 +370,6 @@ function editarItemEstoque(id) {
 
     const btnSalvar = document.getElementById('btn-salvar-estoque');
     btnSalvar.textContent = "Atualizar Estoque";
-    // Resetar validação visual caso estivesse em erro
     btnSalvar.disabled = false;
     btnSalvar.style.backgroundColor = ""; 
 
@@ -420,6 +395,7 @@ async function excluirItemEstoque(id) {
         itensEstoque = itensEstoque.filter(i => i.id !== id);
         renderizarTabelaEstoqueAdm();
         renderizarTabelaProntaEntrega();
+        if(utils?.showToast) utils.showToast("Item excluído permanentemente.", "info");
     }
 }
 
@@ -430,7 +406,6 @@ function atualizarPrecoVendaAutomatico() {
     document.getElementById('estoque-valor').value = helpers.formatarMoeda(c + m + l);
 }
 
-// Relatório de Saídas (Mantido, mas agora deve considerar o filtro no orcamentosPedidosRef se fosse chamado diretamente)
 async function gerarRelatorioRanking() {
     const user = auth.currentUser;
     if (!user) return;
@@ -443,7 +418,6 @@ async function gerarRelatorioRanking() {
     tbody.innerHTML = '<tr><td colspan="3">Carregando...</td></tr>';
     document.getElementById('resultado-relatorio-estoque').style.display = 'block';
 
-    // [ALTERAÇÃO] Filtra relatório por ownerId
     const q = query(
         orcamentosPedidosRef, 
         where("tipo", "==", "pedido"),
@@ -471,12 +445,10 @@ async function gerarRelatorioRanking() {
     });
 }
 
-// --- FUNÇÃO DE SINCRONIZAÇÃO (INTEGRAÇÃO COM PRECIFICAÇÃO) ---
 export async function verificarAtualizacaoEstoque(nomeProduto, novosDados) {
     const user = auth.currentUser;
     if (!user) return false;
 
-    // [ALTERAÇÃO] Busca apenas no estoque do usuário
     const q = query(
         estoqueRef, 
         where("produto", "==", nomeProduto),
@@ -484,15 +456,13 @@ export async function verificarAtualizacaoEstoque(nomeProduto, novosDados) {
     );
     const snapshot = await getDocs(q);
 
-    if (snapshot.empty) return false; // Nenhum item encontrado, segue fluxo normal
+    if (snapshot.empty) return false;
 
-    // UX: Mensagem de confirmação detalhada
-    const qtdItens = snapshot.size;
     const novoValorFmt = helpers.formatarMoeda(novosDados.valorVenda);
     const msg = `⚠️ ATENÇÃO - ESTOQUE DETECTADO\n\n` +
-                `Encontrei ${qtdItens} unidade(s) de "${nomeProduto}" no estoque de Pronta Entrega.\n` +
-                `Deseja atualizar o preço de venda para ${novoValorFmt} e ajustar os custos internos (salário/margem)?\n\n` +
-                `Esta ação evita prejuízo na reposição de itens antigos.`;
+                `Encontrei unidades de "${nomeProduto}" no estoque.\n` +
+                `Deseja atualizar o preço para ${novoValorFmt}?\n\n` +
+                `Isso evita prejuízo na reposição.`;
 
     if (confirm(msg)) {
         try {
@@ -502,9 +472,7 @@ export async function verificarAtualizacaoEstoque(nomeProduto, novosDados) {
             snapshot.forEach(docSnap => {
                 const ref = doc(db, "estoque", docSnap.id);
                 const dadosAtuais = docSnap.data();
-
-                let detalhesAtualizados = dadosAtuais.detalhes || "";
-                detalhesAtualizados += `\n[${dataHoje}: Preço atualizado via Precificação para ${novoValorFmt}]`;
+                let detalhesAtualizados = (dadosAtuais.detalhes || "") + `\n[${dataHoje}: Preço atualizado via Precificação]`;
 
                 batch.update(ref, {
                     valorVenda: novosDados.valorVenda,
@@ -515,22 +483,17 @@ export async function verificarAtualizacaoEstoque(nomeProduto, novosDados) {
             });
 
             await batch.commit();
-            alert(`Sucesso! ${qtdItens} item(ns) do estoque foram atualizados para a nova realidade de mercado.`);
-            
-            if (itensEstoque.length > 0) {
-                await carregarDadosEstoque();
-            }
+            if(utils?.showToast) utils.showToast("Estoque sincronizado!", "success");
+            await carregarDadosEstoque();
             return true;
         } catch (error) {
-            console.error("Erro ao sincronizar estoque em massa:", error);
-            alert("Erro ao atualizar itens do estoque: " + error.message);
+            console.error(error);
             return false;
         }
     }
     return false;
 }
 
-// Helpers de Paginação
 function paginarArray(array, pagina) {
     const totalPaginas = Math.ceil(array.length / ITENS_POR_PAGINA) || 1;
     const inicio = (pagina - 1) * ITENS_POR_PAGINA;
