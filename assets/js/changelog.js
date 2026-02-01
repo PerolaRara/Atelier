@@ -241,4 +241,29 @@ function openChangelogModal() {
                     <span class="changelog-version">Versão ${log.version}</span>
                     <span class="changelog-date">${log.date}</span>
                 </div>
-                <ul class="changelog-list">${items}</ul
+                <ul class="changelog-list">${items}</ul>
+            </div>
+        `;
+    });
+
+    overlay.innerHTML = `
+        <div class="changelog-modal">
+            <span class="close-changelog">&times;</span>
+            <div class="modal-header">
+                <h2>Histórico de Atualizações</h2>
+                <p>Acompanhe a evolução do Portal Pérola Rara</p>
+            </div>
+            <div class="changelog-content">
+                ${listHTML}
+            </div>
+        </div>
+    `;
+
+    overlay.querySelector('.close-changelog').onclick = () => overlay.remove();
+
+    overlay.onclick = (e) => {
+        if (e.target === overlay) overlay.remove();
+    };
+
+    document.body.appendChild(overlay);
+}
