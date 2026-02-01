@@ -277,6 +277,16 @@ async function iniciarVenda(id) {
     const qtdVenda = parseInt(inputQtd);
     if(!qtdVenda || qtdVenda <= 0) return alert("Qtd inválida");
 
+    // --- ALERTA PEDAGÓGICO DE VENDA (RIGOR FINANCEIRO) ---
+    const custoProd = itemLocal.financeiro?.custoProducao || 0;
+    const maoObra = itemLocal.financeiro?.maoDeObra || 0;
+    const margem = itemLocal.financeiro?.margemLucro || 0;
+
+    if (custoProd === 0 || maoObra === 0 || margem === 0) {
+        alert("⚠️ Atenção Pedagógica:\n\nEste produto no estoque possui valores financeiros zerados (Custo, Salário ou Lucro).\n\nA venda será registrada com essa pendência e aparecerá com alerta na lista de pedidos.");
+    }
+    // -----------------------------------------------------
+
     try {
         const resultado = await runTransaction(db, async (transaction) => {
             const itemDocRef = doc(db, "estoque", id);
