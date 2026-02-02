@@ -6,6 +6,14 @@
  */
 const changeLogData = [
     {
+        version: "1.3.0",
+        date: "01/02/2026",
+        changes: [
+            "📅 **Lançamento Retroativo de Vendas:** Agora é possível editar a 'Data do Pedido' manualmente. Isso permite registrar vendas que aconteceram no passado (como em feiras ou balcão) mas só estão sendo lançadas agora, garantindo relatórios financeiros precisos.",
+            "🔄 **Organização Inteligente e Automática:** Ao alterar a data de um pedido, o sistema o reposiciona instantaneamente na ordem cronológica correta na lista. Você não precisa mais procurar o pedido editado; ele 'voa' para o lugar certo sozinho."
+        ]
+    },
+    {
         version: "1.2.9",
         date: "01/02/2026",
         changes: [
