@@ -329,18 +329,31 @@ function tratarBuscaProdutoOrcamento(input) {
 function selecionarProdutoOrcamento(input, dados) {
     const row = input.closest('tr');
     
-    // 1. Preenche visualmente
+    // 1. Preenche visualmente o Nome e o Valor Unitário de Venda
     input.value = dados.produto;
     row.querySelector('.produto-valor-unit').value = utils.formatarMoeda(dados.total);
     
-    // 2. Preenche os dados financeiros ocultos (Dataset)
+    // 2. LÓGICA FINANCEIRA AUTOMÁTICA
+    // Recupera os dados brutos da precificação (Histórico)
+    // Custo Total = Materiais + Custos Fixos (Indiretos)
     const custoMatTotal = (dados.custoMateriais || 0) + (dados.custoIndiretoTotal || 0);
+    const maoObra = dados.totalMaoDeObra || 0;
     
-    row.dataset.custoMat = custoMatTotal;
-    row.dataset.maoObra = dados.totalMaoDeObra || 0;
-    row.dataset.lucro = dados.total - (custoMatTotal + (dados.totalMaoDeObra || 0));
+    // Calcula o Lucro unitário baseado no preço atual
+    // Lucro = Preço Venda - (Custo + Mão de Obra)
+    const lucroUnitario = dados.total - (custoMatTotal + maoObra);
 
+    // 3. Salva esses valores "escondidos" na linha da tabela (Dataset)
+    // Usamos esses valores para multiplicar pela quantidade depois
+    row.dataset.custoMat = custoMatTotal;
+    row.dataset.maoObra = maoObra;
+    row.dataset.lucro = lucroUnitario;
+
+    // 4. Recalcula totais da tela
     atualizarTotais();
+
+    // Feedback visual rápido
+    if(utils && utils.showToast) utils.showToast("Custos e Lucros carregados do histórico!", "success");
 }
 
 function limparBuscaLinha(btn) {
@@ -368,6 +381,8 @@ function excluirProduto(btn) {
 
 function atualizarTotais() {
     let totalProd = 0;
+    
+    // Acumuladores Financeiros
     let acmCustos = 0;
     let acmMaoObra = 0;
     let acmLucro = 0;
@@ -376,14 +391,17 @@ function atualizarTotais() {
     if(listaItensDiv) listaItensDiv.innerHTML = '';
 
     document.querySelectorAll("#tabelaProdutos tbody tr").forEach(row => {
+        // Pega a quantidade digitada pelo usuário
         const qtd = parseFloat(row.querySelector(".produto-quantidade").value) || 0;
+        
         const unit = utils.converterMoedaParaNumero(row.querySelector(".produto-valor-unit").value);
         const totalLinha = qtd * unit;
         
         row.querySelector(".produto-total-linha").textContent = utils.formatarMoeda(totalLinha);
         totalProd += totalLinha;
 
-        // Cálculos Financeiros Ocultos via Dataset
+        // CÁLCULO FINANCEIRO DINÂMICO
+        // Pega o valor unitário salvo no dataset e multiplica pela quantidade
         const cMat = (parseFloat(row.dataset.custoMat) || 0) * qtd;
         const cMO = (parseFloat(row.dataset.maoObra) || 0) * qtd;
         const cLucro = (parseFloat(row.dataset.lucro) || 0) * qtd;
