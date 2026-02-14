@@ -276,8 +276,9 @@ function adicionarProduto() {
     newRow.dataset.maoObra = "0";
     newRow.dataset.lucro = "0";
 
+    // ALTERAÇÃO: Evento oninput para reatividade imediata
     newRow.innerHTML = `
-        <td style="width: 80px;"><input type="number" class="produto-quantidade" value="1" min="1" onchange="atualizarTotais()"></td>
+        <td style="width: 80px;"><input type="number" class="produto-quantidade" value="1" min="1" oninput="atualizarTotais()"></td>
         <td style="position: relative;">
             <div class="search-wrapper-integrated">
                 <input type="text" class="search-input-integrated produto-descricao" placeholder="Buscar produto..." oninput="tratarBuscaProdutoOrcamento(this)" autocomplete="off">
@@ -536,8 +537,9 @@ function editarOrcamento(id) {
             const unit = p.valorUnit || 0;
             row.dataset.lucro = unit - ((p.custoBase || 0) + (p.maoObraBase || 0));
 
+            // ALTERAÇÃO: Evento oninput para reatividade imediata
             row.innerHTML = `
-                <td style="width: 80px;"><input type="number" class="produto-quantidade" value="${p.quantidade}" min="1" onchange="atualizarTotais()"></td>
+                <td style="width: 80px;"><input type="number" class="produto-quantidade" value="${p.quantidade}" min="1" oninput="atualizarTotais()"></td>
                 <td style="position: relative;">
                     <div class="search-wrapper-integrated">
                         <input type="text" class="search-input-integrated produto-descricao" value="${p.descricao}" oninput="tratarBuscaProdutoOrcamento(this)" autocomplete="off">
