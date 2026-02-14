@@ -1,4 +1,4 @@
-/* assets/css/orcamentos.css - ARQUIVO COMPLETO (v1.2.1 - Correção Layout Dropdown & Busca) */
+/* assets/css/orcamentos.css - ARQUIVO COMPLETO (v1.2.0 - Pronta Entrega) */
 
 /* ==== 1. RESET DE SEGURANÇA ==== */
 * {
@@ -215,7 +215,7 @@ input[type="checkbox"] {
     cursor: default;
 }
 
-/* ==== 6. TABELAS (CORREÇÃO OVERFLOW & STACKING) ==== */
+/* ==== 6. TABELAS ==== */
 table {
     width: 100%;
     border-collapse: collapse;
@@ -233,34 +233,11 @@ th {
     color: white;
 }
 
-/* ATUALIZAÇÃO V1.2.1: Overflow visível para dropdown não cortar */
 .table-responsive {
-    overflow: visible !important; 
+    overflow-x: auto;
     width: 100%;
     -webkit-overflow-scrolling: touch;
     display: block;
-}
-
-/* ATUALIZAÇÃO V1.2.1: Contexto de empilhamento para linhas da tabela */
-/* Garante que a linha da tabela sendo editada fique POR CIMA das outras */
-#tabelaProdutos tr, 
-#tabelaProdutosEdicao tr {
-    position: relative; 
-}
-
-/* Quando passamos o mouse ou clicamos na linha, ela sobe para o topo da pilha */
-#tabelaProdutos tr:hover, 
-#tabelaProdutos tr:focus-within,
-#tabelaProdutosEdicao tr:hover, 
-#tabelaProdutosEdicao tr:focus-within {
-    z-index: 500 !important; /* Prioridade alta */
-    background-color: #fff; /* Garante que o fundo não seja transparente */
-}
-
-/* Garante que a célula (td) não corte o conteúdo */
-#tabelaProdutos td, 
-#tabelaProdutosEdicao td {
-    overflow: visible !important;
 }
 
 /* ==== 7. BOTÕES ==== */
@@ -287,7 +264,7 @@ button:hover {
     margin: 0 auto 20px auto;
 }
 
-/* ==== 8. FILTROS E RELATÓRIOS ==== */
+/* ==== 8. FILTROS E RELATÓRIOS (ATUALIZADO V1.1.0) ==== */
 .filtro-data {
     margin-bottom: 20px;
     text-align: center;
@@ -356,15 +333,15 @@ button:hover {
 
 /* Estilo Específico para o Card do Dízimo */
 .kpi-dizimo {
-    border-left: 5px solid #8e24aa;
-    background: #f3e5f5;
-    min-width: 250px;
-    transform: scale(1.05);
-    box-shadow: 0 4px 15px rgba(142, 36, 170, 0.2);
+    border-left: 5px solid #8e24aa; /* Roxo (Simbologia de Nobreza/Espiritualidade) */
+    background: #f3e5f5; /* Fundo Lilás bem suave */
+    min-width: 250px; /* Um pouco mais largo para caber o texto */
+    transform: scale(1.05); /* Leve destaque de tamanho */
+    box-shadow: 0 4px 15px rgba(142, 36, 170, 0.2); /* Sombra colorida */
 }
 
 .kpi-dizimo strong {
-    color: #4a148c;
+    color: #4a148c; /* Texto Roxo Escuro */
     font-size: 1.6rem;
 }
 
@@ -427,6 +404,7 @@ button:hover {
     margin-bottom: 10px;
 }
 
+/* Botão Limpar Página */
 nav ul li a[onclick="limparPagina()"] {
     background-color: #dfb6b0;
     padding: 5px 10px;
@@ -439,80 +417,29 @@ nav ul li a[onclick="limparPagina()"]:hover {
     background-color: #c89790;
 }
 
-/* ==== 10. ESTILOS DE BUSCA E PAGINAÇÃO ==== */
+/* ==== 10. ESTILOS DE BUSCA E PAGINAÇÃO (NOVO) ==== */
 .search-container {
     margin-bottom: 15px;
     display: flex;
     justify-content: center;
 }
 
-/* --- ATUALIZAÇÃO V1.2.1: Busca Integrada (Input + Botão X) --- */
-/* O container do input agora força alinhamento vertical */
-.search-wrapper-integrated {
-    position: relative !important;
-    display: flex !important;
-    align-items: center !important; /* Centraliza verticalmente o conteúdo */
-    width: 100%;
-    max-width: 400px; /* Mantém a largura máxima original */
-}
-
-/* O input precisa de espaço na direita para o botão caber */
-.search-input-integrated {
-    width: 100% !important;
-    padding: 12px 35px 12px 20px !important; /* Espaço seguro para o X na direita */
-    border: 2px solid #dfb6b0;
-    border-radius: 25px;
-    font-size: 1rem;
-    outline: none;
-    transition: border-color 0.3s;
-    background-color: #fff !important;
-    color: #444 !important;
-    box-sizing: border-box !important;
-}
-
-.search-input-integrated:focus {
-    border-color: #7aa2a9;
-    box-shadow: 0 0 8px rgba(122, 162, 169, 0.2);
-}
-
-/* O botão X forçado na posição correta */
-.btn-clear-integrated {
-    position: absolute !important;
-    right: 8px !important;       /* Colado na direita */
-    top: 50% !important;         /* Meio da altura */
-    transform: translateY(-50%) !important; /* Correção matemática do centro */
-    
-    /* Reseta margens que podem estar empurrando ele para baixo */
-    margin: 0 !important;
-    padding: 0 !important;
-    height: 24px !important;     /* Altura fixa */
-    width: 24px !important;      /* Largura fixa */
-    line-height: 24px !important;
-    bottom: auto !important;     /* Remove qualquer fixação no fundo */
-    background: transparent !important;
-    border: none !important;
-    color: #999;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.2rem;
-    cursor: pointer;
-    z-index: 10;
-}
-/* ----------------------------------------------------------- */
-
-/* Estilos legados de input (mantidos para compatibilidade se necessário) */
 .search-input {
     width: 100%;
     max-width: 400px;
     padding: 12px 20px;
-    border: 2px solid #dfb6b0;
+    border: 2px solid #dfb6b0; /* Cor secundária */
     border-radius: 25px;
     font-size: 1rem;
     outline: none;
     transition: border-color 0.3s;
-    background-color: #fff !important;
+    background-color: #fff !important; /* Força branco para destaque */
     color: #444 !important;
+}
+
+.search-input:focus {
+    border-color: #7aa2a9; /* Cor principal */
+    box-shadow: 0 0 8px rgba(122, 162, 169, 0.2);
 }
 
 .pagination-controls {
@@ -554,7 +481,7 @@ nav ul li a[onclick="limparPagina()"]:hover {
     color: #555;
 }
 
-/* ==== 11. MÓDULO PRONTA ENTREGA ==== */
+/* ==== 11. MÓDULO PRONTA ENTREGA (NOVO) ==== */
 /* Card de Cadastro de Estoque */
 .stock-card {
     background: #fff;
@@ -574,9 +501,9 @@ nav ul li a[onclick="limparPagina()"]:hover {
     margin-bottom: 15px;
 }
 
-/* Botão de Venda */
+/* Botão de Venda (Destaque Verde - Prioridade 1) */
 .btn-vender {
-    background-color: #4CAF50 !important;
+    background-color: #4CAF50 !important; /* Verde Sucesso/Dinheiro */
     color: white;
     font-weight: 500;
     padding: 8px 15px !important;
@@ -595,6 +522,7 @@ nav ul li a[onclick="limparPagina()"]:hover {
     transform: translateY(0);
 }
 
+/* Botão de Exclusão de Estoque (Vermelho Discreto) */
 .btn-excluir-estoque {
     background-color: #ef5350 !important;
     color: white;
@@ -607,7 +535,7 @@ nav ul li a[onclick="limparPagina()"]:hover {
     background-color: #e53935 !important;
 }
 
-/* Dropdown de Busca de Produtos (Estilo Original) */
+/* Dropdown de Busca de Produtos (Integração Precificação - Prioridade 3) */
 .dropdown-sugestoes {
     position: absolute;
     background: white;
@@ -618,7 +546,7 @@ nav ul li a[onclick="limparPagina()"]:hover {
     overflow-y: auto;
     z-index: 1000;
     box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    margin-top: -12px;
+    margin-top: -12px; /* Ajuste para colar no input acima */
 }
 
 .dropdown-item {
@@ -627,7 +555,7 @@ nav ul li a[onclick="limparPagina()"]:hover {
     border-bottom: 1px solid #eee;
     font-size: 0.95rem;
     color: #555;
-    background-color: #fff;
+    background-color: #fff; /* Garantir fundo branco */
 }
 
 .dropdown-item:hover {
@@ -638,22 +566,6 @@ nav ul li a[onclick="limparPagina()"]:hover {
 .dropdown-item:last-child {
     border-bottom: none;
 }
-
-/* --- ATUALIZAÇÃO V1.2.1: Dropdown Resultados (Fix Table Overlay) --- */
-.dropdown-resultados {
-    position: absolute;
-    top: 100%; /* Exatamente abaixo do input */
-    left: 0;
-    width: 280px; /* Largura fixa boa para mobile */
-    max-width: 85vw;
-    background: #fff;
-    border: 1px solid #7aa2a9;
-    border-radius: 8px;
-    z-index: 99999 !important; /* Camada mais alta possível */
-    box-shadow: 0 10px 25px rgba(0,0,0,0.3); /* Sombra forte para destacar */
-    margin-top: 5px;
-}
-/* --------------------------------------------------------------- */
 
 /* ==== 12. MEDIA QUERIES (MOBILE) ==== */
 @media (max-width: 768px) {
@@ -721,6 +633,7 @@ nav ul li a[onclick="limparPagina()"]:hover {
         padding: 15px;
     }
 
+    /* Ajuste para o Card do Dízimo em telas menores */
     .kpi-dizimo {
         width: 100%;
         transform: scale(1);
@@ -730,8 +643,7 @@ nav ul li a[onclick="limparPagina()"]:hover {
     .table-responsive {
         width: 100% !important;
         display: block !important;
-        /* Overflow visível mantido aqui para garantir o funcionamento do dropdown no mobile */
-        overflow: visible !important; 
+        overflow-x: auto !important;
     }
     
     table {
@@ -740,13 +652,15 @@ nav ul li a[onclick="limparPagina()"]:hover {
     }
 }
 
+/* Ocultar Colunas Específicas em Telas Pequenas (Quick Win - Prioridade 2) */
 @media (max-width: 600px) {
     .col-oculta-mobile { display: none; }
-    #tabela-relatorio td:nth-child(2) { display: none; }
+    #tabela-relatorio td:nth-child(2) { display: none; } /* Oculta coluna Nº Pedido especificamente na tabela de relatórios */
 }
 
 /* ==== 13. REGRAS DE IMPRESSÃO ==== */
 @media print {
+    /* Ocultar elementos de navegação e interface do sistema */
     body > *:not(#appContent), 
     .btn-back-hub,
     nav,
@@ -756,12 +670,13 @@ nav ul li a[onclick="limparPagina()"]:hover {
     #auth-screen,
     #hub-screen,
     #splash-screen,
-    .search-container,
-    .pagination-controls
+    .search-container,    /* Ocultar busca na impressão */
+    .pagination-controls  /* Ocultar paginação na impressão */
     {
         display: none !important;
     }
 
+    /* Reset de container para usar largura total do papel */
     .container, .mobile-container, #module-orcamentos {
         width: 100% !important;
         max-width: 100% !important;
@@ -771,12 +686,14 @@ nav ul li a[onclick="limparPagina()"]:hover {
         border: none !important;
     }
 
+    /* Estilização para o conteúdo impresso */
     body {
         background: white !important;
         font-size: 12pt;
         color: black !important;
     }
 
+    /* Ajustes de Tabela para Impressão */
     table {
         width: 100% !important;
         border-collapse: collapse !important;
@@ -789,9 +706,9 @@ nav ul li a[onclick="limparPagina()"]:hover {
     }
 
     th, td {
-        border: 1px solid #000 !important;
+        border: 1px solid #000 !important; /* Bordas pretas nítidas */
         color: #000 !important;
-        background-color: transparent !important;
+        background-color: transparent !important; /* Remove fundos coloridos para economizar tinta */
         padding: 5px !important;
     }
 
@@ -800,6 +717,7 @@ nav ul li a[onclick="limparPagina()"]:hover {
         border-bottom: 2px solid #000 !important;
     }
 
+    /* Inputs aparecem como texto limpo */
     input, textarea, select {
         border: none !important;
         background: transparent !important;
@@ -811,6 +729,7 @@ nav ul li a[onclick="limparPagina()"]:hover {
         font-weight: normal;
     }
 
+    /* Cabeçalho de Impressão (se visível) */
     .header-orcamento h1 {
         color: #000 !important;
         margin: 0;
@@ -824,6 +743,7 @@ nav ul li a[onclick="limparPagina()"]:hover {
         border-color: #000 !important;
     }
 
+    /* Estilo de Impressão para Checklist (Checkboxes) - NOVO */
     .checkbox-print {
         width: 20px;
         height: 20px;
@@ -849,15 +769,15 @@ nav ul li a[onclick="limparPagina()"]:hover {
 .rank-1 {
     background-color: #fff8e1 !important;
     font-weight: bold;
-    border-left: 5px solid #FFD700;
+    border-left: 5px solid #FFD700; /* Ouro */
 }
 
 .rank-2 {
-    border-left: 5px solid #C0C0C0;
+    border-left: 5px solid #C0C0C0; /* Prata */
 }
 
 .rank-3 {
-    border-left: 5px solid #CD7F32;
+    border-left: 5px solid #CD7F32; /* Bronze */
 }
 
 /* ==== 15. FILTROS AVANÇADOS (PEDIDOS) ==== */
@@ -888,7 +808,7 @@ nav ul li a[onclick="limparPagina()"]:hover {
     width: auto !important;
     min-width: 120px;
     font-size: 0.9rem !important;
-    margin-bottom: 0 !important;
+    margin-bottom: 0 !important; /* Reset do estilo global de inputs */
 }
 
 .checkbox-highlight {
@@ -903,6 +823,7 @@ nav ul li a[onclick="limparPagina()"]:hover {
     background-color: #ffe0b2;
 }
 
+/* Ajuste Mobile para Filtros */
 @media (max-width: 768px) {
     .filters-container {
         flex-direction: column;
