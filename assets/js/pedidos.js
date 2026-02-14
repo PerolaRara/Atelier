@@ -578,7 +578,7 @@ function adicionarProdutoEdicao() {
 function adicionarRowProdutoEdicao(tbody, p) {
     const row = tbody.insertRow();
     row.innerHTML = `
-        <td><input type="number" class="produto-quantidade" value="${p.quantidade}" min="1" onchange="atualizarTotaisEdicao()"></td>
+        <td><input type="number" class="produto-quantidade" value="${p.quantidade}" min="1" oninput="atualizarTotaisEdicao()"></td>
         <td><input type="text" class="produto-descricao" value="${p.descricao}"></td>
         <td><input type="text" class="produto-valor-unit" value="${utils.formatarMoeda(p.valorUnit)}" oninput="formatarEntradaMoeda(this)" onblur="atualizarTotaisEdicao()"></td>
         <td>${utils.formatarMoeda(p.valorTotal)}</td>
