@@ -1,0 +1,1176 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal Pérola Rara</title>
+    
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#ecd5d1">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+    <link rel="icon" href="assets/images/favicon.ico" type="image/x-icon">
+    
+    <link rel="stylesheet" href="assets/css/main.css">
+    <link rel="stylesheet" href="assets/css/orcamentos.css">
+    <link rel="stylesheet" href="assets/css/precificacao.css">
+
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
+    <script type="module" src="assets/js/firebase-config.js"></script> <script type="module" src="assets/js/precificacao-insumos.js"></script> 
+    <script type="module" src="assets/js/precificacao-produtos.js"></script> 
+    <script type="module" src="assets/js/main.js"></script>
+    <script type="module" src="assets/js/orcamentos.js"></script>
+    <script type="module" src="assets/js/estoque.js"></script>
+    <script type="module" src="assets/js/precificacao.js"></script>
+</head>
+    <div id="toast-container"></div>
+<body>
+
+    <section id="auth-screen">
+        <div class="auth-container">
+            <div class="auth-form">
+                <div class="logo-container">
+                    <img src="assets/images/logo_perola_rara.png" alt="Logo Pérola Rara" id="logo-login" width="150">
+                    <h1 class="login-brand-name">Pérola Rara</h1>
+                </div>
+                <h2>Acesso ao Portal</h2>
+                
+                <div class="form-group">
+                    <label for="email">Email:</label>
+                    <input type="email" id="email" name="email" placeholder="Digite seu email">
+                </div>
+                <div class="form-group">
+                    <label for="password">Senha:</label>
+                    <input type="password" id="password" name="password" placeholder="Digite sua senha">
+                </div>
+                <div class="auth-buttons">
+                    <button type="button" id="loginBtn">Entrar</button>
+                </div>
+                <p id="auth-message" class="auth-message"></p>
+            </div>
+        </div>
+    </section>
+
+    <section id="splash-screen" style="display: none;">
+        <div class="splash-content">
+            <img src="assets/images/logo_perola_rara.png" alt="Logo" class="splash-logo" width="150">
+            <p class="splash-slogan">"Onde a arte se encontra com o amor em cada detalhe."</p>
+        </div>
+    </section>
+
+    <section id="hub-screen" style="display: none;">
+        <header class="hub-header">
+            <img src="assets/images/logo_perola_rara.png" alt="Logo" width="120">
+            <div class="welcome-text">
+                <h1>Painel Administrativo</h1>
+                <div class="user-info-card">
+                    <span class="user-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                    </span>
+                    <span id="user-email-display">...</span>
+                </div>
+            </div>
+        </header>
+
+        <div class="hub-cards-container">
+            <div class="hub-card" id="btn-go-orcamentos">
+                <div class="card-icon">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                        <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                        <path d="M9 14h6"></path>
+                        <path d="M9 10h6"></path>
+                        <path d="M9 18h6"></path>
+                    </svg>
+                </div>
+                <h3>Gestão de Pedidos</h3>
+                <p>Gerencie clientes, orçamentos e fila de produção.</p>
+                <div class="card-footer"><span class="card-action">Acessar &rarr;</span></div>
+            </div>
+
+            <div class="hub-card" id="btn-go-precificacao">
+                <div class="card-icon">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+                        <line x1="7" y1="7" x2="7.01" y2="7"></line>
+                    </svg>
+                </div>
+                <h3>Precificação</h3>
+                <p>Calcule custos de materiais e defina preços de venda.</p>
+                <div class="card-footer"><span class="card-action">Acessar &rarr;</span></div>
+            </div>
+        </div>
+
+        <div class="hub-footer-actions">
+            <button id="hubLogoutBtn" class="btn-logout-solid">Desconectar</button>
+        </div>
+        <div id="version-container"></div>
+    </section>
+
+    <section id="module-orcamentos" style="display: none;">
+        <button class="btn-back-hub">⬅ Voltar ao Menu</button>
+        
+        <div class="container mobile-container">
+            <header class="module-header-styled">
+                 <img src="assets/images/logo_perola_rara.png" class="module-logo-small" alt="Logo">
+                 <h1 class="module-title-main">
+                    Pérola Rara
+                    <span style="display: block; font-size: 0.5em; font-weight: 400; margin-top: 5px;">(Gestão de Pedidos)</span>
+                 </h1>
+                 
+                 <nav class="nav-lined">
+                    <ul>
+                        <li><a href="#" data-pagina="form-orcamento">Novo Orçamento</a></li>
+                        <li><a href="#" data-pagina="orcamentos-gerados">Orçamentos Gerados</a></li>
+                        <li><a href="#" data-pagina="lista-pedidos">Pedidos Realizados</a></li>
+                        <li><a href="#" data-pagina="pronta-entrega">Venda Pronta Entrega</a></li> <li><a href="#" data-pagina="estoque">Estoque</a></li> <li><a href="#" data-pagina="relatorio">Relatório</a></li>
+                    </ul>
+                 </nav>
+            </header>
+            
+            <div id="appContent">
+                <section id="form-orcamento" class="pagina">
+                    <h2 class="section-title-lined">Novo Orçamento</h2>
+                    <form id="orcamento">
+                        <div class="form-row">
+                            <div class="form-group"><label>Data:</label><input type="date" id="dataOrcamento"></div>
+                            <div class="form-group"><label>Validade:</label><input type="date" id="dataValidade"></div>
+                        </div>
+                        <div class="form-group"><label>Cliente:</label><input type="text" id="cliente" placeholder="Nome do Cliente"></div>
+                        <div class="form-group"><label>Endereço:</label><input type="text" id="endereco"></div>
+                        <div class="form-row">
+                            <div class="form-group"><label>Cidade:</label><input type="text" id="cidade"></div>
+                            <div class="form-group"><label>Telefone:</label><input type="text" id="telefone"></div>
+                        </div>
+                        <div class="form-group"><label>Email:</label><input type="email" id="clienteEmail"></div>
+                        <div class="form-row">
+                            <div class="form-group"><label>Tema:</label><input type="text" id="tema"></div>
+                            <div class="form-group"><label>Cores:</label><input type="text" id="cores"></div>
+                        </div>
+
+                        <h3>Produtos</h3>
+                        <div class="table-responsive">
+                            <table id="tabelaProdutos">
+                                <thead>
+                                    <tr>
+                                        <th>Qtd</th>
+                                        <th>Descrição</th>
+                                        <th>Valor Unit.</th>
+                                        <th>Total</th>
+                                        <th>Ação</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <button type="button" id="btnAddProdutoOrcamento">Adicionar Produto</button>
+
+                        <div id="painel-feedback-financeiro" class="feedback-financeiro-container" style="display: none;">
+                            <h4>Detalhamento Financeiro do Pedido (Interno)</h4>
+                            <div class="feedback-lista-itens" id="lista-financeira-itens">
+                                </div>
+                            <div class="feedback-resumo-total">
+                                <div class="kpi-mini" style="border-left-color: #e53935;">
+                                    <span>Custos Totais</span>
+                                    <strong id="feedback-total-custos">R$ 0,00</strong>
+                                </div>
+                                <div class="kpi-mini" style="border-left-color: #2196F3;">
+                                    <span>Meu Salário</span>
+                                    <strong id="feedback-total-salario">R$ 0,00</strong>
+                                </div>
+                                <div class="kpi-mini" style="border-left-color: #4CAF50;">
+                                    <span>Caixa (Lucro)</span>
+                                    <strong id="feedback-total-lucro">R$ 0,00</strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-row valores-pedido" style="margin-top: 20px;">
+                            <div class="form-group"><label>Frete:</label><input type="text" id="valorFrete" placeholder="R$ 0,00" inputmode="numeric"></div>
+                            <div class="form-group"><label>Subtotal:</label><input type="text" id="valorOrcamento" readonly></div>
+                            <div class="form-group"><label>Total Final:</label><input type="text" id="total" readonly></div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Formas de Pagamento:</label>
+                            <label><input type="checkbox" name="pagamento" value="Pix"> Pix</label>
+                            <label><input type="checkbox" name="pagamento" value="Cartão"> Cartão</label>
+                        </div>
+                        <div class="form-group"><label>Observações:</label><textarea id="observacoes"></textarea></div>
+
+                        <button type="button" id="btnGerarOrcamento">Gerar Orçamento</button>
+                        <button type="button" id="btnAtualizarOrcamento" style="display:none;">Salvar Alterações</button>
+                    </form>
+                </section>
+
+                <section id="orcamentos-gerados" class="pagina" style="display: none;">
+                    <h2 class="section-title-lined">Orçamentos Gerados</h2>
+                    
+                    <div class="search-container">
+                        <div class="search-wrapper">
+                            <input type="text" id="busca-orcamentos" placeholder="🔍 Buscar por Cliente, Número ou Data..." class="search-input">
+                            <button type="button" class="btn-clear-search" onclick="limparBusca('busca-orcamentos')">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table id="tabela-orcamentos">
+                            <thead>
+                                <tr>
+                                    <th>Nº</th>
+                                    <th>Data</th>
+                                    <th class="sortable" onclick="ordenarTabela('orcamentos', 'cliente')">Cliente</th>
+                                    <th>Total</th>
+                                    <th>Pedido?</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+
+                    <div class="pagination-controls">
+                        <button id="btn-ant-orc" class="btn-paginacao">❮ Anterior</button>
+                        <span id="info-pag-orc">Página 1</span>
+                        <button id="btn-prox-orc" class="btn-paginacao">Próximo ❯</button>
+                    </div>
+                </section>
+
+                <section id="lista-pedidos" class="pagina" style="display: none;">
+                    <h2 class="section-title-lined">Pedidos Realizados</h2>
+
+                    <div class="filters-container">
+                        <div class="filter-group">
+                            <label>Período:</label>
+                            <select id="filtro-ped-mes" class="filter-select">
+                                <option value="">Todos os Meses</option>
+                                <option value="0">Janeiro</option>
+                                <option value="1">Fevereiro</option>
+                                <option value="2">Março</option>
+                                <option value="3">Abril</option>
+                                <option value="4">Maio</option>
+                                <option value="5">Junho</option>
+                                <option value="6">Julho</option>
+                                <option value="7">Agosto</option>
+                                <option value="8">Setembro</option>
+                                <option value="9">Outubro</option>
+                                <option value="10">Novembro</option>
+                                <option value="11">Dezembro</option>
+                            </select>
+                            <select id="filtro-ped-ano" class="filter-select">
+                                <option value="">Todos os Anos</option>
+                            </select>
+                        </div>
+
+                        <div class="filter-group checkbox-highlight">
+                            <label for="filtro-ped-pendentes" style="cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                                <input type="checkbox" id="filtro-ped-pendentes">
+                                <span style="color: #e65100; font-weight: bold;">⚠️ Apenas Pendências Financeiras</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="search-container">
+                        <div class="search-wrapper">
+                            <input type="text" id="busca-pedidos" placeholder="🔍 Buscar por Cliente, Número ou Data..." class="search-input">
+                            <button type="button" class="btn-clear-search" onclick="limparBusca('busca-pedidos')">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table id="tabela-pedidos">
+                            <thead>
+                                <tr>
+                                    <th>Nº</th>
+                                    <th>Data</th>
+                                    <th class="sortable" onclick="ordenarTabela('pedidos', 'cliente')">Cliente</th>
+                                    <th>Total</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+
+                    <div class="pagination-controls">
+                        <button id="btn-ant-ped" class="btn-paginacao">❮ Anterior</button>
+                        <span id="info-pag-ped">Página 1</span>
+                        <button id="btn-prox-ped" class="btn-paginacao">Próximo ❯</button>
+                    </div>
+                </section>
+                
+                <section id="pronta-entrega" class="pagina" style="display: none;">
+                    <h2 class="section-title-lined">Venda Pronta Entrega</h2>
+                    
+                    <div class="search-container">
+                        <div class="search-wrapper">
+                            <input type="text" id="busca-vendas-estoque" placeholder="🔍 Buscar item para vender..." class="search-input">
+                            <button type="button" class="btn-clear-search" onclick="limparBusca('busca-vendas-estoque')">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table id="tabela-vendas-estoque">
+                            <thead>
+                                <tr>
+                                    <th class="sortable" onclick="ordenarTabela('vendas', 'produto')">Produto</th>
+                                    <th style="text-align: center;">Em Estoque</th>
+                                    <th>Valor Unit.</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+
+                    <div class="pagination-controls">
+                        <button id="btn-ant-venda-est" class="btn-paginacao">❮ Anterior</button>
+                        <span id="info-pag-venda-est">Página 1</span>
+                        <button id="btn-prox-venda-est" class="btn-paginacao">Próximo ❯</button>
+                    </div>
+                </section>
+
+                <section id="estoque" class="pagina" style="display: none;">
+                    <h2 class="section-title-lined">Controle de Estoque</h2>
+
+                    <div class="input-card" style="background: #fff; padding: 20px; border-radius: 12px; border: 1px solid #eee; margin-bottom: 20px;">
+                        <h3 style="margin-top:0; color: #7aa2a9; font-size: 1.1rem; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 15px;">Cadastrar / Editar Estoque</h3>
+
+                        <form id="form-estoque-gerencial">
+                            <input type="hidden" id="estoque-id-edicao">
+
+                            <div class="form-group" style="position: relative;">
+                                <label>Nome do Produto (Busca Automática):</label>
+                                <div class="search-wrapper-integrated">
+                                    <input type="text" id="estoque-produto" class="search-input-integrated" placeholder="Digite para buscar no histórico..." autocomplete="off">
+                                    <span class="search-icon-integrated">🔍</span>
+                                    <button type="button" class="btn-clear-integrated" style="display:none;">×</button>
+                                </div>
+                                <div id="resultados-busca-estoque" class="dropdown-resultados"></div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Quantidade em Estoque:</label>
+                                <input type="number" id="estoque-quantidade" value="1" style="font-weight: bold; background-color: #cae6e7; color: #333; padding: 10px; border-radius: 5px; border: 1px solid #ccc;">
+                            </div>
+
+                            <div class="form-group">
+                                <label>Detalhes / Variação:</label>
+                                <textarea id="estoque-detalhes" rows="2" placeholder="Cor, tamanho, tema..."></textarea>
+                            </div>
+
+                            <div style="background-color: #f9f9f9; padding: 15px; border-radius: 8px; margin-top: 15px; border: 1px dashed #ccc;">
+                                <h4 style="margin: 0 0 10px 0; font-size: 0.9em; color: #555; text-transform: uppercase;">Composição do Preço (Para Relatórios)</h4>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label style="color: #e53935; font-weight: 500;" title="Usado para o Relatório Financeiro">Gastos (R$):</label>
+                                        <input type="text" id="estoque-custo" placeholder="0,00" oninput="formatarEntradaMoeda(this)" inputmode="numeric">
+                                    </div>
+                                     <div class="form-group">
+                                        <label style="color: #2196F3; font-weight: 500;" title="Usado para o Relatório Financeiro">Meu Salário (R$):</label>
+                                        <input type="text" id="estoque-mao-obra" placeholder="0,00" oninput="formatarEntradaMoeda(this)" inputmode="numeric">
+                                    </div>
+                                    <div class="form-group">
+                                        <label style="color: #4CAF50; font-weight: 500;" title="Caixa da Empresa">Caixa (Lucro) (R$):</label>
+                                        <input type="text" id="estoque-margem" placeholder="0,00" oninput="formatarEntradaMoeda(this)" inputmode="numeric">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group" style="margin-top: 15px; text-align: center; background: #f0f7f7; padding: 15px; border-radius: 8px; border: 1px solid #b2d8d8;">
+                                <label style="font-size: 1.1em; color: #006064; font-weight: bold;">Preço Final de Venda (R$):</label>
+                                <input type="text" id="estoque-valor" oninput="formatarEntradaMoeda(this)" style="font-size: 1.3em; text-align: center; font-weight: bold; width: 50%; margin: 5px auto; display: block;" inputmode="numeric">
+                            </div>
+
+                            <div style="display: flex; gap: 10px; margin-top: 15px;">
+                                <button type="button" id="btn-salvar-estoque" style="flex: 1;">Salvar no Estoque</button>
+                                <button type="button" id="btn-cancelar-estoque" style="display: none; background-color: #90a4ae; width: auto;">Cancelar</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="stock-report-card" style="background: #f0f7f7; padding: 15px; border-radius: 12px; border: 1px solid #b2d8d8; margin-bottom: 20px;">
+                        <h3 style="margin-top:0; color: #006064; font-size: 1.1rem; border-bottom: 1px solid #b2d8d8; padding-bottom: 10px; margin-bottom: 15px;">📊 Relatório de Saídas (Ranking de Vendas)</h3>
+                        
+                        <div class="form-row" style="align-items: flex-end; gap: 10px;">
+                            <div class="form-group" style="flex: 1;">
+                                <label>Início:</label>
+                                <input type="date" id="rel-estoque-inicio">
+                            </div>
+                            <div class="form-group" style="flex: 1;">
+                                <label>Fim:</label>
+                                <input type="date" id="rel-estoque-fim">
+                            </div>
+                            <div class="form-group">
+                                <button type="button" id="btn-gerar-relatorio-saida" style="margin:0; background-color: #006064; color: white;">Gerar Ranking</button>
+                            </div>
+                        </div>
+
+                        <div id="resultado-relatorio-estoque" style="display: none; margin-top: 15px;">
+                            <div class="table-responsive">
+                                <table id="tabela-ranking-saidas">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 50px;">#</th>
+                                            <th>Produto</th>
+                                            <th style="text-align: center;">Qtd. Vendida</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="menu">
+
+                    <div class="search-container">
+                        <div class="search-wrapper">
+                            <input type="text" id="busca-lista-estoque-adm" placeholder="🔍 Buscar no estoque..." class="search-input">
+                            <button type="button" class="btn-clear-search" onclick="limparBusca('busca-lista-estoque-adm')">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table id="tabela-estoque-adm">
+                            <thead>
+                                <tr>
+                                    <th class="sortable" onclick="ordenarTabela('estoque', 'produto')">Produto</th>
+                                    <th style="text-align: center;">Qtd</th>
+                                    <th>Valor</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+
+                    <div class="pagination-controls">
+                        <button id="btn-ant-est-adm" class="btn-paginacao">❮ Anterior</button>
+                        <span id="info-pag-est-adm">Página 1</span>
+                        <button id="btn-prox-est-adm" class="btn-paginacao">Próximo ❯</button>
+                    </div>
+                </section>
+
+                <section id="form-edicao-pedido" class="pagina" style="display: none;">
+                    <h2 class="section-title-lined">Editar Pedido</h2>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Data da Venda (Pedido):</label>
+                            <input type="date" id="dataPedidoEdicao">
+                        </div>
+                        <div class="form-group">
+                            <label>Previsão de Entrega:</label>
+                            <input type="date" id="dataEntregaEdicao">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Cliente:</label>
+                        <input type="text" id="clienteEdicao">
+                    </div>
+
+                    <div class="form-group"><label>Endereço:</label><input type="text" id="enderecoEdicao"></div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Cidade:</label><input type="text" id="cidadeEdicao"></div>
+                        <div class="form-group"><label>Telefone:</label><input type="text" id="contatoEdicao"></div>
+                    </div>
+                    <div class="form-row">
+                         <div class="form-group"><label>Tema:</label><input type="text" id="temaEdicao"></div>
+                         <div class="form-group"><label>Cores:</label><input type="text" id="coresEdicao"></div>
+                    </div>
+
+                    <h3>Produtos</h3>
+                    <div class="table-responsive">
+                        <table id="tabelaProdutosEdicao">
+                            <thead><tr><th>Qtd</th><th>Desc</th><th>Unit</th><th>Total</th><th>Ação</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <button type="button" id="btnAddProdutoEdicao">Add Produto</button>
+
+                    <div class="form-row valores-pedido" style="margin-top: 20px;">
+                        <div class="form-group">
+                            <label>Frete (R$):</label>
+                            <input type="text" id="valorFreteEdicao" placeholder="R$ 0,00" oninput="formatarEntradaMoeda(this)" onblur="atualizarTotaisEdicao()" inputmode="numeric">
+                        </div>
+                        <div class="form-group">
+                            <label>Subtotal Produtos (R$):</label>
+                            <input type="text" id="valorPedidoEdicao" placeholder="R$ 0,00" oninput="formatarEntradaMoeda(this)" onblur="atualizarTotaisEdicao()" inputmode="numeric">
+                        </div>
+                    </div>
+
+                    <div class="form-row valores-pedido" style="background-color: #f0f7f7; border: 1px solid #b2d8d8; margin-top: 15px; padding: 15px; border-radius: 10px;">
+                        <h3 style="width: 100%; font-size: 1rem; color: #5a8289; margin: 0 0 10px 0;">Demonstrativo Financeiro (Interno)</h3>
+                        
+                        <div class="form-group">
+                            <label title="Soma de Materiais + Custos Indiretos">Custos Totais (R$):</label>
+                            <input type="text" id="custoTotalPedido" placeholder="R$ 0,00" oninput="formatarEntradaMoeda(this)" inputmode="numeric">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label style="color: #2196F3;">Meu Salário (R$):</label>
+                            <input type="text" id="maoDeObraPedido" placeholder="R$ 0,00" oninput="formatarEntradaMoeda(this)" inputmode="numeric">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label style="color: #4CAF50;">Margem de Lucro (R$):</label>
+                            <input type="text" id="lucroPedido" placeholder="R$ 0,00" oninput="formatarEntradaMoeda(this)" inputmode="numeric">
+                        </div>
+                    </div>
+
+                    <div class="form-row valores-pedido" style="margin-top: 15px;">
+                        <div class="form-group">
+                            <label>Total Geral (R$):</label>
+                            <input type="text" id="totalEdicao" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label>Entrada (R$):</label>
+                            <input type="text" id="entradaEdicao" placeholder="R$ 0,00" oninput="formatarEntradaMoeda(this)" onblur="atualizarRestanteEdicao()" inputmode="numeric">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Restante (R$):</label>
+                        <input type="text" id="restanteEdicao" readonly>
+                    </div>
+
+                    <div class="form-group"><label>Observações:</label><textarea id="observacoesEdicao"></textarea></div>
+
+                    <div class="action-buttons-container" style="display: flex; gap: 10px; margin-top: 20px;">
+                        <button type="button" id="btnSalvarPedidoEdicao" style="flex: 2;">Salvar Pedido</button>
+                        
+                        <button type="button" id="btnExcluirPedido" style="flex: 1; background-color: #e53935; color: white;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 5px;">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            </svg>
+                            Excluir
+                        </button>
+                    </div>
+                </section>
+
+                 <section id="relatorio" class="pagina" style="display: none;">
+                    <h2 class="section-title-lined">Relatório Financeiro Mensal</h2>
+                    
+                    <div class="filtro-data" style="display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
+                        <select id="relatorio-mes">
+                            <option value="0">Janeiro</option><option value="1">Fevereiro</option><option value="2">Março</option>
+                            <option value="3">Abril</option><option value="4">Maio</option><option value="5">Junho</option>
+                            <option value="6">Julho</option><option value="7">Agosto</option><option value="8">Setembro</option>
+                            <option value="9">Outubro</option><option value="10">Novembro</option><option value="11">Dezembro</option>
+                        </select>
+                        <select id="relatorio-ano"></select> <button onclick="gerarRelatorioFinanceiro()">Gerar Relatório</button>
+                    </div>
+
+                    <div id="mensagem-motivacional" class="feedback-card" style="display: none;"></div>
+
+                    <div class="dashboard-resumo" style="display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; margin-bottom: 20px;">
+                        <div class="card-kpi card-destaque-qtd">
+                            <span>Pedidos Entregues</span>
+                            <strong id="kpi-qtd-pedidos">0</strong>
+                        </div>
+                        <div class="card-kpi kpi-salario">
+                            <span>Meu Salário (Mão de Obra)</span>
+                            <strong id="kpi-mao-obra">R$ 0,00</strong>
+                        </div>
+                        <div class="card-kpi kpi-caixa">
+                            <span>Caixa da Empresa</span>
+                            <strong id="kpi-lucro">R$ 0,00</strong>
+                        </div>
+                        <div class="card-kpi kpi-gastos">
+                            <span>Gastos de Produção</span>
+                            <strong id="kpi-custos">R$ 0,00</strong>
+                        </div>
+                        <div class="card-kpi kpi-total">
+                            <span>Total Vendido</span>
+                            <strong id="kpi-total">R$ 0,00</strong>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-extra-row" style="display: flex; justify-content: center; margin-bottom: 30px;">
+                        <div class="card-kpi kpi-dizimo">
+                            <span>Dízimo (10% do Lucro Líquido)</span>
+                            <strong id="kpi-dizimo">R$ 0,00</strong>
+                            <small style="font-size: 0.8em; display: block; margin-top: 5px; color: #6d4c41;">(Salário + Caixa) x 10%</small>
+                        </div>
+                    </div>
+
+                    <div class="distribuicao-financeira-container">
+                        <h3 style="font-size: 0.9rem; color: #555; margin-bottom: 5px;">Para onde foi o dinheiro?</h3>
+                        <div class="barra-empilhada">
+                            <div id="barra-custos" class="barra-segmento segmento-vermelho" style="width: 0%"></div>
+                            <div id="barra-salario" class="barra-segmento segmento-azul" style="width: 0%"></div>
+                            <div id="barra-lucro" class="barra-segmento segmento-verde" style="width: 0%"></div>
+                        </div>
+                        <div class="legenda-barra">
+                            <span class="legenda-item"><span class="dot-red"></span> Gastos</span>
+                            <span class="legenda-item"><span class="dot-blue"></span> Salário</span>
+                            <span class="legenda-item"><span class="dot-green"></span> Caixa</span>
+                        </div>
+                    </div>
+
+                    <h3 style="text-align: center; color: #7aa2a9; margin-top: 30px;">Pedidos Entregues</h3>
+                    <div class="table-responsive">
+                        <table id="tabela-relatorio">
+                            <thead>
+                                <tr>
+                                    <th>Data</th>
+                                    <th class="col-oculta-mobile">Nº Pedido</th> <th>Cliente</th>
+                                    <th style="color: #2196F3;">Salário</th>
+                                    <th style="color: #4CAF50;">Caixa</th>
+                                    <th style="color: #e53935;">Gastos</th> <th style="color: #ff9800;">Total</th>  </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    
+                    <button onclick="gerarRelatorioXLSX()" style="margin-top: 20px;">Exportar Excel</button>
+                 </section>
+            </div>
+        </div>
+    </section>
+
+    <section id="module-precificacao" style="display: none;">
+        <button class="btn-back-hub">⬅ Voltar ao Menu</button>
+
+        <div id="app-container-precificacao" class="mobile-container">
+            <header class="module-header-styled">
+                 <img src="assets/images/logo_perola_rara.png" class="module-logo-small" alt="Logo">
+                 <h1 class="module-title-main">
+                    Pérola Rara
+                    <span style="display: block; font-size: 0.5em; font-weight: 400; margin-top: 5px;">(Precificação)</span>
+                 </h1>
+                 
+                 <nav class="nav-lined">
+                     <ul>
+                        <li><a href="#" data-submenu="materiais-insumos" class="nav-link">Materiais</a></li>
+                        <li><a href="#" data-submenu="mao-de-obra" class="nav-link">Meu Salário</a></li> 
+                        <li><a href="#" data-submenu="custos-indiretos" class="nav-link">Gastos Fixos</a></li> 
+                        <li><a href="#" data-submenu="cadastrar-produtos" class="nav-link">Produtos</a></li>
+                        <li><a href="#" data-submenu="calculo-precificacao" class="nav-link">Precificação</a></li>
+                        <li><a href="#" data-submenu="precificacoes-geradas" class="nav-link">Histórico</a></li>
+                    </ul>
+                 </nav>
+            </header>
+
+            <div id="materiais-insumos" class="subpagina">
+                <h2 class="section-title-lined">Cadastro de Materiais e Insumos</h2>
+                <hr class="aviso-separador">
+                <p class="aviso-unidades" style="text-align: center; font-size: 0.9em; color: #555;">
+                    <strong>Atenção:</strong> Preencha dimensões em <span>cm</span> (Área/Comprimento). Para Litro/Quilo/Unidade, use as unidades padrão (L, kg, un).
+                </p>
+                <hr class="aviso-separador">
+                
+                <form id="form-materiais-insumos">
+                    <div class="form-group">
+                        <label>Nome do Material:</label>
+                        <input type="text" id="nome-material">
+                    </div>
+                    <div class="form-group">
+                        <label>Tipo de Material:</label><br>
+                        <label><input type="radio" name="tipo-material" value="comprimento" checked> Metro (Comprimento)</label>
+                        <label><input type="radio" name="tipo-material" value="litro"> Litro</label>
+                        <label><input type="radio" name="tipo-material" value="quilo"> Quilo</label>
+                        <label><input type="radio" name="tipo-material" value="unidade"> Unidade</label>
+                        <label><input type="radio" name="tipo-material" value="area"> Área (m²)</label>
+                    </div>
+                    
+                    <div class="form-group" id="campos-comprimento">
+                        <label>Comprimento (cm):</label>
+                        <input type="number" id="comprimento-cm" step="0.01" value="100">
+                    </div>
+                    <div class="form-group" id="campos-litro" style="display: none;">
+                        <label>Volume (ml):</label>
+                        <input type="number" id="volume-ml" step="0.01" value="1000">
+                    </div>
+                    <div class="form-group" id="campos-quilo" style="display: none;">
+                        <label>Peso (g):</label>
+                        <input type="number" id="peso-g" step="0.01" value="1000">
+                    </div>
+                    <div class="form-group" id="campos-area" style="display: none;">
+                        <label>Dimensões (cm):</label>
+                        <div class="area-inputs" style="display:flex; align-items:center; gap:5px;">
+                          <input type="number" id="largura-cm" step="0.01" value="100" placeholder="Largura">
+                          <span>x</span>
+                          <input type="number" id="altura-cm" step="0.01" value="100" placeholder="Altura">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Valor Total Compra (R$):</label>
+                        <input type="number" id="valor-total-material" step="0.01">
+                    </div>
+                    <button type="button" id="cadastrar-material-insumo-btn">Cadastrar Material</button>
+                </form>
+                
+                <hr class="menu">
+
+                <div class="search-container">
+                    <div class="search-wrapper">
+                        <input type="text" id="busca-material" placeholder="🔍 Buscar Material..." class="search-input">
+                        <button type="button" class="btn-clear-search" onclick="limparBusca('busca-material')">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="table-responsive">
+                    <table id="tabela-materiais-insumos" class="tabela-gerada">
+                        <thead>
+                            <tr>
+                                <th class="sortable" onclick="ordenarTabela('materiais', 'nome')">Nome</th>
+                                <th>Tipo</th>
+                                <th>Medida</th>
+                                <th>Custo Loja</th>
+                                <th>Custo Unit.</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+                <div class="pagination-controls">
+                    <button id="btn-ant-mat" class="btn-paginacao">❮ Anterior</button>
+                    <span id="info-pag-mat">Página 1</span>
+                    <button id="btn-prox-mat" class="btn-paginacao">Próximo ❯</button>
+                </div>
+            </div>
+
+            <div id="mao-de-obra" class="subpagina" style="display:none;">
+                <h2 class="section-title-lined">Definição do Meu Salário</h2>
+                <form id="form-mao-de-obra">
+                    <div class="form-group">
+                        <label>Salário a receber (R$):</label>
+                        <input type="number" id="salario-receber" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label>Horas trabalhadas por mês:</label>
+                        <input type="number" id="horas-trabalhadas" value="220">
+                    </div>
+                    <div class="form-group">
+                        <label>Valor da hora (Calculado):</label>
+                        <input type="number" id="valor-hora" readonly style="background-color: #cae6e7; font-weight: bold;">
+                    </div>
+                    
+                    <button type="button" id="btn-salvar-mao-de-obra">Salvar Configuração</button>
+                    <button type="button" id="btn-editar-mao-de-obra" style="display:none;">Editar</button>
+
+                    <hr class="linha-separadora">
+                    
+                    <h3>Encargos (Férias e 13º)</h3>
+                    <div class="form-group">
+                        <label>Incluir encargos?</label>
+                        <label><input type="radio" id="incluir-ferias-13o-sim" name="incluir-ferias-13o"> Sim</label>
+                        <label><input type="radio" id="incluir-ferias-13o-nao" name="incluir-ferias-13o" checked> Não</label>
+                    </div>
+                    <div class="form-group">
+                        <label>Custo Adicional por Hora (R$):</label>
+                        <input type="number" id="custo-ferias-13o" readonly style="background-color: #cae6e7;">
+                    </div>
+                </form>
+            </div>
+
+          <div id="custos-indiretos" class="subpagina" style="display:none;">
+                <h2 class="section-title-lined">Gastos Fixos (Indiretos)</h2>
+                
+                <ul id="lista-custos-indiretos">
+                    </ul>
+                
+                <button type="button" id="adicionarCustoIndiretoBtn">+ Custo Adicional</button>
+                
+                <hr class="menu">
+                
+                <div class="search-container">
+                    <div class="search-wrapper">
+                        <input type="text" id="busca-custo-indireto" placeholder="🔍 Buscar Gasto Fixo..." class="search-input">
+                        <button type="button" class="btn-clear-search" onclick="limparBusca('busca-custo-indireto')">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="table-responsive">
+                    <table id="tabela-custos-indiretos" class="tabela-gerada">
+                        <thead>
+                            <tr>
+                                <th class="sortable" onclick="ordenarTabela('custos', 'descricao')">Descrição</th>
+                                <th>Mensal</th>
+                                <th>Por Hora</th>
+                                <th>Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+                <div class="pagination-controls">
+                    <button id="btn-ant-custo" class="btn-paginacao">❮ Anterior</button>
+                    <span id="info-pag-custo">Página 1</span>
+                    <button id="btn-prox-custo" class="btn-paginacao">Próximo ❯</button>
+                </div>
+            </div>
+
+            <div id="cadastrar-produtos" class="subpagina" style="display:none;">
+                <h2 class="section-title-lined">Montagem de Produtos</h2>
+                <form id="form-produtos-cadastrados">
+                    <div class="form-group">
+                        <label>Nome do Produto:</label>
+                        <input type="text" id="nome-produto">
+                    </div>
+                    
+                    <div class="form-group" style="position:relative;">
+                        <label>Adicionar Material:</label>
+                        <input type="text" id="pesquisa-material" placeholder="Digite para pesquisar...">
+                        <div id="resultados-pesquisa" style="display:none; position:absolute; background:white; border:1px solid #ccc; width:100%; max-height:150px; overflow-y:auto; z-index:100;"></div>
+                    </div>
+                    
+                    <div class="table-responsive">
+                        <table id="tabela-materiais-produto" class="tabela-gerada">
+                            <thead><tr><th>Material</th><th>Tipo</th><th>Custo Unit.</th><th>Dimensões</th><th>Qtd</th><th>Total</th><th>Ação</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <button type="button" id="cadastrar-produto-btn">Cadastrar Produto</button>
+                </form>
+
+                <hr class="menu">
+
+                <h2>Produtos Cadastrados</h2>
+
+                <div class="search-container">
+                    <div class="search-wrapper">
+                        <input type="text" id="busca-produto-lista" placeholder="🔍 Buscar Produto..." class="search-input">
+                        <button type="button" class="btn-clear-search" onclick="limparBusca('busca-produto-lista')">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table id="tabela-produtos" class="tabela-gerada">
+                        <thead>
+                            <tr>
+                                <th class="sortable" onclick="ordenarTabela('produtos', 'nome')">Nome</th>
+                                <th>Itens</th>
+                                <th>-</th>
+                                <th>Custo Total</th>
+                                <th>Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+                <div class="pagination-controls">
+                    <button id="btn-ant-prod" class="btn-paginacao">❮ Anterior</button>
+                    <span id="info-pag-prod">Página 1</span>
+                    <button id="btn-prox-prod" class="btn-paginacao">Próximo ❯</button>
+                </div>
+            </div>
+
+            <div id="calculo-precificacao" class="subpagina" style="display:none;">
+                <h2 class="section-title-lined">Cálculo da Precificação</h2>
+
+                <div class="pricing-dashboard">
+                    <div class="pricing-inputs-area">
+                        
+                        <div class="input-card">
+                            <h3>1. Produto & Tempo</h3>
+                            <div class="form-group" style="position: relative;">
+                                <label>Selecione o Produto:</label>
+                                <div class="input-wrapper">
+                                    <input type="text" id="produto-pesquisa" placeholder="Busque o produto montado..." autocomplete="off">
+                                    <div id="search-spinner" class="spinner hidden"></div>
+                                    <span id="aviso-preco-existente" class="badge-aviso hidden"></span>
+                                </div>
+                                <div id="produto-resultados" class="hidden"></div>
+                            </div>
+
+                            <div class="form-row-compact">
+                                <div class="form-group" style="width: 100%;">
+                                    <label>Horas Gastas:</label>
+                                    <input type="number" id="horas-produto" value="1" min="0.1" step="0.1">
+                                </div>
+                            </div>
+                            
+                            <span id="custo-produto" style="display:none;">0</span> 
+                        </div>
+
+                        <div class="input-card">
+                            <h3>2. Margem & Taxas</h3>
+                            
+                            <div class="form-group">
+                                <label>Margem de Lucro (%):</label>
+                                <div class="input-with-suffix">
+                                    <input type="number" id="margem-lucro-final" value="50">
+                                    <span>%</span>
+                                </div>
+                                <p class="help-text">Lucro destinado ao crescimento da empresa.</p>
+                            </div>
+
+                            <div class="form-group tax-group">
+                                <label>Taxa de Cartão / Maquininha:</label>
+                                <div class="tax-controls">
+                                    <label class="switch-label">
+                                        <input type="radio" id="incluir-taxa-credito-nao" name="taxa" checked> 
+                                        Dinheiro/Pix
+                                    </label>
+                                    <label class="switch-label">
+                                        <input type="radio" id="incluir-taxa-credito-sim" name="taxa"> 
+                                        Cartão
+                                    </label>
+                                    <div class="tax-input-wrapper">
+                                        <input type="number" id="taxa-credito-percentual" value="6">
+                                        <span>%</span>
+                                        <button type="button" id="btn-salvar-taxa-credito">Ok</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="action-area" style="display: flex; gap: 10px; flex-direction: column;">
+                            <input type="hidden" id="id-precificacao-edicao">
+
+                            <button type="button" id="btn-gerar-nota" class="btn-primary-large">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px; vertical-align:text-bottom;">
+                                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                                    <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                                    <polyline points="7 3 7 8 15 8"></polyline>
+                                </svg>
+                                <span id="texto-btn-salvar-precificacao">Salvar Precificação</span>
+                            </button>
+
+                             <button type="button" id="btn-cancelar-edicao-precificacao" class="btn-secondary" style="display: none; width: 100%; border-radius: 20px; padding: 10px; cursor: pointer;">
+                                Cancelar Edição
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="pricing-results-area">
+                        <div class="result-card">
+                            <div class="result-header">
+                                <h4>Preço de Venda Sugerido</h4>
+                                <div class="big-price" id="total-final-com-taxas">R$ 0,00</div>
+                            </div>
+
+                            <div class="result-body">
+                                <div class="result-section costs">
+                                    <h5>
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#e53935" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 5px;">
+                                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                                            <polyline points="19 12 12 19 5 12"></polyline>
+                                        </svg>
+                                        Custos (Para Pagar Contas)
+                                    </h5>
+                                    <div class="result-row">
+                                        <span>Custos Diretos (Materiais):</span>
+                                        <span id="res-custo-mat">R$ 0,00</span>
+                                    </div>
+                                    <div class="result-row">
+                                        <span title="Energia, aluguel, depreciação, etc.">Gastos Fixos:</span>
+                                        <span id="custo-indireto">R$ 0,00</span>
+                                    </div>
+                                    <div class="result-row subtotal-row">
+                                        <span class="highlight-red">Subtotal Custos:</span>
+                                        <span id="subtotal" class="highlight-red">R$ 0,00</span>
+                                    </div>
+                                </div>
+
+                                <div class="result-section labor">
+                                    <h5>
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2196F3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 5px;">
+                                            <circle cx="12" cy="12" r="10"></circle>
+                                            <polyline points="12 6 12 12 16 14"></polyline>
+                                        </svg>
+                                        Meu Salário (Mão de Obra)
+                                    </h5>
+                                    <div class="result-row highlight-blue">
+                                        <span title="Valor pelo tempo trabalhado na peça">Valor pelo tempo trabalhado:</span>
+                                        <span id="total-mao-de-obra">R$ 0,00</span>
+                                    </div>
+                                    <span id="custo-mao-de-obra-detalhe" style="display:none;"></span>
+                                    <span id="custo-ferias-13o-detalhe" style="display:none;"></span>
+                                </div>
+
+                                <div class="result-section profit">
+                                    <h5>
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4CAF50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 5px;">
+                                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                                        </svg>
+                                        Caixa da Empresa (Crescimento)
+                                    </h5>
+                                    <div class="result-row highlight-green">
+                                        <span title="Valor destinado para reinvestimento e segurança do negócio">Margem Líquida:</span>
+                                        <span id="margem-lucro-valor">R$ 0,00</span>
+                                    </div>
+                                </div>
+
+                                <div class="result-section fees">
+                                    <div class="result-row">
+                                        <span>Taxas (Cartão/Intermediadores):</span>
+                                        <span id="taxa-credito-valor">R$ 0,00</span>
+                                    </div>
+                                    <div class="result-row total-row-small">
+                                        <span>Valor Real (Sem Taxas):</span>
+                                        <span id="total-final">R$ 0,00</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="details-container">
+                            <details class="details-ci">
+                                <summary>Ver Materiais Inclusos</summary>
+                                <ul id="lista-materiais-produto" class="small-list"></ul>
+                            </details>
+
+                            <details class="details-ci">
+                                <summary>Ver detalhe Gastos Fixos</summary>
+                                <ul id="lista-custos-indiretos-detalhes"></ul>
+                            </details>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="precificacoes-geradas" class="subpagina" style="display:none;">
+                <h2 class="section-title-lined">Histórico de Precificações</h2>
+                
+                <div class="search-container">
+                    <div class="search-wrapper">
+                        <input type="text" id="busca-precificacao" placeholder="🔍 Buscar por Produto ou Número..." class="search-input">
+                        <button type="button" class="btn-clear-search" onclick="limparBusca('busca-precificacao')">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table id="tabela-precificacoes-geradas" class="tabela-gerada">
+                        <thead>
+                            <tr>
+                                <th>Nº</th>
+                                <th class="sortable" onclick="ordenarTabela('historico', 'produto')">Produto</th>
+                                <th>Data</th>
+                                <th>Total</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+                <div class="pagination-controls">
+                    <button id="btn-ant-hist" class="btn-paginacao">❮ Anterior</button>
+                    <span id="info-pag-hist">Página 1</span>
+                    <button id="btn-prox-hist" class="btn-paginacao">Próximo ❯</button>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <div id="modal-calculadora-custos" class="modal-overlay" style="display: none;">
+        <div class="modal-content calculator-modal">
+            <div class="modal-header">
+                <h3 id="titulo-calculadora">Assistente de Cálculo</h3>
+                <span class="close-modal" onclick="fecharCalculadoraCustos()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p id="descricao-calculadora" class="calc-description">Preencha os dados abaixo para estimar o custo:</p>
+                <form id="form-calculadora-dinamica">
+                    </form>
+                <div id="resultado-previo-calc" class="calc-result-preview">
+                    Estimativa Mensal: <strong>R$ 0,00</strong>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="fecharCalculadoraCustos()">Cancelar</button>
+                <button type="button" class="btn-primary" id="btn-confirmar-calculo">Usar Este Valor</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-alerta-financeiro" class="modal-overlay" style="display: none;">
+        <div class="modal-content" style="background-color: #ffffff; max-width: 450px; text-align: center; border-top: 5px solid #ff9800; border-radius: 12px; padding: 0; box-shadow: 0 10px 30px rgba(0,0,0,0.3); position: relative; overflow: hidden;">
+            
+            <div class="modal-header" style="justify-content: center; border: none; padding-top: 25px; padding-bottom: 10px;">
+                <h3 style="color: #e65100; font-size: 1.5rem; margin: 0; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                        <line x1="12" y1="9" x2="12" y2="13"></line>
+                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                    </svg>
+                    Atenção Financeira
+                </h3>
+            </div>
+
+            <div class="modal-body" style="padding: 0 25px 10px 25px;">
+                <p style="font-size: 1.1rem; color: #555; margin-top: 10px;">
+                    Detectamos <strong><span id="qtd-pedidos-incompletos" style="color: #d32f2f; font-size: 1.2rem;">0</span> pedido(s)</strong> neste mês sem o preenchimento do demonstrativo financeiro.
+                </p>
+                
+                <p style="background-color: #fff3e0; padding: 15px; border-radius: 8px; font-size: 0.95rem; color: #ef6c00; border: 1px dashed #ffe0b2; margin-top: 15px;">
+                    Isso distorce seu Relatório e o cálculo do Dízimo.<br>Recomendamos corrigir esses pedidos no menu <strong>"Pedidos Realizados"</strong>.
+                </p>
+            </div>
+
+            <div class="modal-footer" style="justify-content: center; border: none; padding: 20px; background-color: #f9f9f9;">
+                <button type="button" class="btn-primary" onclick="document.getElementById('modal-alerta-financeiro').style.display='none'" style="background-color: #ef6c00; border: none; padding: 10px 30px; font-weight: bold; box-shadow: 0 4px 6px rgba(239, 108, 0, 0.2);">Entendi, vou verificar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./sw.js')
+            .then(reg => console.log('SW registrado!'))
+            .catch(err => console.log('Falha SW:', err));
+        });
+      }
+    </script>
+</body>
+</html>
