@@ -1,4 +1,4 @@
-/* assets/css/main.css - ARQUIVO COMPLETO E ATUALIZADO (V3.4 - FINAL COLOR FIX) */
+/* assets/css/main.css - ARQUIVO COMPLETO E ATUALIZADO (V3.3 - FINAL MOBILE POLISH) */
 
 /* =========================================
    1. IMPORTAÇÕES E VARIÁVEIS GLOBAIS
@@ -392,7 +392,6 @@ body {
     border-bottom: 1px solid #ccc;
 }
 
-/* REGRA GERAL DE INPUTS (FUNDO ROSA) */
 #module-orcamentos input, #module-orcamentos select, #module-orcamentos textarea,
 #module-precificacao input, #module-precificacao select, #module-precificacao textarea {
     width: 100%;
@@ -663,16 +662,6 @@ th.sortable.desc::after { content: '↓'; opacity: 1; }
     gap: 5px !important;
     position: relative !important;
     width: 100% !important;
-}
-
-/* --- FIX V3.4: COR DO TEXTO DOS INPUTS DA TABELA --- */
-/* Garante que todos os inputs dentro da tabela tenham fundo branco e texto ESCURO */
-#tabelaProdutos input,
-#tabelaProdutosEdicao input {
-    color: #333 !important; /* Cinza Escuro */
-    -webkit-text-fill-color: #333 !important; /* Fix para Android/Chrome Mobile */
-    background-color: #fff !important; /* Fundo Branco */
-    opacity: 1 !important;
 }
 
 /* Input (Campo de Texto) Global */
