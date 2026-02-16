@@ -44,7 +44,7 @@ const helpers = {
 };
 
 export async function initEstoque() {
-    console.log("Inicializando Módulo Estoque v1.4.1 (UX Update)...");
+    console.log("Inicializando Módulo Estoque v1.5.0 (UX Melhorada)...");
     
     window.cadastrarItemEstoque = cadastrarItemEstoque;
     window.iniciarVenda = iniciarVenda;
@@ -115,7 +115,7 @@ function setupEventListeners() {
     if(inputNomeProduto) {
         inputNomeProduto.addEventListener('input', (e) => {
             verificarDuplicidade(e.target.value);
-            tratarBuscaEstoque(e.target); // Implementação do Autocomplete
+            tratarBuscaEstoque(e.target); // Implementação do Autocomplete com UX atualizada
         });
     }
 }
@@ -146,20 +146,20 @@ function verificarDuplicidade(nomeDigitado) {
 
 window.tratarBuscaEstoque = function(input) {
     const termo = input.value;
-    const wrapper = input.parentElement; 
+    // Alterado: Busca pelo ID específico conforme novo HTML do plano
+    const btnClear = document.getElementById('btn-limpar-estoque');
     const dropdown = document.getElementById('resultados-busca-estoque');
-    const btnClear = wrapper.querySelector('.btn-clear-integrated');
     
+    // Lógica visual do botão X
     if(btnClear) btnClear.style.display = termo ? 'block' : 'none';
+
+    // Se usuário digitou algo novo, remove a classe de "selecionado" (volta a ser rosa/padrão)
+    input.classList.remove('input-produto-selecionado');
     
     if (btnClear && !btnClear.onclick) {
         btnClear.onclick = () => {
             input.value = '';
-            
-            // --- UX UPDATE: Remove classe visual ao limpar ---
-            input.classList.remove('input-preenchido-fixo');
-            // ------------------------------------------------
-            
+            input.classList.remove('input-produto-selecionado'); // Volta a ser rosa
             limparCamposFinanceirosEstoque();
             btnClear.style.display = 'none';
             if(dropdown) dropdown.style.display = 'none';
@@ -195,12 +195,11 @@ window.tratarBuscaEstoque = function(input) {
 };
 
 function selecionarProdutoEstoque(dados) {
-    const inputNome = document.getElementById('estoque-produto');
-    inputNome.value = dados.produto;
+    const input = document.getElementById('estoque-produto');
+    input.value = dados.produto;
     
-    // --- UX UPDATE: Aplica classe visual para contraste correto ---
-    inputNome.classList.add('input-preenchido-fixo');
-    // -------------------------------------------------------------
+    // NOVO: Muda para Fundo Claro / Texto Escuro para indicar seleção confirmada
+    input.classList.add('input-produto-selecionado');
     
     const custoTotal = dados.custoMateriais + dados.custoIndiretoTotal;
     
@@ -223,15 +222,8 @@ function setReadonlyField(id, valor) {
     if(el) {
         el.value = utils.formatarMoeda(valor);
         el.readOnly = true;
-        
-        // --- UX UPDATE: Substituição de Style Inline por Classe CSS ---
-        el.className = ''; // Limpa classes anteriores (para evitar conflitos)
-        el.classList.add('input-preenchido-fixo'); // Garante fundo claro e texto escuro via CSS
-        
-        // Remove estilos inline antigos que poderiam sobrescrever o CSS
-        el.style.backgroundColor = ""; 
-        el.style.color = "";
-        // -------------------------------------------------------------
+        el.style.backgroundColor = "#e0f2f1"; // Feedback visual verde claro
+        el.style.color = "#00695c";
     }
 }
 
@@ -241,12 +233,8 @@ function limparCamposFinanceirosEstoque() {
         if(el) {
             el.value = '';
             el.readOnly = false;
-            
-            // --- UX UPDATE: Reset visual completo ---
-            el.classList.remove('input-preenchido-fixo');
             el.style.backgroundColor = "";
             el.style.color = "";
-            // ----------------------------------------
         }
     });
 }
@@ -486,8 +474,9 @@ function editarItemEstoque(id) {
     const item = itensEstoque.find(i => i.id === id);
     if(!item) return;
     
-    // Antes de preencher, limpamos estados de readonly
+    // Antes de preencher, limpamos estados de readonly e classes visuais
     limparCamposFinanceirosEstoque();
+    document.getElementById('estoque-produto').classList.remove('input-produto-selecionado');
 
     document.getElementById('estoque-id-edicao').value = item.id;
     document.getElementById('estoque-produto').value = item.produto;
@@ -514,6 +503,12 @@ function cancelarEdicaoEstoque() {
     document.getElementById('estoque-id-edicao').value = "";
     
     limparCamposFinanceirosEstoque(); // Reseta estados de readonly e cores
+    
+    // Remove a classe de seleção visual e esconde o botão X
+    const input = document.getElementById('estoque-produto');
+    if(input) input.classList.remove('input-produto-selecionado');
+    const btnClear = document.getElementById('btn-limpar-estoque');
+    if(btnClear) btnClear.style.display = 'none';
 
     const btnSalvar = document.getElementById('btn-salvar-estoque');
     btnSalvar.textContent = "Salvar no Estoque";
