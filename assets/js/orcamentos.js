@@ -34,7 +34,7 @@ let ordemAtualOrc = "asc";
 // ==========================================================================
 
 export async function initOrcamentos() {
-    console.log("Inicializando Módulo Orçamentos v1.5.0 [Automação + Financeiro]...");
+    console.log("Inicializando Módulo Orçamentos v1.5.1 [UX Fix + Automação]...");
     
     // Exposição de funções para o escopo global (Eventos Inline e Dinâmicos)
     window.excluirProduto = excluirProduto;
@@ -338,8 +338,16 @@ function selecionarProdutoOrcamento(input, dados) {
     
     // 1. Preenche visualmente o Nome e o Valor Unitário de Venda
     input.value = dados.produto;
-    row.querySelector('.produto-valor-unit').value = utils.formatarMoeda(dados.total);
+    // --- ALTERAÇÃO UX: Aplica classe para garantir contraste (texto escuro) ---
+    input.classList.add('input-preenchido-fixo');
+
+    const inputValor = row.querySelector('.produto-valor-unit');
+    inputValor.value = utils.formatarMoeda(dados.total);
     
+    // --- ALTERAÇÃO UX: Garante legibilidade no campo read-only ---
+    inputValor.classList.add('input-preenchido-fixo');
+    inputValor.style.backgroundColor = ""; // Remove estilo inline para usar a cor da classe (ciano)
+
     // 2. LÓGICA FINANCEIRA AUTOMÁTICA
     // Recupera os dados brutos da precificação (Histórico)
     // Custo Total = Materiais + Custos Fixos (Indiretos)
@@ -369,7 +377,15 @@ function limparBuscaLinha(btn) {
     const row = btn.closest('tr');
     
     input.value = '';
-    row.querySelector('.produto-valor-unit').value = 'R$ 0,00';
+    // --- ALTERAÇÃO UX: Restaura visual padrão (Rosé/Branco) ---
+    input.classList.remove('input-preenchido-fixo');
+    
+    const inputValor = row.querySelector('.produto-valor-unit');
+    inputValor.value = 'R$ 0,00';
+    
+    // --- ALTERAÇÃO UX: Restaura visual padrão de Readonly ---
+    inputValor.classList.remove('input-preenchido-fixo');
+    inputValor.style.backgroundColor = "#f0f0f0";
     
     // Zera dados financeiros
     row.dataset.custoMat = "0";
