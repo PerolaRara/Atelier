@@ -1,4 +1,4 @@
-/* assets/css/main.css - ARQUIVO COMPLETO E ATUALIZADO (V3.3 - FINAL MOBILE POLISH) */
+/* assets/css/main.css - ARQUIVO COMPLETO E ATUALIZADO (V3.4 - UX POLISH & VISUAL COHESION) */
 
 /* =========================================
    1. IMPORTAÇÕES E VARIÁVEIS GLOBAIS
@@ -416,7 +416,6 @@ input[readonly] { opacity: 0.9; cursor: default; }
     margin-bottom: 15px;
     border: 1px solid #eee;
     border-radius: 8px;
-    /* --- FIX PLANO EVOLUÇÃO --- */
     overflow-y: visible !important; 
     min-height: 250px; 
 }
@@ -651,80 +650,73 @@ th.sortable.desc::after { content: '↓'; opacity: 1; }
 
 /* =========================================
    9. AUTOMAÇÃO E FEEDBACK FINANCEIRO
-      ATUALIZADO V3.3: Harmônico Global + Fix Qtd Mobile
+      ATUALIZADO V3.4: Fix UX de Inputs e Dropdowns
    ========================================= */
 
-/* Wrapper vira Flex para alinhar Input + Botão em linha (Desktop e Mobile) */
+/* 1. Alinhamento do Wrapper de Busca (Input + Botão X) */
 #tabelaProdutos td .search-wrapper-integrated,
 #tabelaProdutosEdicao td .search-wrapper-integrated {
-    display: flex !important;
-    align-items: center !important;
-    gap: 5px !important;
+    display: flex !important;       /* Garante que fiquem na mesma linha */
+    align-items: center !important; /* Centraliza verticalmente */
     position: relative !important;
-    width: 100% !important;
+    width: 100%;
 }
 
-/* Input (Campo de Texto) Global */
+/* 2. Estilo Unificado dos Inputs (Arredondados e Cor Inicial) */
 #tabelaProdutos input.produto-descricao,
-#tabelaProdutosEdicao input.produto-descricao {
-    flex: 1 !important; /* Cresce para ocupar espaço */
+#tabelaProdutosEdicao input.produto-descricao,
+#estoque-produto {
+    flex: 1 !important;             /* Cresce para ocupar espaço */
     width: auto !important;
-    padding-right: 10px !important;
+    border-radius: 20px !important; /* Borda arredondada consistente */
+    padding-right: 40px !important; /* Espaço para o botão X não ficar em cima do texto */
     margin-bottom: 0 !important;
-    height: 35px !important;
-    font-size: 0.95rem !important;
+    height: 40px !important;        /* Altura fixa para alinhar com botão */
     
-    /* Garante estilo visual padrão */
+    /* Cores Iniciais (Modo Edição/Vazio: Rosé + Branco) */
+    background-color: #dfb6b0 !important; 
+    color: #fff !important; 
     border: 1px solid #ccc !important;
-    border-radius: 4px !important;
+    font-size: 0.95rem !important;
 }
 
-/* Foco no input */
+/* Estado de Foco */
 #tabelaProdutos input.produto-descricao:focus,
-#tabelaProdutosEdicao input.produto-descricao:focus {
+#tabelaProdutosEdicao input.produto-descricao:focus,
+#estoque-produto:focus {
+    background-color: #fff !important;
+    color: #333 !important;
     border-color: #7aa2a9 !important;
-    box-shadow: 0 0 5px rgba(122, 162, 169, 0.3) !important;
+    box-shadow: 0 0 5px rgba(122, 162, 169, 0.4) !important;
 }
 
-/* Botão 'X' Harmônico (Agora Global) */
+/* 3. Posicionamento do Botão 'X' (Lupa/Limpar) */
 .btn-clear-integrated {
-    position: static !important; /* Sem position absolute */
-    transform: none !important;
+    position: absolute !important;
+    right: 10px !important;         /* Fixo à direita dentro do wrapper */
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    z-index: 10;
+    margin: 0 !important;
     
-    /* Tamanho Compacto (32px) */
+    /* Reset visual */
+    background: transparent !important; 
+    border: none !important;
+    color: #e53935 !important;      /* Vermelho para ação de apagar */
+    font-weight: bold;
+    cursor: pointer;
+    
+    /* Tamanho e Flex para centrar ícone se houver */
     width: 32px !important;
     height: 32px !important;
-    min-width: 32px !important; /* Não deixa esmagar */
-    
-    /* Estilo Visual: Harmônico (Outline Salmão) */
-    background-color: #fff !important;
-    border: 1px solid #dfb6b0 !important;
-    color: #dfb6b0 !important;
-    border-radius: 50% !important; /* Circular */
-    
-    /* Alinhamento do Ícone */
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    
-    font-size: 1rem !important;
-    font-weight: bold !important;
-    cursor: pointer !important;
     box-shadow: none !important;
 }
 
-/* Feedback ao tocar/clicar */
-.btn-clear-integrated:active {
-    background-color: #dfb6b0 !important;
-    color: white !important;
-}
-
-/* Destaque visual para itens com inteligência financeira ativa */
-tr[data-custo-mat]:not([data-custo-mat="0"]) .produto-descricao {
-    border-color: #7aa2a9 !important;
-    background-color: #f0f7f7 !important;
+.btn-clear-integrated:hover {
+    transform: translateY(-50%) scale(1.1) !important;
 }
 
 .feedback-financeiro-container {
@@ -783,36 +775,34 @@ tr[data-custo-mat]:not([data-custo-mat="0"]) .produto-descricao {
    10. AJUSTES ESPECÍFICOS PARA ORÇAMENTOS
    ========================================= */
 
-/* 1. Forçar a célula da tabela a não esconder o conteúdo que vaza */
+/* 1. Forçar a célula da tabela a não esconder o conteúdo que vaza (Dropdown) */
 #tabelaProdutos td,
 #tabelaProdutosEdicao td {
-    overflow: visible !important; 
-    position: relative; /* Ponto de referência inicial */
+    overflow: visible !important;   /* Permite que o dropdown saia da célula */
+    position: relative;             /* Ponto de referência para o absolute do dropdown */
     vertical-align: middle !important;
 }
 
 /* FIX: Z-Index para input não ficar abaixo de nada */
 #tabelaProdutos .search-wrapper-integrated {
-    position: relative;
-    width: 100%;
     z-index: 100; 
 }
 
 /* 3. Estilização Robusta do Dropdown Flutuante */
 .dropdown-resultados {
     position: absolute;
-    top: 100%;
+    top: 100%;       /* Logo abaixo do input */
     left: 0;
-    width: 300px; 
-    max-width: 80vw;
+    width: 100%;
+    min-width: 250px; /* Largura mínima para ler o texto */
     max-height: 200px;
     overflow-y: auto;
     background: #fff;
     border: 1px solid #7aa2a9;
-    border-radius: 10px;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.25);
     margin-top: 5px;
-    z-index: 99999 !important; 
+    z-index: 9999 !important; /* Garante que fique acima de tudo */
     display: none;
 }
 
@@ -866,7 +856,6 @@ tr[data-custo-mat]:not([data-custo-mat="0"]) .produto-descricao {
     /* --- PARTE 1: PROTEÇÃO CONTRA ESMAGAMENTO DE COLUNAS --- */
 
     /* Coluna 1: Quantidade (Qtd) */
-    /* FIX V3.3: Removendo padding interno do input para caber 2 dígitos */
     #tabelaProdutos td:nth-child(1), 
     #tabelaProdutosEdicao td:nth-child(1) {
         width: 15% !important; /* Levemente maior */
@@ -930,4 +919,16 @@ tr[data-custo-mat]:not([data-custo-mat="0"]) .produto-descricao {
         z-index: 100000 !important;
         box-shadow: 0 0 15px rgba(122, 162, 169, 0.5) !important;
     }
+}
+
+/* =========================================
+   12. CLASSES UTILITÁRIAS FINAIS (NOVO)
+   ========================================= */
+
+/* Classe para Campos Preenchidos/Bloqueados (Fundo Claro + Texto Escuro) */
+.input-preenchido-fixo {
+    background-color: #e0f2f1 !important; /* Ciano bem claro */
+    color: #333 !important;                /* TEXTO ESCURO (Correção de Legibilidade) */
+    font-weight: 500;
+    border-color: #b2d8d8 !important;
 }
