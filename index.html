@@ -363,13 +363,15 @@
                         <form id="form-estoque-gerencial">
                             <input type="hidden" id="estoque-id-edicao">
 
-                            <div class="form-group" style="position: relative;">
+                            <div class="form-group">
                                 <label>Nome do Produto (Busca Automática):</label>
-                                <div class="search-wrapper-integrated">
-                                    <input type="text" id="estoque-produto" class="search-input-integrated" placeholder="Digite para buscar no histórico..." autocomplete="off">
-                                    <span class="search-icon-integrated">🔍</span>
-                                    <button type="button" class="btn-clear-integrated" style="display:none;">×</button>
+                                
+                                <div class="estoque-input-wrapper">
+                                    <input type="text" id="estoque-produto" placeholder="Digite para buscar no histórico..." autocomplete="off">
+                                    
+                                    <button type="button" id="btn-limpar-estoque" class="btn-clear-integrated" style="display:none;">×</button>
                                 </div>
+                                
                                 <div id="resultados-busca-estoque" class="dropdown-resultados"></div>
                             </div>
                             
