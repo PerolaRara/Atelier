@@ -677,7 +677,14 @@ th.sortable.desc::after { content: '↓'; opacity: 1; }
     
     /* Garante estilo visual padrão */
     border: 1px solid #ccc !important;
-    border-radius: 4px !important;
+    border-radius: 20px !important; /* Estilo Pílula */
+}
+
+/* Ajuste de contraste para legibilidade do Valor Unitário */
+#tabelaProdutos input.produto-valor-unit,
+#tabelaProdutosEdicao input.produto-valor-unit {
+    color: #333 !important; 
+    font-weight: 500;
 }
 
 /* Foco no input */
