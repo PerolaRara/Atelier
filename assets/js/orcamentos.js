@@ -34,7 +34,7 @@ let ordemAtualOrc = "asc";
 // ==========================================================================
 
 export async function initOrcamentos() {
-    console.log("Inicializando Módulo Orçamentos v1.5.1 [UX Fix + Automação]...");
+    console.log("Inicializando Módulo Orçamentos v1.5.0 [Automação + Financeiro]...");
     
     // Exposição de funções para o escopo global (Eventos Inline e Dinâmicos)
     window.excluirProduto = excluirProduto;
@@ -304,6 +304,11 @@ function tratarBuscaProdutoOrcamento(input) {
     const dropdown = wrapper.nextElementSibling;
     const btnClear = wrapper.querySelector('.btn-clear-integrated');
 
+    // [MODIFICAÇÃO DO PLANO]: Resetar estado visual ao digitar
+    if (input.classList.contains('input-produto-selecionado')) {
+        input.classList.remove('input-produto-selecionado');
+    }
+
     if(btnClear) btnClear.style.display = termo ? 'block' : 'none';
 
     if (termo.length < 2) {
@@ -338,15 +343,10 @@ function selecionarProdutoOrcamento(input, dados) {
     
     // 1. Preenche visualmente o Nome e o Valor Unitário de Venda
     input.value = dados.produto;
-    // --- ALTERAÇÃO UX: Aplica classe para garantir contraste (texto escuro) ---
-    input.classList.add('input-preenchido-fixo');
-
-    const inputValor = row.querySelector('.produto-valor-unit');
-    inputValor.value = utils.formatarMoeda(dados.total);
+    row.querySelector('.produto-valor-unit').value = utils.formatarMoeda(dados.total);
     
-    // --- ALTERAÇÃO UX: Garante legibilidade no campo read-only ---
-    inputValor.classList.add('input-preenchido-fixo');
-    inputValor.style.backgroundColor = ""; // Remove estilo inline para usar a cor da classe (ciano)
+    // [MODIFICAÇÃO DO PLANO]: Aplica o estilo visual de "Selecionado"
+    input.classList.add('input-produto-selecionado');
 
     // 2. LÓGICA FINANCEIRA AUTOMÁTICA
     // Recupera os dados brutos da precificação (Histórico)
@@ -377,15 +377,11 @@ function limparBuscaLinha(btn) {
     const row = btn.closest('tr');
     
     input.value = '';
-    // --- ALTERAÇÃO UX: Restaura visual padrão (Rosé/Branco) ---
-    input.classList.remove('input-preenchido-fixo');
     
-    const inputValor = row.querySelector('.produto-valor-unit');
-    inputValor.value = 'R$ 0,00';
+    // [MODIFICAÇÃO DO PLANO]: Remove o estilo visual, volta a ser Rosa
+    input.classList.remove('input-produto-selecionado');
     
-    // --- ALTERAÇÃO UX: Restaura visual padrão de Readonly ---
-    inputValor.classList.remove('input-preenchido-fixo');
-    inputValor.style.backgroundColor = "#f0f0f0";
+    row.querySelector('.produto-valor-unit').value = 'R$ 0,00';
     
     // Zera dados financeiros
     row.dataset.custoMat = "0";
