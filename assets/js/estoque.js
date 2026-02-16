@@ -44,7 +44,7 @@ const helpers = {
 };
 
 export async function initEstoque() {
-    console.log("Inicializando Módulo Estoque v1.4.0 (Automação de Precificação)...");
+    console.log("Inicializando Módulo Estoque v1.4.1 (UX Update)...");
     
     window.cadastrarItemEstoque = cadastrarItemEstoque;
     window.iniciarVenda = iniciarVenda;
@@ -155,6 +155,11 @@ window.tratarBuscaEstoque = function(input) {
     if (btnClear && !btnClear.onclick) {
         btnClear.onclick = () => {
             input.value = '';
+            
+            // --- UX UPDATE: Remove classe visual ao limpar ---
+            input.classList.remove('input-preenchido-fixo');
+            // ------------------------------------------------
+            
             limparCamposFinanceirosEstoque();
             btnClear.style.display = 'none';
             if(dropdown) dropdown.style.display = 'none';
@@ -190,7 +195,12 @@ window.tratarBuscaEstoque = function(input) {
 };
 
 function selecionarProdutoEstoque(dados) {
-    document.getElementById('estoque-produto').value = dados.produto;
+    const inputNome = document.getElementById('estoque-produto');
+    inputNome.value = dados.produto;
+    
+    // --- UX UPDATE: Aplica classe visual para contraste correto ---
+    inputNome.classList.add('input-preenchido-fixo');
+    // -------------------------------------------------------------
     
     const custoTotal = dados.custoMateriais + dados.custoIndiretoTotal;
     
@@ -213,8 +223,15 @@ function setReadonlyField(id, valor) {
     if(el) {
         el.value = utils.formatarMoeda(valor);
         el.readOnly = true;
-        el.style.backgroundColor = "#e0f2f1"; // Feedback visual verde claro
-        el.style.color = "#00695c";
+        
+        // --- UX UPDATE: Substituição de Style Inline por Classe CSS ---
+        el.className = ''; // Limpa classes anteriores (para evitar conflitos)
+        el.classList.add('input-preenchido-fixo'); // Garante fundo claro e texto escuro via CSS
+        
+        // Remove estilos inline antigos que poderiam sobrescrever o CSS
+        el.style.backgroundColor = ""; 
+        el.style.color = "";
+        // -------------------------------------------------------------
     }
 }
 
@@ -224,8 +241,12 @@ function limparCamposFinanceirosEstoque() {
         if(el) {
             el.value = '';
             el.readOnly = false;
+            
+            // --- UX UPDATE: Reset visual completo ---
+            el.classList.remove('input-preenchido-fixo');
             el.style.backgroundColor = "";
             el.style.color = "";
+            // ----------------------------------------
         }
     });
 }
