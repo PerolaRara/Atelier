@@ -472,6 +472,7 @@ async function gerarOrcamento() {
     const dados = {
         dataOrcamento: document.getElementById("dataOrcamento").value,
         dataValidade: document.getElementById("dataValidade").value,
+        dataEntrega: document.getElementById("dataEntregaOrcamento").value,
         cliente: document.getElementById("cliente").value,
         endereco: document.getElementById("endereco").value,
         tema: document.getElementById("tema").value,
@@ -525,6 +526,7 @@ function editarOrcamento(id) {
     
     document.getElementById("dataOrcamento").value = orc.dataOrcamento;
     document.getElementById("dataValidade").value = orc.dataValidade;
+    document.getElementById("dataEntregaOrcamento").value = orc.dataEntrega || "";
     document.getElementById("cliente").value = orc.cliente;
     document.getElementById("endereco").value = orc.endereco;
     document.getElementById("tema").value = orc.tema;
@@ -591,6 +593,7 @@ async function atualizarOrcamento() {
         ...orcamentos[index],
         dataOrcamento: document.getElementById("dataOrcamento").value,
         dataValidade: document.getElementById("dataValidade").value,
+        dataEntrega: document.getElementById("dataEntregaOrcamento").value,
         cliente: document.getElementById("cliente").value,
         endereco: document.getElementById("endereco").value,
         tema: document.getElementById("tema").value,
@@ -776,7 +779,7 @@ async function gerarPedido(orcamentoId) {
 
     const pedido = {
         dataPedido: new Date().toISOString().split('T')[0],
-        dataEntrega: orc.dataValidade,
+        dataEntrega: orc.dataEntrega || orc.dataValidade,
         cliente: orc.cliente,
         endereco: orc.endereco,
         tema: orc.tema,
@@ -872,6 +875,16 @@ function visualizarImpressao(orcamento) {
                 .conditions p { margin: 5px 0; font-weight: bold; color: #7aa2a9; }
                 .conditions ol { padding-left: 20px; margin: 5px 0; }
                 .conditions li { margin-bottom: 5px; }
+                .delivery-card-print { 
+                    background-color: #f0f7f7; 
+                    border-left: 4px solid #7aa2a9; 
+                    padding: 12px 15px; 
+                    margin-top: 25px; 
+                    border-radius: 4px; 
+                    color: #444; 
+                    font-size: 1em; 
+                }
+                .delivery-card-print strong { color: #7aa2a9; }
                 @media print { .no-print { display: none; } body { padding: 0; } }
             </style>
         </head>
@@ -919,6 +932,11 @@ function visualizarImpressao(orcamento) {
                 <div class="total-row final"><span>Total:</span> <span>${utils.formatarMoeda(orcamento.total)}</span></div>
                 <div style="margin-top:10px; font-size:0.8em; color:#888; text-align:right;">Forma Pagto: ${pagamento}</div>
             </div>
+            ${orcamento.dataEntrega ? `
+            <div class="delivery-card-print">
+                <strong>Prazo de Entrega Acordado:</strong> ${utils.formatarDataBR(orcamento.dataEntrega)}
+            </div>
+            ` : ''}
             <div class="conditions">
                 <p>Observações:</p>
                 <ol>
