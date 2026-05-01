@@ -934,7 +934,7 @@ function visualizarImpressao(orcamento) {
             </div>
             ${orcamento.dataEntrega ? `
             <div class="delivery-card-print">
-                <strong>Prazo de Entrega Acordado:</strong> ${utils.formatarDataBR(orcamento.dataEntrega)}
+                <strong>Prazo de Entrega:</strong> ${utils.formatarDataBR(orcamento.dataEntrega)}
             </div>
             ` : ''}
             <div class="conditions">
