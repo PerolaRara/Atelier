@@ -472,7 +472,6 @@ async function gerarOrcamento() {
     const dados = {
         dataOrcamento: document.getElementById("dataOrcamento").value,
         dataValidade: document.getElementById("dataValidade").value,
-        dataEntrega: document.getElementById("dataEntrega").value,
         cliente: document.getElementById("cliente").value,
         endereco: document.getElementById("endereco").value,
         tema: document.getElementById("tema").value,
@@ -526,7 +525,6 @@ function editarOrcamento(id) {
     
     document.getElementById("dataOrcamento").value = orc.dataOrcamento;
     document.getElementById("dataValidade").value = orc.dataValidade;
-    document.getElementById("dataEntrega").value = orc.dataEntrega || "";
     document.getElementById("cliente").value = orc.cliente;
     document.getElementById("endereco").value = orc.endereco;
     document.getElementById("tema").value = orc.tema;
@@ -593,7 +591,6 @@ async function atualizarOrcamento() {
         ...orcamentos[index],
         dataOrcamento: document.getElementById("dataOrcamento").value,
         dataValidade: document.getElementById("dataValidade").value,
-        dataEntrega: document.getElementById("dataEntrega").value,
         cliente: document.getElementById("cliente").value,
         endereco: document.getElementById("endereco").value,
         tema: document.getElementById("tema").value,
@@ -842,7 +839,6 @@ function visualizarImpressao(orcamento) {
     const janela = window.open('', '_blank');
     const dtOrc = utils.formatarDataBR(orcamento.dataOrcamento);
     const dtVal = utils.formatarDataBR(orcamento.dataValidade);
-    const dtEntrega = orcamento.dataEntrega ? utils.formatarDataBR(orcamento.dataEntrega) : 'A combinar';
     const pagamento = Array.isArray(orcamento.pagamento) ? orcamento.pagamento.join(', ') : orcamento.pagamento;
     
     const path = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
@@ -876,9 +872,6 @@ function visualizarImpressao(orcamento) {
                 .conditions p { margin: 5px 0; font-weight: bold; color: #7aa2a9; }
                 .conditions ol { padding-left: 20px; margin: 5px 0; }
                 .conditions li { margin-bottom: 5px; }
-                .delivery-card { background-color: #f0f7f7; border: 1px solid #b2d8d8; border-left: 5px solid #7aa2a9; padding: 15px 20px; margin: 30px 0 10px 0; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; page-break-inside: avoid; }
-                .delivery-card .delivery-title { font-weight: 700; color: #5a8289; font-size: 1.1em; }
-                .delivery-card .delivery-date { font-size: 1.2em; font-weight: bold; color: #333; }
                 @media print { .no-print { display: none; } body { padding: 0; } }
             </style>
         </head>
@@ -926,12 +919,6 @@ function visualizarImpressao(orcamento) {
                 <div class="total-row final"><span>Total:</span> <span>${utils.formatarMoeda(orcamento.total)}</span></div>
                 <div style="margin-top:10px; font-size:0.8em; color:#888; text-align:right;">Forma Pagto: ${pagamento}</div>
             </div>
-
-            <div class="delivery-card">
-                <span class="delivery-title">📅 Previsão de Entrega</span>
-                <span class="delivery-date">${dtEntrega}</span>
-            </div>
-
             <div class="conditions">
                 <p>Observações:</p>
                 <ol>
