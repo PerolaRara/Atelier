@@ -244,6 +244,20 @@ function setupEventListeners() {
             atualizarTotais();
         });
     }
+
+    // [NOVO] Event Bus: Escuta exclusão de pedidos de forma desacoplada
+    window.addEventListener('pedidoExcluido', (e) => {
+        const numeroPedidoExcluido = e.detail.numeroPedido;
+        // Procura no array local de orçamentos quem tem este número
+        const orcamentoAfetado = orcamentos.find(o => o.numeroPedido === numeroPedidoExcluido);
+        
+        if (orcamentoAfetado) {
+            orcamentoAfetado.pedidoGerado = false;
+            orcamentoAfetado.statusPedido = 'excluido';
+            // Repinta a tela silenciosamente se o usuário estiver nela
+            mostrarOrcamentosGerados();
+        }
+    });
 }
 
 function bindClick(selector, handler) {
@@ -707,7 +721,32 @@ function mostrarOrcamentosGerados() {
             btnImprimir.onclick = () => visualizarImpressao(orc);
             cellAcoes.appendChild(btnImprimir);
 
-            if (!orc.pedidoGerado) {
+            // [MODIFICADO] Nova lógica baseada na máquina de estados
+            if (orc.statusPedido === 'excluido' && !orc.pedidoGerado) {
+                // Cenário: Pedido foi gerado, mas excluído depois
+                const span = document.createElement('span');
+                span.textContent = " ⚠️ Pedido Excluído";
+                span.style.color = "#d32f2f"; // Vermelho Alerta
+                span.style.fontWeight = "bold";
+                span.style.fontSize = "0.85em";
+                span.style.display = "block";
+                span.style.marginBottom = "5px";
+                cellAcoes.appendChild(span);
+                
+                // Botões voltam a aparecer porque pedidoGerado é false
+                const btnEditar = document.createElement('button');
+                btnEditar.textContent = "Editar";
+                btnEditar.style.marginRight = "5px";
+                btnEditar.onclick = () => editarOrcamento(orc.id);
+                cellAcoes.appendChild(btnEditar);
+                
+                const btnGerar = document.createElement('button');
+                btnGerar.textContent = "Gerar Novo Pedido";
+                btnGerar.onclick = () => gerarPedido(orc.id); 
+                cellAcoes.appendChild(btnGerar);
+
+            } else if (!orc.pedidoGerado) {
+                // Cenário: Orçamento Normal, pedido nunca gerado
                 const btnEditar = document.createElement('button');
                 btnEditar.textContent = "Editar";
                 btnEditar.style.marginRight = "5px";
@@ -719,9 +758,10 @@ function mostrarOrcamentosGerados() {
                 btnGerar.onclick = () => gerarPedido(orc.id); 
                 cellAcoes.appendChild(btnGerar);
             } else {
+                // Cenário: Pedido gerado e ativo
                 const span = document.createElement('span');
-                span.textContent = " Pedido Gerado";
-                span.style.color = "#7aa2a9";
+                span.textContent = " ✓ Pedido Gerado";
+                span.style.color = "#4CAF50"; // Verde Sucesso
                 span.style.fontWeight = "bold";
                 span.style.fontSize = "0.9em";
                 cellAcoes.appendChild(span);

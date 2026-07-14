@@ -2,7 +2,7 @@
 
 import { utils } from './utils.js';
 // Importações necessárias para a funcionalidade de exclusão
-import { db, deleteDoc, doc, updateDoc } from './firebase-config.js'; 
+import { db, deleteDoc, doc, updateDoc, collection, query, where, getDocs } from './firebase-config.js'; 
 
 // ==========================================================================
 // ESTADO LOCAL DO MÓDULO DE PEDIDOS
@@ -497,30 +497,44 @@ async function excluirPedidoAtual() {
             btnExcluir.textContent = "Apagando...";
         }
 
-        // Referência ao documento
-        const pedidoRef = doc(db, "Orcamento-Pedido", pedidoEditando);
+        // 1. OTIMIZAÇÃO: Busca o pedido a ser excluído na MEMÓRIA LOCAL (evita leitura no Firestore)
+        const pedidoASerExcluido = pedidos.find(p => p.id === pedidoEditando);
         
-        // Logica Opcional: Liberar orçamento original se existir
-        // const docSnap = await getDoc(pedidoRef);
-        // if (docSnap.exists()) {
-        //      const dados = docSnap.data();
-        //      if (dados.idOrcamentoOriginal) {
-        //          const orcRef = doc(db, "Orcamento-Pedido", dados.idOrcamentoOriginal);
-        //          await updateDoc(orcRef, { pedidoGerado: false, numeroPedido: null });
-        //      }
-        // }
-
-        // AÇÃO PRINCIPAL: Deletar
+        // 2. Ação principal: Deleta o pedido do banco de dados
+        const pedidoRef = doc(db, "Orcamento-Pedido", pedidoEditando);
         await deleteDoc(pedidoRef);
 
-        // Atualizar lista local para resposta imediata da UI
-        pedidos = pedidos.filter(p => p.id !== pedidoEditando);
+        // 3. RETROCOMPATIBILIDADE: Busca se existe algum Orçamento vinculado a este NÚMERO de pedido
+        if (pedidoASerExcluido && pedidoASerExcluido.numero) {
+            const orcamentosRef = collection(db, "Orcamento-Pedido");
+            const q = query(orcamentosRef, 
+                where("tipo", "==", "orcamento"), 
+                where("numeroPedido", "==", pedidoASerExcluido.numero)
+            );
+            
+            const querySnapshot = await getDocs(q);
+            
+            // Se encontrou o orçamento pai, atualiza a máquina de estados dele
+            querySnapshot.forEach(async (documento) => {
+                const orcRef = doc(db, "Orcamento-Pedido", documento.id);
+                await updateDoc(orcRef, { 
+                    pedidoGerado: false, // Libera para gerar novamente
+                    statusPedido: 'excluido' // Flag visual de histórico
+                });
+            });
 
-        if (utils && utils.showToast) {
-            utils.showToast("Pedido excluído com sucesso.", "error"); 
+            // 4. DESACOPLAMENTO: Dispara evento global avisando que o pedido morreu
+            const evento = new CustomEvent('pedidoExcluido', { 
+                detail: { numeroPedido: pedidoASerExcluido.numero } 
+            });
+            window.dispatchEvent(evento);
         }
 
-        // Resetar estado e retornar
+        // 5. Atualiza lista local de pedidos
+        pedidos = pedidos.filter(p => p.id !== pedidoEditando);
+
+        if (utils && utils.showToast) utils.showToast("Pedido excluído com sucesso.", "error"); 
+
         houveAlteracaoNaoSalva = false;
         pedidoEditando = null;
         mostrarPagina('lista-pedidos');
@@ -533,12 +547,7 @@ async function excluirPedidoAtual() {
         const btnExcluir = document.getElementById('btnExcluirPedido');
         if(btnExcluir) {
             btnExcluir.disabled = false;
-            btnExcluir.innerHTML = `
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 5px;">
-                    <polyline points="3 6 5 6 21 6"></polyline>
-                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                </svg>
-                Excluir`;
+            btnExcluir.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 5px;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg> Excluir`;
         }
     }
 }
