@@ -840,3 +840,33 @@ nav ul li a[onclick="limparPagina()"]:hover {
         flex: 1;
     }
 }
+
+/* ==== BOTÃO INTELIGENTE DE DUPLICAÇÃO DE ORÇAMENTO ==== */
+.btn-duplicar-arredondado {
+    background-color: #fff;
+    color: #7aa2a9;
+    border: 1px solid #7aa2a9;
+    border-radius: 50%; /* Totalmente redondo */
+    width: 32px;
+    height: 32px;
+    cursor: pointer;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    margin-left: 10px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    transition: all 0.2s ease;
+    padding: 0;
+    vertical-align: middle;
+}
+
+.btn-duplicar-arredondado:hover {
+    background-color: #7aa2a9;
+    color: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(122, 162, 169, 0.2);
+}
+
+.btn-duplicar-arredondado svg {
+    margin-top: 1px; /* Alinhamento óptico */
+}

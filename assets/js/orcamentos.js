@@ -40,6 +40,7 @@ export async function initOrcamentos() {
     window.excluirProduto = excluirProduto;
     window.visualizarImpressao = visualizarImpressao;
     window.editarOrcamento = editarOrcamento;
+    window.duplicarOrcamento = duplicarOrcamento; // NOVO
     window.gerarPedido = gerarPedido; 
     window.gerarOrcamento = gerarOrcamento;
     window.atualizarOrcamento = atualizarOrcamento;
@@ -527,74 +528,110 @@ async function gerarOrcamento() {
         alert("Erro ao gerar orçamento. Tente novamente.");
     } finally {
         btn.disabled = false;
-        btn.textContent = txtOriginal;
+        btn.textContent = "Gerar Orçamento"; // Restaura texto original de forma forçada
         btn.style.cursor = "pointer";
     }
 }
 
-function editarOrcamento(id) {
-    const orc = orcamentos.find(o => o.id === id);
-    if (!orc) return;
-
-    orcamentoEditando = id;
-    
-    document.getElementById("dataOrcamento").value = orc.dataOrcamento;
-    document.getElementById("dataValidade").value = orc.dataValidade;
+// --- NOVO MOTOR CENTRALIZADO (Refatoração de UX, DRY e Segurança XSS) ---
+function carregarContextoOrcamento(orc, modo = 'edicao') {
+    // 1. Preenchimento Comum de Campos
+    document.getElementById("dataValidade").value = orc.dataValidade || "";
     document.getElementById("dataEntregaOrcamento").value = orc.dataEntrega || "";
-    document.getElementById("cliente").value = orc.cliente;
-    document.getElementById("endereco").value = orc.endereco;
-    document.getElementById("tema").value = orc.tema;
-    document.getElementById("cidade").value = orc.cidade;
-    document.getElementById("telefone").value = orc.telefone;
+    document.getElementById("cliente").value = orc.cliente || "";
+    document.getElementById("endereco").value = orc.endereco || "";
+    document.getElementById("tema").value = orc.tema || "";
+    document.getElementById("cidade").value = orc.cidade || "";
+    document.getElementById("telefone").value = orc.telefone || "";
     document.getElementById("clienteEmail").value = orc.email || "";
-    document.getElementById("cores").value = orc.cores;
-    
+    document.getElementById("cores").value = orc.cores || "";
+    document.getElementById("observacoes").value = orc.observacoes || "";
+    document.getElementById("valorFrete").value = utils.formatarMoeda(orc.valorFrete);
+
+    // Pagamentos
     const pagamentos = Array.isArray(orc.pagamento) ? orc.pagamento : [orc.pagamento];
     document.querySelectorAll('input[name="pagamento"]').forEach(cb => {
         cb.checked = pagamentos.includes(cb.value);
     });
 
-    document.getElementById("valorFrete").value = utils.formatarMoeda(orc.valorFrete);
-    document.getElementById("valorOrcamento").value = utils.formatarMoeda(orc.valorOrcamento);
-    document.getElementById("total").value = utils.formatarMoeda(orc.total);
-    document.getElementById("observacoes").value = orc.observacoes;
+    // 2. Máquina de Estados de Interface (Edição vs Duplicação)
+    const btnGerar = document.getElementById("btnGerarOrcamento");
+    const btnAtualizar = document.getElementById("btnAtualizarOrcamento");
 
+    if (modo === 'edicao') {
+        orcamentoEditando = orc.id;
+        document.getElementById("dataOrcamento").value = orc.dataOrcamento;
+        
+        btnGerar.style.display = "none";
+        btnAtualizar.style.display = "inline-block";
+        btnAtualizar.textContent = "Salvar Alterações";
+    } else if (modo === 'duplicacao') {
+        orcamentoEditando = null; // Garante que será um novo documento
+        document.getElementById("dataOrcamento").value = new Date().toISOString().split('T')[0];
+        
+        btnGerar.style.display = "inline-block";
+        btnAtualizar.style.display = "none";
+        btnGerar.textContent = "Salvar Nova Cópia"; // Alerta visual de UX
+    }
+
+    // 3. Renderização Segura de Itens (Mitigação de XSS)
     const tbody = document.querySelector("#tabelaProdutos tbody");
     tbody.innerHTML = '';
     
     if (orc.produtos && orc.produtos.length > 0) {
         orc.produtos.forEach(p => {
             const row = tbody.insertRow();
-            // Re-hidratando datasets para manter a inteligência financeira na edição
+            
+            // Inteligência Financeira Preservada
             row.dataset.custoMat = p.custoBase || 0;
             row.dataset.maoObra = p.maoObraBase || 0;
             const unit = p.valorUnit || 0;
             row.dataset.lucro = unit - ((p.custoBase || 0) + (p.maoObraBase || 0));
 
-            // --- ATUALIZAÇÃO UX: Classe CSS para botão excluir ---
+            // Estrutura Estática (Sem injeção de variáveis do usuário aqui)
             row.innerHTML = `
-                <td style="width: 80px;"><input type="number" class="produto-quantidade" value="${p.quantidade}" min="1" oninput="atualizarTotais()" onchange="atualizarTotais()"></td>
+                <td style="width: 80px;"><input type="number" class="produto-quantidade" min="1" oninput="atualizarTotais()" onchange="atualizarTotais()"></td>
                 <td style="position: relative;">
                     <div class="search-wrapper-integrated">
-                        <input type="text" class="search-input-integrated produto-descricao" value="${p.descricao}" oninput="tratarBuscaProdutoOrcamento(this)" autocomplete="off">
+                        <input type="text" class="search-input-integrated produto-descricao" oninput="tratarBuscaProdutoOrcamento(this)" autocomplete="off">
                         <button type="button" class="btn-clear-integrated" style="display:block;" onclick="limparBuscaLinha(this)">×</button>
                     </div>
                     <div class="dropdown-resultados"></div>
                 </td>
-                <td style="width: 120px;"><input type="text" class="produto-valor-unit" value="${utils.formatarMoeda(p.valorUnit)}" readonly style="background-color: #f0f0f0; cursor: default;"></td>
-                <td style="width: 120px;" class="produto-total-linha">${utils.formatarMoeda(p.valorTotal)}</td>
+                <td style="width: 120px;"><input type="text" class="produto-valor-unit" readonly style="background-color: #f0f0f0; cursor: default;"></td>
+                <td style="width: 120px;" class="produto-total-linha"></td>
                 <td style="width: 50px; text-align: center;">
                     <button type="button" class="btn-excluir-arredondado" onclick="excluirProduto(this)" title="Remover item">X</button>
                 </td>
             `;
+
+            // Injeção Segura dos Valores (Proteção XSS)
+            row.querySelector('.produto-quantidade').value = p.quantidade;
+            row.querySelector('.produto-descricao').value = p.descricao; // Blindado!
+            row.querySelector('.produto-valor-unit').value = utils.formatarMoeda(p.valorUnit);
+            row.querySelector('.produto-total-linha').textContent = utils.formatarMoeda(p.valorTotal);
         });
     }
 
     atualizarTotais();
     mostrarPagina('form-orcamento');
-    document.getElementById("btnGerarOrcamento").style.display = "none";
-    document.getElementById("btnAtualizarOrcamento").style.display = "inline-block";
     document.querySelector('.mobile-container').scrollIntoView({ behavior: 'smooth' });
+}
+
+// Controladores Limpos
+function editarOrcamento(id) {
+    const orc = orcamentos.find(o => o.id === id);
+    if (orc) carregarContextoOrcamento(orc, 'edicao');
+}
+
+function duplicarOrcamento(id) {
+    const orc = orcamentos.find(o => o.id === id);
+    if (orc) {
+        carregarContextoOrcamento(orc, 'duplicacao');
+        if(utils && utils.showToast) {
+            utils.showToast("Cópia gerada! Faça suas alterações e clique em Salvar Nova Cópia.", "info");
+        }
+    }
 }
 
 async function atualizarOrcamento() {
@@ -764,7 +801,22 @@ function mostrarOrcamentosGerados() {
                 span.style.color = "#4CAF50"; // Verde Sucesso
                 span.style.fontWeight = "bold";
                 span.style.fontSize = "0.9em";
+                span.style.display = "inline-block";
+                span.style.verticalAlign = "middle";
                 cellAcoes.appendChild(span);
+
+                // NOVO: Botão de Duplicar (Reaproveitar)
+                const btnDuplicar = document.createElement('button');
+                btnDuplicar.className = "btn-duplicar-arredondado";
+                btnDuplicar.title = "Usar como base para um Novo Orçamento";
+                btnDuplicar.innerHTML = `
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                `;
+                btnDuplicar.onclick = () => duplicarOrcamento(orc.id);
+                cellAcoes.appendChild(btnDuplicar);
             }
         });
     }
