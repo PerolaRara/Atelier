@@ -3,7 +3,8 @@
 import { utils } from './utils.js';
 // Importações necessárias para a funcionalidade de exclusão
 import { db, deleteDoc, doc, updateDoc, collection, query, where, getDocs } from './firebase-config.js'; 
-import { setupRelatorios, invalidarCacheRelatorios } from './relatorios.js'; 
+// Importação do novo motor desacoplado de Relatórios (Mensal, 12 Meses e XLSX)
+import { setupRelatorios, invalidarCacheRelatorios } from './relatorios.js';
 
 // ==========================================================================
 // ESTADO LOCAL DO MÓDULO DE PEDIDOS
@@ -17,7 +18,7 @@ let pagAtualPed = 1;
 let termoBuscaPed = "";
 let pedidoEditando = null;
 
-// --- NOVAS VARIÁVEIS DE FILTRO (PLANO DE EVOLUÇÃO) ---
+// --- VARIÁVEIS DE FILTRO ---
 let filtroMesPed = "";
 let filtroAnoPed = "";
 let filtroSoPendentes = false;
@@ -44,7 +45,7 @@ export function setupPedidos(config) {
     pedidos = config.listaPedidos || [];
     salvarDadosFn = config.salvarDadosFn;
 
-    // 2. Expor funções para o HTML (window) para os botões onclick
+    // 2. Expor funções para o HTML (window) para os botões onclick de Pedidos
     window.editarPedido = editarPedido;
     window.atualizarPedido = atualizarPedido;
     window.excluirPedidoAtual = excluirPedidoAtual; // Exposta para redundância
@@ -57,12 +58,12 @@ export function setupPedidos(config) {
     window.atualizarTotaisEdicao = atualizarTotaisEdicao;
     window.atualizarRestanteEdicao = atualizarRestanteEdicao;
 
-    // 3. Popular Select de Anos Dinamicamente (PLANO DE EVOLUÇÃO)
+    // 3. Popular Select de Anos Dinamicamente (Filtro da aba Pedidos Realizados)
     const selectAno = document.getElementById("filtro-ped-ano");
-    if(selectAno) {
+    if (selectAno) {
         const anoAtual = new Date().getFullYear();
         selectAno.innerHTML = '<option value="">Todos os Anos</option>';
-        for(let i = anoAtual; i >= anoAtual - 2; i--) {
+        for (let i = anoAtual; i >= anoAtual - 2; i--) {
             const opt = document.createElement("option");
             opt.value = i;
             opt.text = i;
@@ -73,10 +74,10 @@ export function setupPedidos(config) {
     // 4. Inicializar Listeners de DOM específicos deste módulo
     initListenersPedidos();
 
-    // 5. Renderização Inicial
+    // 5. Renderização Inicial da Lista de Pedidos
     mostrarPedidosRealizados();
 
-    // Inicializa o Módulo de Relatórios passando getter seguro para leitura em tempo real
+    // 6. Inicializar o Módulo de Relatórios com Closure Getter (evita Stale Reference)
     setupRelatorios({
         getPedidos: () => pedidos
     });
@@ -85,13 +86,14 @@ export function setupPedidos(config) {
 /**
  * Permite que o módulo de orçamentos adicione um novo pedido à lista sem recarregar a página.
  */
-await salvarDadosFn(dados, 'pedido');
-        pedidos[index] = dados;
+export function adicionarPedidoNaLista(novoPedido) {
+    pedidos.push(novoPedido);
+    invalidarCacheRelatorios(); // Notifica o motor de relatórios sobre o novo pedido
 
-        pedidos.sort((a, b) => {
+    pagAtualPed = 1;
     termoBuscaPed = ""; 
     const inputBusca = document.getElementById('busca-pedidos');
-    if(inputBusca) inputBusca.value = "";
+    if (inputBusca) inputBusca.value = "";
     
     mostrarPedidosRealizados();
 }
@@ -125,7 +127,7 @@ window.addEventListener('beforeunload', (e) => {
 function initListenersPedidos() {
     // Busca
     const inputBuscaPed = document.getElementById('busca-pedidos');
-    if(inputBuscaPed) {
+    if (inputBuscaPed) {
         inputBuscaPed.addEventListener('input', debounce((e) => {
             termoBuscaPed = e.target.value.toLowerCase();
             pagAtualPed = 1; 
@@ -137,7 +139,7 @@ function initListenersPedidos() {
     const selAno = document.getElementById('filtro-ped-ano');
     const chkPendentes = document.getElementById('filtro-ped-pendentes');
 
-    if(selMes) {
+    if (selMes) {
         selMes.addEventListener('change', (e) => {
             filtroMesPed = e.target.value;
             pagAtualPed = 1;
@@ -145,7 +147,7 @@ function initListenersPedidos() {
         });
     }
 
-    if(selAno) {
+    if (selAno) {
         selAno.addEventListener('change', (e) => {
             filtroAnoPed = e.target.value;
             pagAtualPed = 1;
@@ -153,7 +155,7 @@ function initListenersPedidos() {
         });
     }
 
-    if(chkPendentes) {
+    if (chkPendentes) {
         chkPendentes.addEventListener('change', (e) => {
             filtroSoPendentes = e.target.checked;
             pagAtualPed = 1;
@@ -164,31 +166,23 @@ function initListenersPedidos() {
     const btnAnt = document.getElementById("btn-ant-ped");
     const btnProx = document.getElementById("btn-prox-ped");
     
-    if(btnAnt) btnAnt.addEventListener('click', () => { 
-        if(pagAtualPed > 1) { pagAtualPed--; mostrarPedidosRealizados(); } 
+    if (btnAnt) btnAnt.addEventListener('click', () => { 
+        if (pagAtualPed > 1) { pagAtualPed--; mostrarPedidosRealizados(); } 
     });
     
-    if(btnProx) btnProx.addEventListener('click', () => { 
+    if (btnProx) btnProx.addEventListener('click', () => { 
         pagAtualPed++; 
         mostrarPedidosRealizados(); 
     });
 
     const btnSalvar = document.getElementById('btnSalvarPedidoEdicao');
-    if(btnSalvar) btnSalvar.addEventListener('click', atualizarPedido);
+    if (btnSalvar) btnSalvar.addEventListener('click', atualizarPedido);
 
     const btnExcluir = document.getElementById('btnExcluirPedido');
-    if(btnExcluir) btnExcluir.addEventListener('click', excluirPedidoAtual);
+    if (btnExcluir) btnExcluir.addEventListener('click', excluirPedidoAtual);
 
     const btnAddProd = document.getElementById('btnAddProdutoEdicao');
-    if(btnAddProd) btnAddProd.addEventListener('click', adicionarProdutoEdicao);
-
-    const btnXLSX = document.querySelector('#relatorio button[onclick="gerarRelatorioXLSX()"]') || 
-                    document.querySelector('#btn-gerar-xlsx'); 
-    
-    if(btnXLSX) {
-        btnXLSX.removeAttribute('onclick');
-        btnXLSX.addEventListener('click', gerarRelatorioXLSX);
-    }
+    if (btnAddProd) btnAddProd.addEventListener('click', adicionarProdutoEdicao);
 
     document.querySelectorAll('.btn-back-hub, nav ul li a').forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -228,7 +222,7 @@ function mostrarPedidosRealizados() {
     const btnProx = document.getElementById("btn-prox-ped");
     const infoPag = document.getElementById("info-pag-ped");
 
-    if(!tbody) return;
+    if (!tbody) return;
     tbody.innerHTML = '';
 
     const termo = termoBuscaPed.trim();
@@ -269,7 +263,7 @@ function mostrarPedidosRealizados() {
     });
 
     if (colunaOrdenacaoPed === 'cliente') {
-        filtrados.sort((a,b) => {
+        filtrados.sort((a, b) => {
             const valA = (a.cliente || '').toLowerCase();
             const valB = (b.cliente || '').toLowerCase();
             return ordemAtualPed === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
@@ -277,10 +271,10 @@ function mostrarPedidosRealizados() {
         
         document.querySelectorAll('th.sortable').forEach(th => th.classList.remove('asc', 'desc'));
         const thAtual = document.querySelector(`th[onclick*="ordenarPedidos('${colunaOrdenacaoPed}')"]`);
-        if(thAtual) thAtual.classList.add(ordemAtualPed);
+        if (thAtual) thAtual.classList.add(ordemAtualPed);
 
     } else {
-        filtrados.sort((a,b) => b.numero.localeCompare(a.numero));
+        filtrados.sort((a, b) => b.numero.localeCompare(a.numero));
     }
 
     const totalItens = filtrados.length;
@@ -368,12 +362,12 @@ function editarPedido(id) {
     setValMoeda("lucroPedido", pedido.margemLucro || 0);
     
     const inputMO = document.getElementById("maoDeObraPedido");
-    if(inputMO) {
+    if (inputMO) {
         inputMO.dataset.salarioAlvo = pedido.custoMaoDeObra || 0;
         inputMO.style.backgroundColor = ""; 
         inputMO.style.color = "";
         const inputLucro = document.getElementById("lucroPedido");
-        if(inputLucro) {
+        if (inputLucro) {
             inputLucro.style.backgroundColor = ""; 
             inputLucro.style.color = "";
         }
@@ -381,7 +375,7 @@ function editarPedido(id) {
 
     const tbody = document.querySelector("#tabelaProdutosEdicao tbody");
     tbody.innerHTML = '';
-    if(pedido.produtos && pedido.produtos.length > 0) {
+    if (pedido.produtos && pedido.produtos.length > 0) {
         pedido.produtos.forEach(p => adicionarRowProdutoEdicao(tbody, p));
     } else {
         adicionarRowProdutoEdicao(tbody, { quantidade: 1, descricao: '', valorUnit: 0, valorTotal: 0 });
@@ -389,15 +383,15 @@ function editarPedido(id) {
 
     houveAlteracaoNaoSalva = false;
     const inputCusto = document.getElementById("custoTotalPedido");
-    if(inputCusto) inputCusto.style.border = "";
+    if (inputCusto) inputCusto.style.border = "";
 
     const inputsMonitorados = document.querySelectorAll('#form-edicao-pedido input, #form-edicao-pedido textarea');
     inputsMonitorados.forEach(input => {
         input.addEventListener('input', () => {
-            if(!houveAlteracaoNaoSalva) {
+            if (!houveAlteracaoNaoSalva) {
                 houveAlteracaoNaoSalva = true;
                 const btn = document.getElementById('btnSalvarPedidoEdicao');
-                if(btn) btn.innerText = "Salvar Alterações *";
+                if (btn) btn.innerText = "Salvar Alterações *";
             }
         });
     });
@@ -422,8 +416,8 @@ async function atualizarPedido() {
             "Deseja salvar mesmo assim?";
         
         if (!confirm(mensagemEducativa)) {
-            if(custosTotais === 0) document.getElementById("custoTotalPedido")?.focus();
-            else if(custoMO === 0) document.getElementById("maoDeObraPedido")?.focus();
+            if (custosTotais === 0) document.getElementById("custoTotalPedido")?.focus();
+            else if (custoMO === 0) document.getElementById("maoDeObraPedido")?.focus();
             return; 
         }
     }
@@ -455,9 +449,12 @@ async function atualizarPedido() {
             return dataB.localeCompare(dataA);
         });
 
+        // Invalida o cache do módulo de relatórios para refletir os novos valores financeiros
+        invalidarCacheRelatorios();
+
         houveAlteracaoNaoSalva = false;
         const btn = document.getElementById('btnSalvarPedidoEdicao');
-        if(btn) btn.innerText = "Salvar Pedido";
+        if (btn) btn.innerText = "Salvar Pedido";
         
         pedidoEditando = null;
         mostrarPagina('lista-pedidos');
@@ -496,7 +493,7 @@ async function excluirPedidoAtual() {
 
     try {
         const btnExcluir = document.getElementById('btnExcluirPedido');
-        if(btnExcluir) {
+        if (btnExcluir) {
             btnExcluir.disabled = true;
             btnExcluir.textContent = "Apagando...";
         }
@@ -527,14 +524,14 @@ async function excluirPedidoAtual() {
                 });
             });
 
-            // 4. DESACOPLAMENTO: Dispara evento global avisando que o pedido morreu
+            // 4. DESACOPLAMENTO: Dispara evento global avisando que o pedido foi excluído
             const evento = new CustomEvent('pedidoExcluido', { 
                 detail: { numeroPedido: pedidoASerExcluido.numero } 
             });
             window.dispatchEvent(evento);
         }
 
-        // 5. Atualiza lista local de pedidos
+        // 5. Atualiza lista local de pedidos e invalida cache do módulo de relatórios
         pedidos = pedidos.filter(p => p.id !== pedidoEditando);
         invalidarCacheRelatorios();
 
@@ -550,7 +547,7 @@ async function excluirPedidoAtual() {
         alert("Erro ao tentar excluir. Veja o console.");
     } finally {
         const btnExcluir = document.getElementById('btnExcluirPedido');
-        if(btnExcluir) {
+        if (btnExcluir) {
             btnExcluir.disabled = false;
             btnExcluir.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 5px;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg> Excluir`;
         }
@@ -560,12 +557,12 @@ async function excluirPedidoAtual() {
 // Helpers de Formulário
 function setVal(id, val) {
     const el = document.getElementById(id);
-    if(el) el.value = val || '';
+    if (el) el.value = val || '';
 }
 
 function setValMoeda(id, val) {
     const el = document.getElementById(id);
-    if(el) el.value = utils.formatarMoeda(val || 0);
+    if (el) el.value = utils.formatarMoeda(val || 0);
 }
 
 function getValMoeda(id) {
@@ -576,7 +573,7 @@ function getValMoeda(id) {
 function mostrarPagina(idPagina) {
     document.querySelectorAll('#module-orcamentos .pagina').forEach(p => p.style.display = 'none');
     const target = document.getElementById(idPagina);
-    if(target) target.style.display = 'block';
+    if (target) target.style.display = 'block';
 }
 
 // ==========================================================================
@@ -686,7 +683,7 @@ function atualizarRestanteEdicao() {
 }
 
 // ==========================================================================
-// 6. RELATÓRIOS E CHECKLIST
+// 6. IMPRESSÃO DE CHECKLIST E NOTA DE PEDIDO
 // ==========================================================================
 
 function imprimirChecklist(id) {
@@ -913,5 +910,3 @@ function imprimirNotaPedido(id) {
     janela.document.write(html);
     janela.document.close();
 }
-
-
