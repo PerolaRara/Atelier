@@ -3,6 +3,7 @@
 import { utils } from './utils.js';
 // Importações necessárias para a funcionalidade de exclusão
 import { db, deleteDoc, doc, updateDoc, collection, query, where, getDocs } from './firebase-config.js'; 
+import { setupRelatorios, invalidarCacheRelatorios } from './relatorios.js'; 
 
 // ==========================================================================
 // ESTADO LOCAL DO MÓDULO DE PEDIDOS
@@ -50,9 +51,6 @@ export function setupPedidos(config) {
     window.imprimirChecklist = imprimirChecklist;
     window.imprimirNotaPedido = imprimirNotaPedido;
     
-    window.gerarRelatorioFinanceiro = gerarRelatorioFinanceiro;
-    window.gerarRelatorioXLSX = gerarRelatorioXLSX;
-    
     // Funções auxiliares da tabela de edição
     window.adicionarProdutoEdicao = adicionarProdutoEdicao;
     window.excluirProdutoEdicao = excluirProdutoEdicao;
@@ -77,14 +75,20 @@ export function setupPedidos(config) {
 
     // 5. Renderização Inicial
     mostrarPedidosRealizados();
+
+    // Inicializa o Módulo de Relatórios passando getter seguro para leitura em tempo real
+    setupRelatorios({
+        getPedidos: () => pedidos
+    });
 }
 
 /**
  * Permite que o módulo de orçamentos adicione um novo pedido à lista sem recarregar a página.
  */
-export function adicionarPedidoNaLista(novoPedido) {
-    pedidos.push(novoPedido);
-    pagAtualPed = 1;
+await salvarDadosFn(dados, 'pedido');
+        pedidos[index] = dados;
+
+        pedidos.sort((a, b) => {
     termoBuscaPed = ""; 
     const inputBusca = document.getElementById('busca-pedidos');
     if(inputBusca) inputBusca.value = "";
@@ -532,6 +536,7 @@ async function excluirPedidoAtual() {
 
         // 5. Atualiza lista local de pedidos
         pedidos = pedidos.filter(p => p.id !== pedidoEditando);
+        invalidarCacheRelatorios();
 
         if (utils && utils.showToast) utils.showToast("Pedido excluído com sucesso.", "error"); 
 
@@ -909,115 +914,4 @@ function imprimirNotaPedido(id) {
     janela.document.close();
 }
 
-function gerarRelatorioFinanceiro() {
-    const mes = parseInt(document.getElementById("relatorio-mes").value);
-    const anoSelect = document.getElementById("relatorio-ano");
-    const ano = parseInt(anoSelect ? anoSelect.value : new Date().getFullYear());
 
-    let totalFat = 0, totalMO = 0, totalLucro = 0, totalCustos = 0;
-    let pedidosComAlerta = 0;
-
-    const tbody = document.querySelector("#tabela-relatorio tbody");
-    if(!tbody) return;
-    
-    tbody.innerHTML = "";
-
-    const pedidosFiltrados = pedidos.filter(p => {
-        if(!p.dataPedido) return false;
-        const parts = p.dataPedido.split('-');
-        const pMes = parseInt(parts[1]) - 1; 
-        const pAno = parseInt(parts[0]);
-        return pMes === mes && pAno === ano;
-    });
-
-    pedidosFiltrados.forEach(p => {
-        totalFat += (p.total || 0);
-        totalMO += (p.custoMaoDeObra || 0);
-        totalLucro += (p.margemLucro || 0);
-        totalCustos += (p.custosTotais || 0);
-
-        const somaFinanceira = (parseFloat(p.custosTotais)||0) + (parseFloat(p.custoMaoDeObra)||0) + (parseFloat(p.margemLucro)||0);
-        if (somaFinanceira === 0) {
-            pedidosComAlerta++;
-        }
-
-        const row = tbody.insertRow();
-        const nomeCliente = p.cliente.length > 15 ? p.cliente.substring(0, 15) + '...' : p.cliente;
-
-        row.innerHTML = `
-            <td>${utils.formatarDataBR(p.dataPedido).substring(0, 5)}</td>
-            <td class="col-oculta-mobile">${p.numero}</td>
-            <td><span title="${p.cliente}">${nomeCliente}</span></td>
-            <td style="color:#2196F3; font-weight:bold;">${utils.formatarMoeda(p.custoMaoDeObra)}</td>
-            <td style="color:#4CAF50; font-weight:bold;">${utils.formatarMoeda(p.margemLucro)}</td>
-            <td style="color:#e53935; font-weight:bold;">${utils.formatarMoeda(p.custosTotais)}</td>
-            <td style="color:#ff9800; font-weight:bold;">${utils.formatarMoeda(p.total)}</td>
-        `;
-    });
-
-    if(pedidosFiltrados.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 20px; color: #777;">Nenhum pedido entregue neste período.</td></tr>';
-    }
-
-    updateElementText("kpi-qtd-pedidos", pedidosFiltrados.length, false);
-    updateElementText("kpi-mao-obra", totalMO);
-    updateElementText("kpi-lucro", totalLucro);
-    updateElementText("kpi-custos", totalCustos);
-    updateElementText("kpi-total", totalFat);
-
-    const baseCalculoDizimo = totalMO + totalLucro;
-    const valorDizimo = baseCalculoDizimo * 0.10;
-    updateElementText("kpi-dizimo", valorDizimo);
-
-    const modalAlerta = document.getElementById('modal-alerta-financeiro');
-    const spanQtd = document.getElementById('qtd-pedidos-incompletos');
-
-    if (pedidosFiltrados.length > 0 && pedidosComAlerta > 0 && modalAlerta) {
-        spanQtd.textContent = pedidosComAlerta;
-        modalAlerta.style.display = 'flex';
-    } else if (modalAlerta) {
-        modalAlerta.style.display = 'none';
-    }
-
-    if (totalFat > 0) {
-        setBarWidth("barra-custos", (totalCustos / totalFat) * 100);
-        setBarWidth("barra-salario", (totalMO / totalFat) * 100);
-        setBarWidth("barra-lucro", (totalLucro / totalFat) * 100);
-    } else {
-        setBarWidth("barra-custos", 0);
-        setBarWidth("barra-salario", 0);
-        setBarWidth("barra-lucro", 0);
-    }
-
-    const boxMsg = document.getElementById("mensagem-motivacional");
-    if (boxMsg) {
-        if (pedidosFiltrados.length > 0) {
-            boxMsg.style.display = "block";
-            let mensagem = "";
-            if (totalLucro > totalCustos) {
-                mensagem = "🎉 <strong>Uau!</strong> O caixa da sua empresa cresceu mais que seus gastos este mês!";
-            } else if (totalMO > totalLucro && totalMO > totalCustos) {
-                mensagem = "💼 <strong>Ótimo trabalho!</strong> Seu salário (Mão de Obra) foi o destaque do mês.";
-            } else {
-                mensagem = `🚀 <strong>Produção a todo vapor!</strong> Você entregou ${pedidosFiltrados.length} pedidos. Continue firme!`;
-            }
-            boxMsg.innerHTML = mensagem;
-        } else {
-            boxMsg.style.display = "none";
-        }
-    }
-}
-
-function gerarRelatorioXLSX() {
-    alert("Exportação XLSX em breve.");
-}
-
-function updateElementText(id, value, isMoney = true) {
-    const el = document.getElementById(id);
-    if(el) el.textContent = isMoney ? utils.formatarMoeda(value) : value;
-}
-
-function setBarWidth(id, pct) {
-    const el = document.getElementById(id);
-    if(el) el.style.width = `${pct}%`;
-}
