@@ -870,3 +870,396 @@ nav ul li a[onclick="limparPagina()"]:hover {
 .btn-duplicar-arredondado svg {
     margin-top: 1px; /* Alinhamento óptico */
 }
+
+/* ==== 16. PAINEL E GRÁFICO DE 12 MESES (RELATÓRIO ANUAL REATIVO) ==== */
+
+/* Controle Principal de Abas (Segmented Control) */
+.relatorio-tabs {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    background-color: #f0f4f5;
+    padding: 6px;
+    border-radius: 30px;
+    max-width: 520px;
+    margin: 0 auto 20px auto;
+    border: 1px solid #dce5e7;
+}
+
+.tab-rel-btn {
+    flex: 1;
+    background-color: transparent;
+    color: #687f82;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 25px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    margin: 0;
+    transition: all 0.25s ease;
+    box-shadow: none;
+}
+
+.tab-rel-btn:hover {
+    background-color: rgba(122, 162, 169, 0.12);
+    color: #5a8289;
+}
+
+.tab-rel-btn.active {
+    background-color: #7aa2a9;
+    color: #ffffff;
+    font-weight: 700;
+    box-shadow: 0 3px 10px rgba(122, 162, 169, 0.35);
+}
+
+/* Filtro de Data Reativo */
+.filtro-data-reativo {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    background-color: #f8f9fa;
+    padding: 12px 20px;
+    border-radius: 15px;
+    border: 1px solid #eee;
+    max-width: 520px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.filtro-data-reativo label {
+    margin: 0;
+    color: #5a8289;
+    font-size: 0.92rem;
+    font-weight: 700;
+}
+
+.filtro-data-reativo select {
+    width: auto !important;
+    min-width: 130px;
+    margin-bottom: 0 !important;
+    padding: 8px 15px !important;
+    background-color: #fff !important;
+    color: #444 !important;
+    border: 1px solid #dfb6b0 !important;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+/* Banner Contextual de Retorno do Drill-Down */
+.drilldown-banner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    background-color: #fff8e1;
+    border: 1px solid #ffe082;
+    color: #e65100;
+    padding: 10px 18px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    animation: fadeInUp 0.3s ease;
+}
+
+.btn-voltar-drilldown {
+    background-color: #ff9800 !important;
+    color: #fff !important;
+    padding: 6px 14px !important;
+    font-size: 0.82rem !important;
+    border-radius: 15px !important;
+    margin: 0 !important;
+    min-width: auto !important;
+    font-weight: 700;
+}
+
+.btn-voltar-drilldown:hover {
+    background-color: #f57c00 !important;
+}
+
+/* Barra de Controle da Visão 12 Meses */
+.painel-controle-12m {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+    background: linear-gradient(135deg, #f0f7f7 0%, #fff9f8 100%);
+    border: 1px solid #d8e6e8;
+    padding: 12px 20px;
+    border-radius: 16px;
+    margin-bottom: 22px;
+}
+
+.periodo-12m-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    color: #5a8289;
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.badge-ativos {
+    background-color: #e0f2f1;
+    color: #00695c;
+    border: 1px solid #80cbc4;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.seletor-base-media {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.seletor-label {
+    font-size: 0.85rem;
+    color: #666;
+    font-weight: 500;
+}
+
+.botoes-base-grupo {
+    display: inline-flex;
+    background-color: #ffffff;
+    border: 1px solid #cfd8dc;
+    border-radius: 20px;
+    padding: 3px;
+}
+
+.btn-base-calc {
+    background: transparent;
+    color: #687f82;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 16px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin: 0;
+    min-width: auto;
+    transition: all 0.2s ease;
+}
+
+.btn-base-calc:hover {
+    color: #333;
+    background-color: #f5f5f5;
+}
+
+.btn-base-calc.active {
+    background-color: #dfb6b0;
+    color: #ffffff;
+    box-shadow: 0 2px 5px rgba(223, 182, 176, 0.4);
+}
+
+/* Subvalor acumulado dentro dos Cards KPI */
+.kpi-subvalor {
+    display: block;
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px dashed rgba(0, 0, 0, 0.1);
+    font-size: 0.78rem;
+    color: #666;
+    font-weight: 500;
+}
+
+/* Card do Gráfico de 12 Meses com Dicas Visuais de Scroll */
+.grafico-12m-card {
+    background: #ffffff;
+    border: 1px solid #e6ecec;
+    border-radius: 16px;
+    padding: 25px 20px;
+    margin: 25px 0;
+    box-shadow: 0 6px 20px rgba(122, 162, 169, 0.08);
+}
+
+.grafico-12m-header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.grafico-12m-header h3 {
+    margin: 0 0 5px 0;
+    color: #7aa2a9;
+    font-size: 1.15rem;
+}
+
+.grafico-12m-header p {
+    margin: 0;
+    font-size: 0.82rem;
+    color: #888;
+}
+
+/* Wrapper com Scroll Shadows para indicar rolagem lateral no Mobile */
+.grafico-scroll-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    padding-top: 40px;
+    padding-bottom: 12px;
+    -webkit-overflow-scrolling: touch;
+    background:
+        linear-gradient(to right, white 30%, rgba(255,255,255,0)),
+        linear-gradient(to right, rgba(255,255,255,0), white 70%) 0 100%,
+        radial-gradient(farthest-side at 0% 50%, rgba(122, 162, 169, 0.22), rgba(0,0,0,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(122, 162, 169, 0.22), rgba(0,0,0,0)) 0 100%;
+    background-repeat: no-repeat;
+    background-color: white;
+    background-size: 35px 100%, 35px 100%, 12px 100%, 12px 100%;
+    background-position: 0 0, 100% 0, 0 0, 100% 0;
+    background-attachment: local, local, scroll, scroll;
+}
+
+.grafico-colunas-container {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    height: 220px;
+    min-width: 640px;
+    gap: 12px;
+    padding: 0 10px;
+    border-bottom: 2px solid #dfe7e9;
+    position: relative;
+}
+
+.coluna-mes-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100%;
+    justify-content: flex-end;
+    position: relative;
+    cursor: pointer;
+    user-select: none;
+}
+
+.coluna-mes-item.mes-sem-venda {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.valor-topo-barra {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #687f82;
+    margin-bottom: 6px;
+    white-space: nowrap;
+    transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.coluna-mes-item:hover .valor-topo-barra {
+    color: #222;
+    transform: translateY(-2px);
+}
+
+.barra-vertical-pilha {
+    width: 100%;
+    max-width: 38px;
+    border-radius: 8px 8px 0 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column-reverse;
+    background-color: #f1f3f4;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    min-height: 4px;
+}
+
+.coluna-mes-item:not(.mes-sem-venda):hover .barra-vertical-pilha {
+    transform: scaleX(1.1);
+    box-shadow: 0 4px 12px rgba(122, 162, 169, 0.35);
+}
+
+.seg-v-gastos { background-color: #ef5350; width: 100%; transition: height 0.5s ease; }
+.seg-v-salario { background-color: #42a5f5; width: 100%; transition: height 0.5s ease; }
+.seg-v-caixa { background-color: #66bb6a; width: 100%; transition: height 0.5s ease; }
+
+.mes-label-eixo {
+    margin-top: 8px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #555;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: 8px;
+    transition: background-color 0.2s;
+}
+
+.coluna-mes-item:not(.mes-sem-venda):hover .mes-label-eixo {
+    background-color: #e0f2f1;
+    color: #00695c;
+}
+
+/* Tooltip Elegante */
+.tooltip-mes-12m {
+    position: absolute;
+    bottom: calc(100% + 4px);
+    left: 50%;
+    transform: translateX(-50%) translateY(5px);
+    background: rgba(38, 50, 56, 0.96);
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 0.74rem;
+    line-height: 1.4;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.2s ease;
+    z-index: 50;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+}
+
+.coluna-mes-item:hover .tooltip-mes-12m {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* Linhas clicáveis na tabela de 12 meses */
+#tabela-relatorio-12m tbody tr.linha-mes-clicavel {
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+#tabela-relatorio-12m tbody tr.linha-mes-clicavel:hover {
+    background-color: #f0f7f7;
+}
+
+/* Destaque do Rodapé da Tabela de 12 Meses */
+#tabela-relatorio-12m tfoot tr.linha-media-anual {
+    background-color: #f0f7f7;
+    font-weight: bold;
+    border-top: 2px solid #7aa2a9;
+}
+
+#tabela-relatorio-12m tfoot tr.linha-total-anual {
+    background-color: #fff9f8;
+    font-weight: bold;
+}
+
+@media (max-width: 768px) {
+    .painel-controle-12m {
+        flex-direction: column;
+        text-align: center;
+        justify-content: center;
+    }
+    .periodo-12m-info, .seletor-base-media {
+        justify-content: center;
+        width: 100%;
+    }
+    .drilldown-banner {
+        flex-direction: column;
+        text-align: center;
+    }
+}
