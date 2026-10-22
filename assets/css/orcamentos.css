@@ -1263,3 +1263,254 @@ nav ul li a[onclick="limparPagina()"]:hover {
         text-align: center;
     }
 }
+
+/* ==== 17. COMUTADOR DE TÍTULO E RELATÓRIO DE DESEMPENHO DE PRODUTOS ==== */
+
+.relatorio-header-switcher {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding-bottom: 14px;
+}
+
+.title-switcher-btn {
+    background: linear-gradient(135deg, #ffffff 0%, #f4f9f9 100%);
+    color: #7aa2a9;
+    border: 2px solid #7aa2a9;
+    border-radius: 30px;
+    padding: 8px 22px;
+    font-size: 1.3rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    margin: 0;
+    box-shadow: 0 4px 12px rgba(122, 162, 169, 0.15);
+    transition: all 0.25s ease;
+}
+
+.title-switcher-btn:hover {
+    background: #7aa2a9;
+    color: #ffffff;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(122, 162, 169, 0.3);
+}
+
+.switcher-chevron {
+    font-size: 0.95rem;
+    background: rgba(122, 162, 169, 0.15);
+    padding: 2px 8px;
+    border-radius: 12px;
+    transition: transform 0.3s ease, background-color 0.3s ease;
+}
+
+.title-switcher-btn:hover .switcher-chevron {
+    background: rgba(255, 255, 255, 0.25);
+    transform: rotate(180deg);
+}
+
+.switcher-pills-sub {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.82rem;
+}
+
+.dominio-pill {
+    background: transparent;
+    border: 1px solid transparent;
+    cursor: pointer;
+    color: #777;
+    padding: 4px 12px;
+    border-radius: 15px;
+    transition: all 0.2s ease;
+    font-weight: 500;
+    font-size: 0.82rem;
+    min-width: auto;
+    margin: 0;
+}
+
+.dominio-pill:hover {
+    color: #5a8289;
+    background-color: #f0f4f5;
+}
+
+.dominio-pill.active {
+    background-color: #e0f2f1;
+    color: #00695c;
+    border-color: #80cbc4;
+    font-weight: 700;
+}
+
+.dominio-divider {
+    color: #ccc;
+}
+
+/* Barra de Filtro de Produto Individual e Métrica */
+.filtro-produtos-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    background-color: #fff9f8;
+    border: 1px solid #f2dcd9;
+    padding: 12px 18px;
+    border-radius: 15px;
+    margin-bottom: 20px;
+}
+
+.filtro-prod-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.filtro-prod-group label {
+    margin: 0;
+    color: #ad6a63;
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.filter-select-prod {
+    width: auto !important;
+    min-width: 240px;
+    margin-bottom: 0 !important;
+    padding: 8px 14px !important;
+    background-color: #fff !important;
+    color: #444 !important;
+    border: 1px solid #dfb6b0 !important;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.btn-reset-prod {
+    background-color: #ef5350 !important;
+    color: #fff !important;
+    padding: 6px 12px !important;
+    font-size: 0.78rem !important;
+    border-radius: 15px !important;
+    margin: 0 !important;
+    min-width: auto !important;
+}
+
+/* Cores Semânticas para Canais (Encomenda vs Pronta-Entrega) */
+.kpi-encomenda { border-left: 5px solid #d48b82; background: #fdf3f2; }
+.kpi-pronta-entrega { border-left: 5px solid #26a69a; background: #e0f2f1; }
+.kpi-campeao { border-left: 5px solid #ffb300; background: #fff8e1; }
+
+.segmento-encomenda, .seg-v-encomenda { background-color: #d48b82; width: 100%; transition: all 0.4s ease; }
+.segmento-pronta, .seg-v-pronta { background-color: #26a69a; width: 100%; transition: all 0.4s ease; }
+
+.dot-encomenda { width: 10px; height: 10px; background: #d48b82; border-radius: 50%; display: inline-block; }
+.dot-pronta { width: 10px; height: 10px; background: #26a69a; border-radius: 50%; display: inline-block; }
+
+/* Gráfico de Ranking Horizontal de Produtos */
+.ranking-horizontal-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.ranking-prod-row {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.ranking-prod-row:hover {
+    background-color: #f4f9f9;
+    border-color: #d8e6e8;
+}
+
+.ranking-prod-row.selecionado {
+    background-color: #fff8e1;
+    border-color: #ffe082;
+}
+
+.ranking-prod-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.88rem;
+    color: #444;
+    font-weight: 600;
+}
+
+.ranking-prod-meta {
+    font-size: 0.78rem;
+    color: #666;
+    font-weight: 500;
+}
+
+.ranking-prod-bar-track {
+    width: 100%;
+    height: 18px;
+    background-color: #f1f3f4;
+    border-radius: 10px;
+    overflow: hidden;
+    display: flex;
+}
+
+.badge-canal-mini {
+    display: inline-block;
+    font-size: 0.75rem;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 600;
+}
+
+.badge-encomenda { background: #fdf3f2; color: #ad6a63; border: 1px solid #f2dcd9; }
+.badge-pronta { background: #e0f2f1; color: #00695c; border: 1px solid #b2dfdb; }
+
+/* Estilização adicional para tabelas de produtos clicáveis e rodapé */
+#tabela-produtos-mensal tbody tr.linha-mes-clicavel,
+#tabela-produtos-12m tbody tr.linha-mes-clicavel {
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+#tabela-produtos-mensal tbody tr.linha-mes-clicavel:hover,
+#tabela-produtos-12m tbody tr.linha-mes-clicavel:hover {
+    background-color: #f0f7f7;
+}
+
+#tabela-produtos-12m tfoot tr.linha-media-anual {
+    background-color: #f0f7f7;
+    font-weight: bold;
+    border-top: 2px solid #7aa2a9;
+}
+
+#tabela-produtos-12m tfoot tr.linha-total-anual {
+    background-color: #fff9f8;
+    font-weight: bold;
+}
+
+@media (max-width: 768px) {
+    .filtro-produtos-bar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .filtro-prod-group {
+        justify-content: center;
+        width: 100%;
+    }
+    .filter-select-prod {
+        width: 100% !important;
+    }
+    .title-switcher-btn {
+        font-size: 1.1rem;
+        padding: 8px 16px;
+    }
+}
