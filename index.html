@@ -581,10 +581,26 @@
                     </div>
                 </section>
 
-                 <section id="relatorio" class="pagina" style="display: none;">
-                    <h2 class="section-title-lined">Relatório Financeiro</h2>
+                <section id="relatorio" class="pagina" style="display: none;">
+                    <!-- Cabeçalho Clicável Comutador de Relatórios (Title Switcher) -->
+                    <div class="section-title-lined relatorio-header-switcher">
+                        <button type="button" id="btn-switch-tipo-relatorio" class="title-switcher-btn" title="Toque para alternar entre Relatório Financeiro e Desempenho de Produtos">
+                            <span id="icone-titulo-relatorio" class="switcher-icon">💰</span>
+                            <span id="texto-titulo-relatorio">Relatório Financeiro</span>
+                            <span class="switcher-chevron" aria-hidden="true">⇄</span>
+                        </button>
+                        <div class="switcher-pills-sub" role="tablist" aria-label="Tipo de Relatório">
+                            <button type="button" id="pill-dominio-financeiro" class="dominio-pill active" data-dominio="financeiro">
+                                💰 Financeiro
+                            </button>
+                            <span class="dominio-divider">•</span>
+                            <button type="button" id="pill-dominio-produtos" class="dominio-pill" data-dominio="produtos">
+                                🛍️ Desempenho de Produtos
+                            </button>
+                        </div>
+                    </div>
                 
-                    <!-- Controle de Abas -->
+                    <!-- Controle de Abas de Período (Compartilhado entre Financeiro e Produtos) -->
                     <div class="relatorio-tabs" role="tablist">
                         <button type="button" id="tab-rel-mensal" class="tab-rel-btn active" data-modo="mensal">
                             📅 Fechamento Mensal
@@ -594,7 +610,7 @@
                         </button>
                     </div>
                     
-                    <!-- Filtro de Data Reativo -->
+                    <!-- Filtro de Data Reativo (Compartilhado) -->
                     <div class="filtro-data filtro-data-reativo">
                         <label id="label-filtro-relatorio" for="relatorio-mes">Mês de Referência:</label>
                         <select id="relatorio-mes">
@@ -605,8 +621,32 @@
                         </select>
                         <select id="relatorio-ano"></select>
                     </div>
+
+                    <!-- Barra de Filtro de Produto Individual e Métrica (Exibida no domínio 'produtos') -->
+                    <div id="barra-filtro-produtos" class="filtro-produtos-bar" style="display: none;">
+                        <div class="filtro-prod-group">
+                            <label for="relatorio-filtro-produto">🎯 Produto:</label>
+                            <select id="relatorio-filtro-produto" class="filter-select-prod">
+                                <option value="__TODOS__">🌎 Todos os Produtos (Visão Global)</option>
+                            </select>
+                            <button type="button" id="btn-limpar-filtro-prod" class="btn-reset-prod" style="display: none;" title="Voltar para Todos os Produtos">
+                                ✕ Ver Todos
+                            </button>
+                        </div>
+                        <div class="filtro-prod-group">
+                            <span class="seletor-label">Exibir Gráfico em:</span>
+                            <div class="botoes-base-grupo">
+                                <button type="button" id="btn-metrica-qtd" class="btn-base-calc active" data-metrica="qtd">
+                                    📦 Peças (Qtd)
+                                </button>
+                                <button type="button" id="btn-metrica-valor" class="btn-base-calc" data-metrica="valor">
+                                    💵 Receita (R$)
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 
-                    <!-- Banner Contextual de Drill-Down -->
+                    <!-- Banner Contextual de Drill-Down (Compartilhado e Agnóstico ao Domínio) -->
                     <div id="banner-retorno-drilldown" class="drilldown-banner" style="display: none;">
                         <span id="texto-drilldown-origem">🔍 Inspecionando mês selecionado a partir do Panorama Anual</span>
                         <button type="button" id="btn-voltar-12m" class="btn-voltar-drilldown">
@@ -614,176 +654,341 @@
                         </button>
                     </div>
                 
-                    <!-- ==========================================
-                         VISÃO 1: FECHAMENTO MENSAL
-                         ========================================== -->
-                    <div id="visao-relatorio-mensal">
-                        <div id="mensagem-motivacional" class="feedback-card" style="display: none;"></div>
-                
-                        <div class="dashboard-resumo" style="display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; margin-bottom: 20px;">
-                            <div class="card-kpi card-destaque-qtd">
-                                <span>Pedidos Entregues</span>
-                                <strong id="kpi-qtd-pedidos">0</strong>
-                            </div>
-                            <div class="card-kpi kpi-salario">
-                                <span>Meu Salário (Mão de Obra)</span>
-                                <strong id="kpi-mao-obra">R$ 0,00</strong>
-                            </div>
-                            <div class="card-kpi kpi-caixa">
-                                <span>Caixa da Empresa</span>
-                                <strong id="kpi-lucro">R$ 0,00</strong>
-                            </div>
-                            <div class="card-kpi kpi-gastos">
-                                <span>Gastos de Produção</span>
-                                <strong id="kpi-custos">R$ 0,00</strong>
-                            </div>
-                            <div class="card-kpi kpi-total">
-                                <span>Total Vendido</span>
-                                <strong id="kpi-total">R$ 0,00</strong>
-                            </div>
-                        </div>
-                
-                        <div class="dashboard-extra-row" style="display: flex; justify-content: center; margin-bottom: 30px;">
-                            <div class="card-kpi kpi-dizimo">
-                                <span>Dízimo (10% do Lucro Líquido)</span>
-                                <strong id="kpi-dizimo">R$ 0,00</strong>
-                                <small style="font-size: 0.8em; display: block; margin-top: 5px; color: #6d4c41;">(Salário + Caixa) x 10%</small>
-                            </div>
-                        </div>
-                
-                        <div class="distribuicao-financeira-container">
-                            <h3 style="font-size: 0.9rem; color: #555; margin-bottom: 5px;">Para onde foi o dinheiro?</h3>
-                            <div class="barra-empilhada">
-                                <div id="barra-custos" class="barra-segmento segmento-vermelho" style="width: 0%"></div>
-                                <div id="barra-salario" class="barra-segmento segmento-azul" style="width: 0%"></div>
-                                <div id="barra-lucro" class="barra-segmento segmento-verde" style="width: 0%"></div>
-                            </div>
-                            <div class="legenda-barra">
-                                <span class="legenda-item"><span class="dot-red"></span> Gastos</span>
-                                <span class="legenda-item"><span class="dot-blue"></span> Salário</span>
-                                <span class="legenda-item"><span class="dot-green"></span> Caixa</span>
-                            </div>
-                        </div>
-                
-                        <h3 style="text-align: center; color: #7aa2a9; margin-top: 30px;">Pedidos Entregues</h3>
-                        <div class="table-responsive" style="min-height: auto;">
-                            <table id="tabela-relatorio">
-                                <thead>
-                                    <tr>
-                                        <th>Data</th>
-                                        <th class="col-oculta-mobile">Nº Pedido</th>
-                                        <th>Cliente</th>
-                                        <th style="color: #2196F3;">Salário</th>
-                                        <th style="color: #4CAF50;">Caixa</th>
-                                        <th style="color: #e53935;">Gastos</th>
-                                        <th style="color: #ff9800;">Total</th>
-                                    </tr>
-                                </thead>
-                                <tbody></tbody>
-                            </table>
-                        </div>
-                        
-                        <button type="button" id="btn-exportar-xlsx-mensal" style="margin-top: 20px;">Exportar Excel (Mês)</button>
-                    </div>
-                
-                    <!-- ==========================================
-                         VISÃO 2: MÉDIA E EVOLUÇÃO (12 MESES)
-                         ========================================== -->
-                    <div id="visao-relatorio-12m" style="display: none;">
-                        
-                        <div class="painel-controle-12m">
-                            <div class="periodo-12m-info">
-                                <span id="label-intervalo-12m">Período analisado: Últimos 12 meses</span>
-                                <span id="badge-meses-ativos" class="badge-ativos">0 meses com vendas</span>
-                            </div>
-                
-                            <div class="seletor-base-media">
-                                <span class="seletor-label">Calcular média por:</span>
-                                <div class="botoes-base-grupo">
-                                    <button type="button" id="btn-media-ativos" class="btn-base-calc active" data-base="ativos" title="Divide o acumulado apenas pelos meses que tiveram pedidos entregues">
-                                        ⚡ Meses Ativos
-                                    </button>
-                                    <button type="button" id="btn-media-corridos" class="btn-base-calc" data-base="corridos" title="Divide o acumulado fixamente por 12 meses">
-                                        🗓️ 12 Meses Fixos
-                                    </button>
+                    <!-- =========================================================================
+                         DOMÍNIO 1: RELATÓRIO FINANCEIRO (ESTRUTURA ORIGINAL PRESERVADA)
+                         ========================================================================= -->
+                    <div id="dominio-relatorio-financeiro">
+                        <!-- VISÃO 1A: FECHAMENTO MENSAL FINANCEIRO -->
+                        <div id="visao-relatorio-mensal">
+                            <div id="mensagem-motivacional" class="feedback-card" style="display: none;"></div>
+                    
+                            <div class="dashboard-resumo" style="display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; margin-bottom: 20px;">
+                                <div class="card-kpi card-destaque-qtd">
+                                    <span>Pedidos Entregues</span>
+                                    <strong id="kpi-qtd-pedidos">0</strong>
+                                </div>
+                                <div class="card-kpi kpi-salario">
+                                    <span>Meu Salário (Mão de Obra)</span>
+                                    <strong id="kpi-mao-obra">R$ 0,00</strong>
+                                </div>
+                                <div class="card-kpi kpi-caixa">
+                                    <span>Caixa da Empresa</span>
+                                    <strong id="kpi-lucro">R$ 0,00</strong>
+                                </div>
+                                <div class="card-kpi kpi-gastos">
+                                    <span>Gastos de Produção</span>
+                                    <strong id="kpi-custos">R$ 0,00</strong>
+                                </div>
+                                <div class="card-kpi kpi-total">
+                                    <span>Total Vendido</span>
+                                    <strong id="kpi-total">R$ 0,00</strong>
                                 </div>
                             </div>
-                        </div>
-                
-                        <div class="dashboard-resumo" style="display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; margin-bottom: 20px;">
-                            <div class="card-kpi card-destaque-qtd">
-                                <span>Média de Pedidos / Mês</span>
-                                <strong id="kpi-12m-qtd">0</strong>
-                                <small id="acum-12m-qtd" class="kpi-subvalor">Total no período: 0</small>
+                    
+                            <div class="dashboard-extra-row" style="display: flex; justify-content: center; margin-bottom: 30px;">
+                                <div class="card-kpi kpi-dizimo">
+                                    <span>Dízimo (10% do Lucro Líquido)</span>
+                                    <strong id="kpi-dizimo">R$ 0,00</strong>
+                                    <small style="font-size: 0.8em; display: block; margin-top: 5px; color: #6d4c41;">(Salário + Caixa) x 10%</small>
+                                </div>
                             </div>
-                            <div class="card-kpi kpi-salario">
-                                <span>Média Meu Salário</span>
-                                <strong id="kpi-12m-salario">R$ 0,00</strong>
-                                <small id="acum-12m-salario" class="kpi-subvalor">Acumulado: R$ 0,00</small>
+                    
+                            <div class="distribuicao-financeira-container">
+                                <h3 style="font-size: 0.9rem; color: #555; margin-bottom: 5px;">Para onde foi o dinheiro?</h3>
+                                <div class="barra-empilhada">
+                                    <div id="barra-custos" class="barra-segmento segmento-vermelho" style="width: 0%"></div>
+                                    <div id="barra-salario" class="barra-segmento segmento-azul" style="width: 0%"></div>
+                                    <div id="barra-lucro" class="barra-segmento segmento-verde" style="width: 0%"></div>
+                                </div>
+                                <div class="legenda-barra">
+                                    <span class="legenda-item"><span class="dot-red"></span> Gastos</span>
+                                    <span class="legenda-item"><span class="dot-blue"></span> Salário</span>
+                                    <span class="legenda-item"><span class="dot-green"></span> Caixa</span>
+                                </div>
                             </div>
-                            <div class="card-kpi kpi-caixa">
-                                <span>Média Caixa Empresa</span>
-                                <strong id="kpi-12m-lucro">R$ 0,00</strong>
-                                <small id="acum-12m-lucro" class="kpi-subvalor">Acumulado: R$ 0,00</small>
-                            </div>
-                            <div class="card-kpi kpi-gastos">
-                                <span>Média Gastos Produção</span>
-                                <strong id="kpi-12m-custos">R$ 0,00</strong>
-                                <small id="acum-12m-custos" class="kpi-subvalor">Acumulado: R$ 0,00</small>
-                            </div>
-                            <div class="card-kpi kpi-total">
-                                <span>Faturamento Médio</span>
-                                <strong id="kpi-12m-total">R$ 0,00</strong>
-                                <small id="acum-12m-total" class="kpi-subvalor">Acumulado: R$ 0,00</small>
-                            </div>
-                        </div>
-                
-                        <div class="dashboard-extra-row" style="display: flex; justify-content: center; margin-bottom: 30px;">
-                            <div class="card-kpi kpi-dizimo">
-                                <span>Média Dízimo Mensal (10%)</span>
-                                <strong id="kpi-12m-dizimo">R$ 0,00</strong>
-                                <small id="acum-12m-dizimo" style="font-size: 0.8em; display: block; margin-top: 5px; color: #6d4c41;">Total acumulado: R$ 0,00</small>
-                            </div>
-                        </div>
-                
-                        <div class="grafico-12m-card">
-                            <div class="grafico-12m-header">
-                                <h3>Evolução Financeira nos Últimos 12 Meses</h3>
-                                <p>💡 Dica: Toque ou clique em qualquer coluna para abrir o detalhamento de pedidos daquele mês</p>
+                    
+                            <h3 style="text-align: center; color: #7aa2a9; margin-top: 30px;">Pedidos Entregues</h3>
+                            <div class="table-responsive" style="min-height: auto;">
+                                <table id="tabela-relatorio">
+                                    <thead>
+                                        <tr>
+                                            <th>Data</th>
+                                            <th class="col-oculta-mobile">Nº Pedido</th>
+                                            <th>Cliente</th>
+                                            <th style="color: #2196F3;">Salário</th>
+                                            <th style="color: #4CAF50;">Caixa</th>
+                                            <th style="color: #e53935;">Gastos</th>
+                                            <th style="color: #ff9800;">Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
                             </div>
                             
-                            <div class="grafico-scroll-wrapper" id="grafico-scroll-wrapper">
-                                <div id="grafico-colunas-12m" class="grafico-colunas-container">
-                                    <!-- Colunas geradas via DocumentFragment em relatorios.js -->
+                            <button type="button" id="btn-exportar-xlsx-mensal" style="margin-top: 20px;">Exportar Excel (Mês)</button>
+                        </div>
+                    
+                        <!-- VISÃO 1B: MÉDIA E EVOLUÇÃO FINANCEIRA (12 MESES) -->
+                        <div id="visao-relatorio-12m" style="display: none;">
+                            <div class="painel-controle-12m">
+                                <div class="periodo-12m-info">
+                                    <span id="label-intervalo-12m">Período analisado: Últimos 12 meses</span>
+                                    <span id="badge-meses-ativos" class="badge-ativos">0 meses com vendas</span>
+                                </div>
+                    
+                                <div class="seletor-base-media">
+                                    <span class="seletor-label">Calcular média por:</span>
+                                    <div class="botoes-base-grupo">
+                                        <button type="button" id="btn-media-ativos" class="btn-base-calc active" data-base="ativos" title="Divide o acumulado apenas pelos meses que tiveram pedidos entregues">
+                                            ⚡ Meses Ativos
+                                        </button>
+                                        <button type="button" id="btn-media-corridos" class="btn-base-calc" data-base="corridos" title="Divide o acumulado fixamente por 12 meses">
+                                            🗓️ 12 Meses Fixos
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
-                
-                            <div class="legenda-barra" style="margin-top: 15px; padding-top: 10px; border-top: 1px solid #f0f0f0;">
-                                <span class="legenda-item"><span class="dot-blue"></span> Meu Salário</span>
-                                <span class="legenda-item"><span class="dot-green"></span> Caixa (Lucro)</span>
-                                <span class="legenda-item"><span class="dot-red"></span> Gastos</span>
+                    
+                            <div class="dashboard-resumo" style="display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; margin-bottom: 20px;">
+                                <div class="card-kpi card-destaque-qtd">
+                                    <span>Média de Pedidos / Mês</span>
+                                    <strong id="kpi-12m-qtd">0</strong>
+                                    <small id="acum-12m-qtd" class="kpi-subvalor">Total no período: 0</small>
+                                </div>
+                                <div class="card-kpi kpi-salario">
+                                    <span>Média Meu Salário</span>
+                                    <strong id="kpi-12m-salario">R$ 0,00</strong>
+                                    <small id="acum-12m-salario" class="kpi-subvalor">Acumulado: R$ 0,00</small>
+                                </div>
+                                <div class="card-kpi kpi-caixa">
+                                    <span>Média Caixa Empresa</span>
+                                    <strong id="kpi-12m-lucro">R$ 0,00</strong>
+                                    <small id="acum-12m-lucro" class="kpi-subvalor">Acumulado: R$ 0,00</small>
+                                </div>
+                                <div class="card-kpi kpi-gastos">
+                                    <span>Média Gastos Produção</span>
+                                    <strong id="kpi-12m-custos">R$ 0,00</strong>
+                                    <small id="acum-12m-custos" class="kpi-subvalor">Acumulado: R$ 0,00</small>
+                                </div>
+                                <div class="card-kpi kpi-total">
+                                    <span>Faturamento Médio</span>
+                                    <strong id="kpi-12m-total">R$ 0,00</strong>
+                                    <small id="acum-12m-total" class="kpi-subvalor">Acumulado: R$ 0,00</small>
+                                </div>
                             </div>
+                    
+                            <div class="dashboard-extra-row" style="display: flex; justify-content: center; margin-bottom: 30px;">
+                                <div class="card-kpi kpi-dizimo">
+                                    <span>Média Dízimo Mensal (10%)</span>
+                                    <strong id="kpi-12m-dizimo">R$ 0,00</strong>
+                                    <small id="acum-12m-dizimo" style="font-size: 0.8em; display: block; margin-top: 5px; color: #6d4c41;">Total acumulado: R$ 0,00</small>
+                                </div>
+                            </div>
+                    
+                            <div class="grafico-12m-card">
+                                <div class="grafico-12m-header">
+                                    <h3>Evolução Financeira nos Últimos 12 Meses</h3>
+                                    <p>💡 Dica: Toque ou clique em qualquer coluna para abrir o detalhamento de pedidos daquele mês</p>
+                                </div>
+                                
+                                <div class="grafico-scroll-wrapper" id="grafico-scroll-wrapper">
+                                    <div id="grafico-colunas-12m" class="grafico-colunas-container"></div>
+                                </div>
+                    
+                                <div class="legenda-barra" style="margin-top: 15px; padding-top: 10px; border-top: 1px solid #f0f0f0;">
+                                    <span class="legenda-item"><span class="dot-blue"></span> Meu Salário</span>
+                                    <span class="legenda-item"><span class="dot-green"></span> Caixa (Lucro)</span>
+                                    <span class="legenda-item"><span class="dot-red"></span> Gastos</span>
+                                </div>
+                            </div>
+                    
+                            <h3 style="text-align: center; color: #7aa2a9; margin-top: 35px;">Detalhamento Mês a Mês</h3>
+                            <div class="table-responsive" style="min-height: auto;">
+                                <table id="tabela-relatorio-12m">
+                                    <thead>
+                                        <tr>
+                                            <th>Mês / Ano</th>
+                                            <th style="text-align: center;">Pedidos</th>
+                                            <th style="color: #2196F3;">Meu Salário</th>
+                                            <th style="color: #4CAF50;">Caixa</th>
+                                            <th style="color: #e53935;">Gastos</th>
+                                            <th style="color: #ff9800;">Total Vendido</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                    <tfoot></tfoot>
+                                </table>
+                            </div>
+                    
+                            <button type="button" id="btn-exportar-xlsx-12m" style="margin-top: 20px;">Exportar Excel (12 Meses)</button>
                         </div>
-                
-                        <h3 style="text-align: center; color: #7aa2a9; margin-top: 35px;">Detalhamento Mês a Mês</h3>
-                        <div class="table-responsive" style="min-height: auto;">
-                            <table id="tabela-relatorio-12m">
-                                <thead>
-                                    <tr>
-                                        <th>Mês / Ano</th>
-                                        <th style="text-align: center;">Pedidos</th>
-                                        <th style="color: #2196F3;">Meu Salário</th>
-                                        <th style="color: #4CAF50;">Caixa</th>
-                                        <th style="color: #e53935;">Gastos</th>
-                                        <th style="color: #ff9800;">Total Vendido</th>
-                                    </tr>
-                                </thead>
-                                <tbody></tbody>
-                                <tfoot></tfoot>
-                            </table>
+                    </div>
+
+                    <!-- =========================================================================
+                         DOMÍNIO 2: DESEMPENHO DE PRODUTOS (NOVO)
+                         ========================================================================= -->
+                    <div id="dominio-relatorio-produtos" style="display: none;">
+
+                        <!-- VISÃO 2A: FECHAMENTO MENSAL DE PRODUTOS -->
+                        <div id="visao-produtos-mensal">
+                            <div id="insight-produtos-mensal" class="feedback-card" style="display: none;"></div>
+
+                            <div class="dashboard-resumo" style="display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; margin-bottom: 20px;">
+                                <div class="card-kpi card-destaque-qtd">
+                                    <span>Peças Vendidas no Mês</span>
+                                    <strong id="kpi-prod-mes-pecas">0</strong>
+                                    <small id="sub-prod-mes-skus" class="kpi-subvalor">0 produtos distintos</small>
+                                </div>
+                                <div class="card-kpi kpi-encomenda">
+                                    <span>Saída Sob Encomenda</span>
+                                    <strong id="kpi-prod-mes-encomenda">0 un.</strong>
+                                    <small id="sub-prod-mes-encomenda" class="kpi-subvalor">0% (R$ 0,00)</small>
+                                </div>
+                                <div class="card-kpi kpi-pronta-entrega">
+                                    <span>Saída Pronta-Entrega</span>
+                                    <strong id="kpi-prod-mes-pronta">0 un.</strong>
+                                    <small id="sub-prod-mes-pronta" class="kpi-subvalor">0% (R$ 0,00)</small>
+                                </div>
+                                <div class="card-kpi kpi-campeao">
+                                    <span>Peça Campeã do Mês</span>
+                                    <strong id="kpi-prod-mes-campeao" style="font-size: 1.05rem;">-</strong>
+                                    <small id="sub-prod-mes-campeao" class="kpi-subvalor">0 unidades</small>
+                                </div>
+                                <div class="card-kpi kpi-total">
+                                    <span>Receita dos Itens (s/ Frete)</span>
+                                    <strong id="kpi-prod-mes-receita">R$ 0,00</strong>
+                                    <small class="kpi-subvalor">Soma exclusiva dos produtos</small>
+                                </div>
+                            </div>
+
+                            <!-- Barra Empilhada de Proporção de Canal no Mês -->
+                            <div class="distribuicao-financeira-container">
+                                <h3 style="font-size: 0.9rem; color: #555; margin-bottom: 5px;">Origem das Saídas no Mês (Sob Encomenda vs. Pronta-Entrega)</h3>
+                                <div class="barra-empilhada">
+                                    <div id="barra-canal-encomenda" class="barra-segmento segmento-encomenda" style="width: 0%"></div>
+                                    <div id="barra-canal-pronta" class="barra-segmento segmento-pronta" style="width: 0%"></div>
+                                </div>
+                                <div class="legenda-barra">
+                                    <span class="legenda-item"><span class="dot-encomenda"></span> Sob Encomenda (Orçamento)</span>
+                                    <span class="legenda-item"><span class="dot-pronta"></span> Pronta-Entrega (Estoque)</span>
+                                </div>
+                            </div>
+
+                            <!-- Gráfico Horizontal de Ranking de Produtos no Mês -->
+                            <div class="grafico-12m-card">
+                                <div class="grafico-12m-header">
+                                    <h3 id="titulo-ranking-prod-mes">Ranking de Saídas por Produto & Canal</h3>
+                                    <p>💡 Dica: Toque em uma barra para filtrar o desempenho exclusivo daquele produto</p>
+                                </div>
+                                <div id="grafico-ranking-produtos-mes" class="ranking-horizontal-container"></div>
+                                <div id="container-btn-expandir-ranking" style="text-align: center; margin-top: 12px; display: none;">
+                                    <button type="button" id="btn-expandir-ranking-mes" class="btn-base-calc" style="border: 1px solid #7aa2a9;">
+                                        Mostrar todos os produtos no gráfico
+                                    </button>
+                                </div>
+                            </div>
+
+                            <h3 style="text-align: center; color: #7aa2a9; margin-top: 30px;">Detalhamento Mensal por Produto</h3>
+                            <div class="table-responsive" style="min-height: auto;">
+                                <table id="tabela-produtos-mensal">
+                                    <thead>
+                                        <tr>
+                                            <th>Produto</th>
+                                            <th style="text-align: center;">Total Qtd</th>
+                                            <th style="text-align: center; color: #ad6a63;">Encomenda</th>
+                                            <th style="text-align: center; color: #00796b;">Pronta-Entrega</th>
+                                            <th>Ticket Médio</th>
+                                            <th style="color: #ff9800;">Receita (s/ Frete)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+
+                            <button type="button" id="btn-exportar-xlsx-prod-mensal" style="margin-top: 20px;">Exportar Excel Produtos (Mês)</button>
                         </div>
-                
-                        <button type="button" id="btn-exportar-xlsx-12m" style="margin-top: 20px;">Exportar Excel (12 Meses)</button>
+
+                        <!-- VISÃO 2B: MÉDIA E EVOLUÇÃO DE PRODUTOS (12 MESES) -->
+                        <div id="visao-produtos-12m" style="display: none;">
+                            <div class="painel-controle-12m">
+                                <div class="periodo-12m-info">
+                                    <span id="label-intervalo-prod-12m">Período analisado: Últimos 12 meses</span>
+                                    <span id="badge-meses-ativos-prod" class="badge-ativos">0 meses com saídas</span>
+                                </div>
+
+                                <div class="seletor-base-media">
+                                    <span class="seletor-label">Calcular média por:</span>
+                                    <div class="botoes-base-grupo">
+                                        <button type="button" id="btn-prod-media-ativos" class="btn-base-calc active" data-base-prod="ativos" title="Divide pelas ocorrências de meses com saída">
+                                            ⚡ Meses Ativos
+                                        </button>
+                                        <button type="button" id="btn-prod-media-corridos" class="btn-base-calc" data-base-prod="corridos" title="Divide fixamente por 12 meses">
+                                            🗓️ 12 Meses Fixos
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="dashboard-resumo" style="display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; margin-bottom: 20px;">
+                                <div class="card-kpi card-destaque-qtd">
+                                    <span>Média de Peças / Mês</span>
+                                    <strong id="kpi-prod-12m-qtd">0</strong>
+                                    <small id="acum-prod-12m-qtd" class="kpi-subvalor">Acumulado: 0 un.</small>
+                                </div>
+                                <div class="card-kpi kpi-encomenda">
+                                    <span>Média Sob Encomenda</span>
+                                    <strong id="kpi-prod-12m-encomenda">0 un.</strong>
+                                    <small id="acum-prod-12m-encomenda" class="kpi-subvalor">Acumulado: 0 un. (0%)</small>
+                                </div>
+                                <div class="card-kpi kpi-pronta-entrega">
+                                    <span>Média Pronta-Entrega</span>
+                                    <strong id="kpi-prod-12m-pronta">0 un.</strong>
+                                    <small id="acum-prod-12m-pronta" class="kpi-subvalor">Acumulado: 0 un. (0%)</small>
+                                </div>
+                                <div class="card-kpi kpi-total">
+                                    <span>Receita Média (s/ Frete)</span>
+                                    <strong id="kpi-prod-12m-receita">R$ 0,00</strong>
+                                    <small id="acum-prod-12m-receita" class="kpi-subvalor">Acumulado: R$ 0,00</small>
+                                </div>
+                            </div>
+
+                            <div class="grafico-12m-card">
+                                <div class="grafico-12m-header">
+                                    <h3 id="titulo-grafico-prod-12m">Evolução de Saídas nos Últimos 12 Meses</h3>
+                                    <p>💡 Dica: Toque ou clique em qualquer coluna para abrir o fechamento de produtos daquele mês</p>
+                                </div>
+
+                                <div class="grafico-scroll-wrapper" id="grafico-prod-scroll-wrapper">
+                                    <div id="grafico-colunas-prod-12m" class="grafico-colunas-container"></div>
+                                </div>
+
+                                <div class="legenda-barra" style="margin-top: 15px; padding-top: 10px; border-top: 1px solid #f0f0f0;">
+                                    <span class="legenda-item"><span class="dot-encomenda"></span> Sob Encomenda (Orçamento)</span>
+                                    <span class="legenda-item"><span class="dot-pronta"></span> Pronta-Entrega (Estoque)</span>
+                                </div>
+                            </div>
+
+                            <h3 style="text-align: center; color: #7aa2a9; margin-top: 35px;">Ranking Consolidado no Período (12 Meses)</h3>
+                            <div class="table-responsive" style="min-height: auto;">
+                                <table id="tabela-produtos-12m">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 45px;">#</th>
+                                            <th>Produto</th>
+                                            <th style="text-align: center;">Total (12m)</th>
+                                            <th style="text-align: center;">Média / Mês</th>
+                                            <th style="text-align: center; color: #ad6a63;">Encomenda</th>
+                                            <th style="text-align: center; color: #00796b;">Pronta-Ent.</th>
+                                            <th style="color: #ff9800;">Receita (s/ Frete)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                    <tfoot></tfoot>
+                                </table>
+                            </div>
+
+                            <button type="button" id="btn-exportar-xlsx-prod-12m" style="margin-top: 20px;">Exportar Excel Produtos (12 Meses)</button>
+                        </div>
                     </div>
                  </section>
             </div>
